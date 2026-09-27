@@ -17,6 +17,7 @@ async def lifespan(application: FastAPI):
         yield
     finally:
         analyzer.close()
+        del application.state.morphological_analyzer
 
 
 app = FastAPI(title="Japanese Reader", lifespan=lifespan)

@@ -1,6 +1,8 @@
+from dataclasses import replace
 from importlib.metadata import version
 from threading import Lock
 from typing import Protocol
+from unicodedata import normalize
 
 from sudachipy import dictionary, tokenizer
 from sudachipy.morpheme import Morpheme
@@ -18,9 +20,15 @@ class MorphologicalAnalyzer(Protocol):
 def _hiragana(reading: str) -> str | None:
     if not reading:
         return None
-    return "".join(
-        chr(ord(char) - 0x60) if "ァ" <= char <= "ヶ" else char
-        for char in reading
+    # Decomposition exposes voiced archaic kana's base letters (ヷ -> ワ + ゙).
+    return normalize(
+        "NFC",
+        "".join(
+            chr(ord(char) - 0x60)
+            if "ァ" <= char <= "ヶ" or char in "ヽヾ"
+            else char
+            for char in normalize("NFD", reading)
+        ),
     )
 
 
@@ -49,8 +57,9 @@ class SudachiMorphologicalAnalyzer:
         with self._lock:
             if self._closed:
                 raise RuntimeError("Morphological analyzer is closed")
-            return tuple(
-                RawToken(
+            tokens: list[RawToken] = []
+            for morpheme in self._tokenizer.tokenize(text):
+                token = RawToken(
                     raw_surface=morpheme.raw_surface(),
                     start_offset=base_offset + morpheme.begin(),
                     end_offset=base_offset + morpheme.end(),
@@ -60,8 +69,29 @@ class SudachiMorphologicalAnalyzer:
                     part_of_speech=morpheme.part_of_speech(),
                     is_out_of_vocabulary=morpheme.is_oov(),
                 )
-                for morpheme in self._tokenizer.tokenize(text)
-            )
+                if token.start_offset == token.end_offset:
+                    if token.raw_surface or not tokens or tokens[-1].end_offset != token.start_offset:
+                        raise ValueError("Normalization expansion has no matching source boundary")
+                    # One source character can expand into several morphemes (㍿).
+                    # Keep one selectable source span and its complete occurrence
+                    # reading. A partial dictionary reading must not become a key.
+                    previous = tokens[-1]
+                    tokens[-1] = replace(
+                        previous,
+                        lemma=previous.lemma + token.lemma,
+                        reading=((previous.reading or "") + (token.reading or "")) or None,
+                        dictionary_reading=(
+                            previous.dictionary_reading + token.dictionary_reading
+                            if previous.dictionary_reading and token.dictionary_reading
+                            else None
+                        ),
+                        is_out_of_vocabulary=(
+                            previous.is_out_of_vocabulary or token.is_out_of_vocabulary
+                        ),
+                    )
+                else:
+                    tokens.append(token)
+            return tuple(tokens)
 
     def _dictionary_reading(self, morpheme: Morpheme) -> str | None:
         if morpheme.is_oov():
@@ -86,5 +116,7 @@ class SudachiMorphologicalAnalyzer:
     def close(self) -> None:
         with self._lock:
             if not self._closed:
+                # Tokenizer holds its own shared dictionary reference in Sudachi.
+                self._tokenizer = None
                 self._dictionary.close()
                 self._closed = True

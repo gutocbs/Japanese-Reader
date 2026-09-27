@@ -151,5 +151,46 @@ def test_lifespan_shares_analyzer_and_releases_it(monkeypatch):
             assert created == [shared]
         with pytest.raises(RuntimeError, match="closed"):
             shared.analyze("猫")
+        assert shared._tokenizer is None
+        assert not hasattr(app.state, "morphological_analyzer")
 
     asyncio.run(exercise())
+
+
+@pytest.mark.parametrize("text, expected", [
+    ("㍿", [("㍿", 13, 14, "かぶしきがいしゃ")]),
+    ("𠮷㍿猫", [("𠮷", 13, 14, "𠮷"), ("㍿", 14, 15, "かぶしきがいしゃ"), ("猫", 15, 16, "ねこ")]),
+    ("㍿㍿", [("㍿", 13, 14, "かぶしきがいしゃ"), ("㍿", 14, 15, "かぶしきがいしゃ")]),
+])
+def test_normalization_expansion_keeps_reading_in_positive_source_span(analyzer, text, expected):
+    tokens = analyzer.analyze(text, base_offset=13)
+    assert [(token.raw_surface, token.start_offset, token.end_offset, token.reading) for token in tokens] == expected
+    assert "".join(token.raw_surface for token in tokens) == text
+    for token in tokens:
+        assert token.end_offset > token.start_offset
+        assert token.raw_surface == text[token.start_offset - 13 : token.end_offset - 13]
+    expanded = next(token for token in tokens if token.raw_surface == "㍿")
+    assert expanded.lemma == "株式会社"
+    assert expanded.dictionary_reading is None
+
+
+@pytest.mark.parametrize("text, reading", [
+    ("ヽヾ", "ゝゞ"),
+    ("ヷヸヹヺ", "わ\u3099ゐ\u3099ゑ\u3099を\u3099"),
+])
+def test_iteration_and_voiced_archaic_katakana_readings_become_hiragana(analyzer, text, reading):
+    tokens = analyzer.analyze(text)
+    assert "".join(token.raw_surface for token in tokens) == text
+    assert "".join(token.reading for token in tokens) == reading
+
+
+@pytest.mark.parametrize("has_unrelated_previous_token", [False, True])
+def test_unanchored_expansion_cannot_attach_reading_to_unrelated_source(analyzer, monkeypatch, has_unrelated_previous_token):
+    real_tokenizer = analyzer._tokenizer
+    zero_width = real_tokenizer.tokenize("A㍿")[-1]
+    morphemes = [zero_width]
+    if has_unrelated_previous_token:
+        morphemes.insert(0, real_tokenizer.tokenize("猫")[0])
+    monkeypatch.setattr(analyzer, "_tokenizer", SimpleNamespace(tokenize=lambda text: morphemes))
+    with pytest.raises(ValueError, match="source boundary"):
+        analyzer.analyze("A㍿")
