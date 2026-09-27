@@ -45,11 +45,11 @@ class AnalysisService:
 
         metadata = self._analyzer.metadata
         options = AnalysisOptions(split_mode=metadata.split_mode)
-        content_hash = sha256(document.content.encode("utf-8")).hexdigest()
+        content_hash = self._content_hash(document.content)
         key = AnalysisCacheKey(document.id, document.revision, content_hash, metadata, options)
         cached = self._analyses.find_compatible(key)
         if cached is not None:
-            self._ensure_current(document)
+            self._ensure_current(document, content_hash)
             return cached
 
         blocks: list[AnalysisBlock] = []
@@ -80,18 +80,26 @@ class AnalysisService:
             document.id, document.revision, content_hash, metadata, options,
             tuple(blocks), tuple(diagnostics),
         )
-        self._ensure_current(document)
+        self._ensure_current(document, content_hash)
         self._analyses.save(analysis)
         # A persistence adapter may take time to save. Check again before
         # publishing and discard disposable cache if the document changed there.
         try:
-            self._ensure_current(document)
+            self._ensure_current(document, content_hash)
         except StaleDocumentRevisionError:
             self._analyses.invalidate_document(document.id)
             raise
         return analysis
 
-    def _ensure_current(self, document: Document) -> None:
+    @staticmethod
+    def _content_hash(content: str) -> str:
+        return sha256(content.encode("utf-8")).hexdigest()
+
+    def _ensure_current(self, document: Document, content_hash: str) -> None:
         current = self._documents.get(document.id)
-        if current is None or current.revision != document.revision:
+        if (
+            current is None
+            or current.revision != document.revision
+            or self._content_hash(current.content) != content_hash
+        ):
             raise StaleDocumentRevisionError(document.id, document.revision)

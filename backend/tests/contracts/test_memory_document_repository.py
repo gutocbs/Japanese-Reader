@@ -1,5 +1,7 @@
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from itertools import count
+from threading import Barrier, BrokenBarrierError
 from uuid import UUID
 
 import pytest
@@ -51,3 +53,31 @@ def test_naive_clock_is_rejected_before_creating_document():
     with pytest.raises(ValueError, match="timezone-aware"):
         repository.create(CreateDocument(title="First", content="一"))
     assert repository.list() == ()
+
+
+def test_concurrent_content_updates_allocate_distinct_revisions_atomically():
+    clock_calls = count()
+    concurrent_updates = Barrier(2)
+
+    def racing_clock():
+        call = next(clock_calls)
+        if call > 0:
+            try:
+                concurrent_updates.wait(timeout=0.2)
+            except BrokenBarrierError:
+                pass
+        return CREATED_AT + timedelta(minutes=call)
+
+    repository = InMemoryDocumentRepository(clock=racing_clock)
+    original = repository.create(CreateDocument(title="First", content="猫"))
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        futures = [
+            executor.submit(repository.update, original.id, UpdateDocument(content=content))
+            for content in ("犬", "鳥")
+        ]
+        updates = [future.result(timeout=2) for future in futures]
+
+    assert {document.content for document in updates} == {"犬", "鳥"}
+    assert sorted(document.revision for document in updates) == [2, 3]
+    assert repository.get(original.id).revision == 3

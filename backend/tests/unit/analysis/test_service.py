@@ -5,7 +5,12 @@ from uuid import uuid4
 import pytest
 
 from backend.app.analysis.furigana import FuriganaAligner
-from backend.app.analysis.models import AnalyzerMetadata, RawToken
+from backend.app.analysis.models import (
+    AnalysisCacheKey,
+    AnalysisOptions,
+    AnalyzerMetadata,
+    RawToken,
+)
 from backend.app.analysis.morphology import SudachiMorphologicalAnalyzer
 from backend.app.analysis.service import AnalysisService, EmptyDocumentError, StaleDocumentRevisionError
 from backend.app.documents.models import CreateDocument, UpdateDocument
@@ -117,6 +122,39 @@ def test_revision_change_or_deletion_during_analysis_never_saves_stale_result(an
     with pytest.raises(StaleDocumentRevisionError):
         service_for(documents, EditingAnalyzer(), cache).analyze(document.id)
     assert cache.find_compatible(baseline.cache_key) is None
+
+
+def test_same_revision_content_change_during_analysis_is_rejected_by_utf8_hash(analyzer):
+    storage = InMemoryDocumentRepository()
+    document = storage.create(CreateDocument("title", "猫"))
+    cache = InMemoryAnalysisRepository()
+
+    class SameRevisionRepository:
+        current = document
+
+        def get(self, document_id):
+            return self.current if document_id == document.id else None
+
+    documents = SameRevisionRepository()
+
+    class SameRevisionEditingAnalyzer:
+        metadata = analyzer.metadata
+
+        def analyze(self, text, base_offset=0):
+            result = analyzer.analyze(text, base_offset)
+            documents.current = replace(document, content="犬")
+            return result
+
+    with pytest.raises(StaleDocumentRevisionError):
+        service_for(documents, SameRevisionEditingAnalyzer(), cache).analyze(document.id)
+    stale_key = AnalysisCacheKey(
+        document.id,
+        document.revision,
+        sha256(document.content.encode("utf-8")).hexdigest(),
+        analyzer.metadata,
+        AnalysisOptions(split_mode=analyzer.metadata.split_mode),
+    )
+    assert cache.find_compatible(stale_key) is None
 
 
 def test_compatible_cache_skips_morphology_and_title_changes_keep_it(analyzer):
