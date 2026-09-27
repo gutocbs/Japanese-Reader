@@ -1,5 +1,5 @@
 import { StrictMode } from 'react';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Analysis, Document, DocumentClient } from '../shared/api/client';
 import { App } from './App';
@@ -29,7 +29,7 @@ const analysis: Analysis = {
     tokens: [{
       startOffset: 0, endOffset: 2, surface: '国境', lemma: '国境', reading: 'こっきょう',
       dictionaryReading: 'こっきょう', partOfSpeech: ['名詞', '普通名詞', '一般', '*', '*', '*'],
-      isOutOfVocabulary: false, isLexical: true, vocabularyKey: '国境\u0000こっきょう',
+      isOutOfVocabulary: false, isLexical: true, vocabularyKey: '["国境","こっきょう"]',
       furiganaSegments: [{ text: '国境', reading: 'こっきょう' }],
     }],
   }],
@@ -54,7 +54,7 @@ const revisedAnalysis: Analysis = {
     tokens: [{
       startOffset: 0, endOffset: 2, surface: '雪国', lemma: '雪国', reading: 'ゆきぐに',
       dictionaryReading: 'ゆきぐに', partOfSpeech: ['名詞', '普通名詞', '一般', '*', '*', '*'],
-      isOutOfVocabulary: false, isLexical: true, vocabularyKey: '雪国\u0000ゆきぐに',
+      isOutOfVocabulary: false, isLexical: true, vocabularyKey: '["雪国","ゆきぐに"]',
       furiganaSegments: [{ text: '雪国', reading: 'ゆきぐに' }],
     }],
   }],
@@ -78,6 +78,8 @@ function client(overrides: Partial<DocumentClient> = {}): DocumentClient {
     update: vi.fn().mockResolvedValue(document),
     delete: vi.fn().mockResolvedValue(undefined),
     analyze: vi.fn().mockResolvedValue(analysis),
+    listVocabularySelections: vi.fn().mockResolvedValue([]),
+    replaceVocabularySelections: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   };
 }
@@ -251,6 +253,28 @@ describe('reader routes', () => {
       level: 1,
     })).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('serializes replacement writes so rapid toggles cannot persist stale state', async () => {
+    const firstWrite = deferred<void>();
+    const replaceVocabularySelections = vi.fn()
+      .mockReturnValueOnce(firstWrite.promise)
+      .mockResolvedValue(undefined);
+    const api = client({ replaceVocabularySelections });
+    render(<App client={api} initialPath={`/documents/${document.id}/read`} />);
+    const token = await screen.findByRole('button', { name: '国境' });
+
+    fireEvent.click(token);
+    fireEvent.click(token);
+
+    await waitFor(() => expect(replaceVocabularySelections).toHaveBeenCalledTimes(1));
+    expect(replaceVocabularySelections).toHaveBeenNthCalledWith(1, document.id, [
+      { lemma: '国境', reading: 'こっきょう' },
+    ]);
+
+    await act(async () => firstWrite.resolve());
+    await waitFor(() => expect(replaceVocabularySelections).toHaveBeenCalledTimes(2));
+    expect(replaceVocabularySelections).toHaveBeenNthCalledWith(2, document.id, []);
   });
 
   it('disables analysis for empty content and explains how to continue', () => {

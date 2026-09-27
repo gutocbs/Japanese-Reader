@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { useState } from 'react';
 import { describe, expect, it } from 'vitest';
 import type { Analysis } from '../../shared/api/client';
 import { DocumentText } from './DocumentText';
@@ -99,5 +100,55 @@ describe('DocumentText', () => {
     expect(ruby?.tagName).toBe('RUBY');
     expect(ruby?.childNodes[0]?.textContent).toBe('昨日');
     expect(ruby?.querySelectorAll('rt')).toHaveLength(1);
+  });
+
+  it('toggles every occurrence with the same key but keeps a different reading separate', () => {
+    const firstKey = '["生","せい"]';
+    const secondKey = '["生","しょう"]';
+    const selectionAnalysis: Analysis = {
+      ...analysis,
+      blocks: [{
+        startOffset: 0,
+        endOffset: 3,
+        tokens: [
+          { ...analysis.blocks[1].tokens[0], startOffset: 0, endOffset: 1, surface: '生', lemma: '生', reading: 'せい', dictionaryReading: 'せい', vocabularyKey: firstKey, furiganaSegments: [{ text: '生', reading: 'せい' }] },
+          { ...analysis.blocks[1].tokens[0], startOffset: 1, endOffset: 2, surface: '生', lemma: '生', reading: 'せい', dictionaryReading: 'せい', vocabularyKey: firstKey, furiganaSegments: [{ text: '生', reading: 'せい' }] },
+          { ...analysis.blocks[1].tokens[0], startOffset: 2, endOffset: 3, surface: '生', lemma: '生', reading: 'しょう', dictionaryReading: 'しょう', vocabularyKey: secondKey, furiganaSegments: [{ text: '生', reading: 'しょう' }] },
+        ],
+      }],
+    };
+
+    function SelectionHarness() {
+      const [selectedKeys, setSelectedKeys] = useState(() => new Set<string>());
+      const toggle = (key: string) => {
+        setSelectedKeys((current) => {
+          const next = new Set(current);
+          if (next.has(key)) next.delete(key);
+          else next.add(key);
+          return next;
+        });
+      };
+      return (
+        <DocumentText
+          content="生生生"
+          analysis={selectionAnalysis}
+          selectedKeys={selectedKeys}
+          onToggleVocabulary={toggle}
+        />
+      );
+    }
+
+    render(<SelectionHarness />);
+    const occurrences = screen.getAllByRole('button', { name: '生' });
+
+    fireEvent.click(occurrences[0]);
+    expect(occurrences[0]).toHaveAttribute('aria-pressed', 'true');
+    expect(occurrences[1]).toHaveAttribute('aria-pressed', 'true');
+    expect(occurrences[2]).toHaveAttribute('aria-pressed', 'false');
+
+    fireEvent.click(occurrences[1]);
+    expect(occurrences[0]).toHaveAttribute('aria-pressed', 'false');
+    expect(occurrences[1]).toHaveAttribute('aria-pressed', 'false');
+    expect(occurrences[2]).toHaveAttribute('aria-pressed', 'false');
   });
 });

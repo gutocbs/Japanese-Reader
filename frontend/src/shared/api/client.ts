@@ -6,6 +6,7 @@ export type UpdateDocument = components['schemas']['UpdateDocumentRequest'];
 export type Analysis = components['schemas']['DocumentAnalysisResponse'];
 export type AnalysisBlock = components['schemas']['AnalysisBlockResponse'];
 export type AnalyzedToken = components['schemas']['AnalyzedTokenResponse'];
+export type VocabularySelection = components['schemas']['VocabularyKeyModel'];
 export type ProblemDetails = operations['getDocument']['responses'][404]['content']['application/problem+json'];
 
 function isProblemDetails(body: unknown): body is ProblemDetails {
@@ -44,6 +45,7 @@ export function createDocumentClient(fetcher: typeof fetch = globalThis.fetch) {
   }
 
   const documentPath = (id: string) => `/api/documents/${encodeURIComponent(id)}`;
+  const vocabularyPath = (id: string) => `${documentPath(id)}/vocabulary-selections`;
   return {
     list: () => request<Document[]>('/api/documents', 'GET'),
     create: (data: CreateDocument) => request<Document>('/api/documents', 'POST', data),
@@ -51,6 +53,12 @@ export function createDocumentClient(fetcher: typeof fetch = globalThis.fetch) {
     update: (id: string, data: UpdateDocument) => request<Document>(documentPath(id), 'PUT', data),
     delete: (id: string) => request<void>(documentPath(id), 'DELETE'),
     analyze: (id: string) => request<Analysis>(`${documentPath(id)}/analysis`, 'POST'),
+    listVocabularySelections: async (id: string) => (
+      await request<{ selections: VocabularySelection[] }>(vocabularyPath(id), 'GET')
+    ).selections,
+    replaceVocabularySelections: (id: string, selections: VocabularySelection[]) => (
+      request<void>(vocabularyPath(id), 'PUT', { selections })
+    ),
   };
 }
 

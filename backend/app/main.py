@@ -10,6 +10,8 @@ from backend.app.api.router import router
 from backend.app.documents.service import DocumentService
 from backend.app.persistence.memory.analyses import InMemoryAnalysisRepository
 from backend.app.persistence.memory.documents import InMemoryDocumentRepository
+from backend.app.persistence.memory.vocabulary import InMemoryVocabularySelectionRepository
+from backend.app.vocabulary.service import VocabularySelectionService
 
 
 @asynccontextmanager
@@ -21,16 +23,23 @@ async def lifespan(application: FastAPI):
             application.state.document_repository, InMemoryAnalysisRepository(),
             analyzer, FuriganaAligner(),
         )
+        application.state.vocabulary_service = VocabularySelectionService(
+            application.state.document_repository,
+            application.state.vocabulary_repository,
+            application.state.analysis_service,
+        )
         yield
     finally:
         analyzer.close()
         del application.state.morphological_analyzer
         del application.state.analysis_service
+        del application.state.vocabulary_service
 
 
 app = FastAPI(title="Japanese Reader", lifespan=lifespan)
 app.state.document_repository = InMemoryDocumentRepository()
 app.state.document_service = DocumentService(app.state.document_repository)
+app.state.vocabulary_repository = InMemoryVocabularySelectionRepository()
 install_error_handlers(app)
 app.include_router(router)
 

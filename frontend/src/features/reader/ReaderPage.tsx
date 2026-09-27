@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useDocumentClient, useRouter } from '../../app/providers';
 import type { Analysis, Document } from '../../shared/api/client';
+import {
+  decodeVocabularyKey,
+  encodeVocabularyKey,
+  orderedVocabularyEntries,
+  ReviewList,
+} from '../vocabulary/ReviewList';
 import { DocumentText } from './DocumentText';
 
 interface ReaderPageProps {
@@ -27,6 +33,9 @@ export function ReaderPage({ documentId }: ReaderPageProps) {
   const [snapshot, setSnapshot] = useState<ReaderSnapshot | null>(routedSnapshot);
   const [isLoading, setIsLoading] = useState(routedSnapshot === null);
   const [hasError, setHasError] = useState(false);
+  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(() => new Set());
+  const selectedKeysRef = useRef(selectedKeys);
+  const selectionWriteChainRef = useRef<Promise<void>>(Promise.resolve());
   const requestGeneration = useRef(0);
 
   const loadReader = useCallback(async (candidate: ReaderSnapshot | null) => {
@@ -36,7 +45,10 @@ export function ReaderPage({ documentId }: ReaderPageProps) {
     setIsLoading(candidate === null);
     setHasError(false);
     try {
-      const document = await client.get(documentId);
+      const [document, selections] = await Promise.all([
+        client.get(documentId),
+        client.listVocabularySelections(documentId),
+      ]);
       if (!ownsState()) return;
       const analysis = candidate?.analysis.documentRevision === document.revision
         ? candidate.analysis
@@ -45,6 +57,9 @@ export function ReaderPage({ documentId }: ReaderPageProps) {
       if (analysis.documentRevision !== document.revision) {
         throw new Error('Analysis revision does not match the document');
       }
+      const loadedKeys = new Set(selections.map(encodeVocabularyKey));
+      selectedKeysRef.current = loadedKeys;
+      setSelectedKeys(loadedKeys);
       setSnapshot({ document, analysis });
     } catch {
       if (ownsState()) setHasError(true);
@@ -59,6 +74,30 @@ export function ReaderPage({ documentId }: ReaderPageProps) {
       requestGeneration.current += 1;
     };
   }, [loadReader, routedSnapshot]);
+
+  const toggleVocabulary = useCallback((key: string) => {
+    const decoded = decodeVocabularyKey(key);
+    if (decoded === null) return;
+    const previous = selectedKeysRef.current;
+    const next = new Set(previous);
+    if (next.has(key)) next.delete(key);
+    else next.add(key);
+    selectedKeysRef.current = next;
+    setSelectedKeys(next);
+
+    const selections = [...next]
+      .map(decodeVocabularyKey)
+      .filter((entry): entry is NonNullable<typeof entry> => entry !== null);
+    const write = selectionWriteChainRef.current.then(() => (
+      client.replaceVocabularySelections(documentId, selections)
+    ));
+    selectionWriteChainRef.current = write.catch(() => undefined);
+    void write.catch(() => {
+      if (selectedKeysRef.current !== next) return;
+      selectedKeysRef.current = previous;
+      setSelectedKeys(previous);
+    });
+  }, [client, documentId]);
 
   if (isLoading) {
     return <p className="page-state" role="status">Preparando leitura…</p>;
@@ -95,7 +134,16 @@ export function ReaderPage({ documentId }: ReaderPageProps) {
           Editar documento
         </a>
       </header>
-      <DocumentText content={snapshot.document.content} analysis={snapshot.analysis} />
+      <DocumentText
+        content={snapshot.document.content}
+        analysis={snapshot.analysis}
+        selectedKeys={selectedKeys}
+        onToggleVocabulary={toggleVocabulary}
+      />
+      <ReviewList
+        entries={orderedVocabularyEntries(snapshot.analysis, selectedKeys)}
+        onRemove={toggleVocabulary}
+      />
     </article>
   );
 }

@@ -58,6 +58,26 @@ describe('document client', () => {
     });
   });
 
+  it('lists and replaces document vocabulary selections', async () => {
+    const selections = [{ lemma: '猫', reading: 'ねこ' }];
+    const fetcher = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ selections })))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+    const client = createDocumentClient(fetcher);
+
+    expect(await client.listVocabularySelections('doc/one')).toEqual(selections);
+    expect(await client.replaceVocabularySelections('doc/one', selections)).toBeUndefined();
+    expect(fetcher.mock.calls).toEqual([
+      ['/api/documents/doc%2Fone/vocabulary-selections', {
+        method: 'GET', headers: undefined, body: undefined,
+      }],
+      ['/api/documents/doc%2Fone/vocabulary-selections', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ selections }),
+      }],
+    ]);
+  });
+
   it('preserves Problem Details and HTTP status for callers', async () => {
     const problem = { type: 'about:blank', title: 'Not Found', status: 404, detail: 'Document missing' };
     const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify(problem), {

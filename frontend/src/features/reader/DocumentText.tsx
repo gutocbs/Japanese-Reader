@@ -5,9 +5,16 @@ import { Token } from './Token';
 interface DocumentTextProps {
   content: string;
   analysis: Analysis;
+  selectedKeys?: ReadonlySet<string>;
+  onToggleVocabulary?: (key: string) => void;
 }
 
-export function DocumentText({ content, analysis }: DocumentTextProps) {
+export function DocumentText({
+  content,
+  analysis,
+  selectedKeys = new Set(),
+  onToggleVocabulary,
+}: DocumentTextProps) {
   const codePoints = [...content];
   const rendered: ReactNode[] = [];
   let cursor = 0;
@@ -30,6 +37,8 @@ export function DocumentText({ content, analysis }: DocumentTextProps) {
         <Token
           key={`token:${blockIndex}:${tokenIndex}:${token.startOffset}`}
           token={token}
+          selected={token.vocabularyKey !== null && selectedKeys.has(token.vocabularyKey)}
+          onToggleVocabulary={onToggleVocabulary}
         />,
       );
       cursor = token.endOffset;
