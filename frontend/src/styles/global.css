@@ -1,0 +1,258 @@
+@import './tokens.css';
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--color-page);
+  color: var(--color-text);
+  font-family: var(--font-ui);
+  font-size: 100%;
+}
+
+body {
+  margin: 0;
+  min-width: 20rem;
+  min-height: 100vh;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+button,
+a {
+  touch-action: manipulation;
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 3px;
+}
+
+.skip-link {
+  position: fixed;
+  left: var(--space-4);
+  top: var(--space-4);
+  z-index: 10;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-surface);
+  color: var(--color-primary);
+  transform: translateY(-180%);
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
+.app-header {
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: min(calc(100% - 3rem), var(--content-width));
+  min-height: 4rem;
+  margin: 0 auto;
+  color: var(--color-text);
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.brand-mark {
+  width: 0.25rem;
+  height: 1.75rem;
+  background: var(--color-primary);
+}
+
+.app-main {
+  width: min(calc(100% - 3rem), var(--content-width));
+  margin: 0 auto;
+  padding: var(--space-12) 0 var(--space-16);
+}
+
+.editor-page,
+.reader-page {
+  border-left: 0.25rem solid var(--color-primary);
+  padding-left: var(--space-8);
+}
+
+.page-heading,
+.reader-heading {
+  margin-bottom: var(--space-8);
+}
+
+.page-heading h1,
+.reader-heading h1,
+.page-state h1 {
+  margin: var(--space-2) 0 var(--space-3);
+  font-family: var(--font-reader);
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.page-heading > p:last-child,
+.page-state > p {
+  max-width: 42rem;
+  color: var(--color-text-muted);
+  line-height: 1.65;
+}
+
+.eyebrow {
+  margin: 0;
+  color: var(--color-primary);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.editor-form {
+  display: grid;
+  gap: var(--space-6);
+  max-width: var(--reading-width);
+}
+
+.field {
+  display: grid;
+  gap: var(--space-2);
+  color: var(--color-text);
+  font-weight: 650;
+}
+
+.field input,
+.field textarea {
+  width: 100%;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-small);
+  background: var(--color-surface);
+  color: var(--color-text);
+  padding: var(--space-3) var(--space-4);
+  font-weight: 400;
+}
+
+.field textarea {
+  min-height: 20rem;
+  resize: vertical;
+  font-family: var(--font-reader);
+  font-size: 1.125rem;
+  line-height: 1.9;
+}
+
+.field input:disabled,
+.field textarea:disabled {
+  background: var(--color-surface-muted);
+  color: var(--color-text-muted);
+}
+
+.field-hint {
+  margin: calc(var(--space-4) * -1) 0 0;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.button {
+  min-height: 2.75rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-small);
+  padding: var(--space-3) var(--space-6);
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 160ms ease-out, color 160ms ease-out;
+}
+
+.button--primary {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.button--primary:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+}
+
+.button--secondary {
+  border-color: var(--color-primary);
+  background: transparent;
+  color: var(--color-primary);
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.error-message {
+  border-left: 0.25rem solid var(--color-error);
+  background: var(--color-error-surface);
+  color: var(--color-error);
+  padding: var(--space-4) var(--space-6);
+}
+
+.error-message p {
+  margin-top: 0;
+}
+
+.reader-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: var(--space-8);
+  max-width: var(--reading-width);
+}
+
+.text-link {
+  color: var(--color-primary);
+  font-weight: 700;
+  text-underline-offset: 0.2em;
+}
+
+.document-text {
+  max-width: var(--reading-width);
+  font-family: var(--font-reader);
+  font-size: clamp(1.25rem, 2.3vw, 1.55rem);
+  line-height: 2.35;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+.document-text ruby {
+  ruby-position: over;
+}
+
+.document-text rt {
+  color: var(--color-text-muted);
+  font-family: var(--font-ui);
+  font-size: 0.5em;
+  line-height: 1;
+}
+
+.page-state {
+  max-width: var(--reading-width);
+  padding: var(--space-8);
+  border-left: 0.25rem solid var(--color-primary);
+  background: var(--color-surface);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -31,6 +31,33 @@ describe('document client', () => {
     expect(JSON.parse(fetcher.mock.calls[3][1]!.body as string)).toEqual({ title: 'new' });
   });
 
+  it('requests analysis for the encoded document resource', async () => {
+    const analysis = {
+      documentId: document.id,
+      documentRevision: 1,
+      contentHash: 'hash',
+      metadata: {
+        analyzerName: 'SudachiPy', analyzerVersion: '0.6.11',
+        dictionaryName: 'SudachiDict-core', dictionaryVersion: '20250825', splitMode: 'B',
+      },
+      analysisOptions: { splitMode: 'B' },
+      blocks: [],
+      diagnostics: [],
+    };
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(JSON.stringify(analysis)),
+    );
+
+    const result = await createDocumentClient(fetcher).analyze('doc/with slash');
+
+    expect(result).toEqual(analysis);
+    expect(fetcher).toHaveBeenCalledWith('/api/documents/doc%2Fwith%20slash/analysis', {
+      method: 'POST',
+      headers: undefined,
+      body: undefined,
+    });
+  });
+
   it('preserves Problem Details and HTTP status for callers', async () => {
     const problem = { type: 'about:blank', title: 'Not Found', status: 404, detail: 'Document missing' };
     const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify(problem), {

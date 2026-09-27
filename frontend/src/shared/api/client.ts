@@ -3,6 +3,9 @@ import type { components, operations } from './generated';
 export type Document = components['schemas']['DocumentResponse'];
 export type CreateDocument = components['schemas']['CreateDocumentRequest'];
 export type UpdateDocument = components['schemas']['UpdateDocumentRequest'];
+export type Analysis = components['schemas']['DocumentAnalysisResponse'];
+export type AnalysisBlock = components['schemas']['AnalysisBlockResponse'];
+export type AnalyzedToken = components['schemas']['AnalyzedTokenResponse'];
 export type ProblemDetails = operations['getDocument']['responses'][404]['content']['application/problem+json'];
 
 function isProblemDetails(body: unknown): body is ProblemDetails {
@@ -47,7 +50,9 @@ export function createDocumentClient(fetcher: typeof fetch = globalThis.fetch) {
     get: (id: string) => request<Document>(documentPath(id), 'GET'),
     update: (id: string, data: UpdateDocument) => request<Document>(documentPath(id), 'PUT', data),
     delete: (id: string) => request<void>(documentPath(id), 'DELETE'),
+    analyze: (id: string) => request<Analysis>(`${documentPath(id)}/analysis`, 'POST'),
   };
 }
 
+export type DocumentClient = ReturnType<typeof createDocumentClient>;
 export const documentClient = createDocumentClient();
