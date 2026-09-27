@@ -1,3 +1,4 @@
+import { StrictMode } from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Analysis, Document, DocumentClient } from '../shared/api/client';
@@ -33,6 +34,30 @@ const analysis: Analysis = {
     }],
   }],
   diagnostics: [],
+};
+
+const revisedDocument: Document = {
+  ...document,
+  title: '雪国 改訂版',
+  content: '雪国へ戻った。',
+  revision: 2,
+  updatedAt: '2026-09-27T00:00:00Z',
+};
+
+const revisedAnalysis: Analysis = {
+  ...analysis,
+  documentRevision: 2,
+  contentHash: 'revised-hash',
+  blocks: [{
+    startOffset: 0,
+    endOffset: 2,
+    tokens: [{
+      startOffset: 0, endOffset: 2, surface: '雪国', lemma: '雪国', reading: 'ゆきぐに',
+      dictionaryReading: 'ゆきぐに', partOfSpeech: ['名詞', '普通名詞', '一般', '*', '*', '*'],
+      isOutOfVocabulary: false, isLexical: true, vocabularyKey: '雪国\u0000ゆきぐに',
+      furiganaSegments: [{ text: '雪国', reading: 'ゆきぐに' }],
+    }],
+  }],
 };
 
 function deferred<T>() {
@@ -119,28 +144,6 @@ describe('reader routes', () => {
   });
 
   it('revalidates an older reader history entry before keeping its snapshot', async () => {
-    const revisedDocument: Document = {
-      ...document,
-      title: '雪国 改訂版',
-      content: '雪国へ戻った。',
-      revision: 2,
-      updatedAt: '2026-09-27T00:00:00Z',
-    };
-    const revisedAnalysis: Analysis = {
-      ...analysis,
-      documentRevision: 2,
-      contentHash: 'revised-hash',
-      blocks: [{
-        startOffset: 0,
-        endOffset: 2,
-        tokens: [{
-          startOffset: 0, endOffset: 2, surface: '雪国', lemma: '雪国', reading: 'ゆきぐに',
-          dictionaryReading: 'ゆきぐに', partOfSpeech: ['名詞', '普通名詞', '一般', '*', '*', '*'],
-          isOutOfVocabulary: false, isLexical: true, vocabularyKey: '雪国\u0000ゆきぐに',
-          furiganaSegments: [{ text: '雪国', reading: 'ゆきぐに' }],
-        }],
-      }],
-    };
     let currentDocument = document;
     const api = client({
       get: vi.fn().mockImplementation(async () => currentDocument),
@@ -182,6 +185,72 @@ describe('reader routes', () => {
     })).toBeInTheDocument();
     expect(window.location.pathname).toBe(`/documents/${document.id}/read`);
     expect(screen.getByText('ゆきぐに').parentElement?.tagName).toBe('RUBY');
+  });
+
+  it('ignores an older StrictMode success after a newer reader request wins', async () => {
+    const staleDocument = deferred<Document>();
+    const api = client({
+      get: vi.fn()
+        .mockReturnValueOnce(staleDocument.promise)
+        .mockResolvedValue(revisedDocument),
+      analyze: vi.fn()
+        .mockResolvedValueOnce(revisedAnalysis)
+        .mockResolvedValue(analysis),
+    });
+    render(
+      <StrictMode>
+        <App client={api} initialPath={`/documents/${document.id}/read`} />
+      </StrictMode>,
+    );
+
+    expect(await screen.findByRole('heading', {
+      name: revisedDocument.title,
+      level: 1,
+    })).toBeInTheDocument();
+
+    await act(async () => {
+      staleDocument.resolve(document);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(screen.getByRole('heading', {
+      name: revisedDocument.title,
+      level: 1,
+    })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: document.title, level: 1 })).not.toBeInTheDocument();
+    expect(screen.getByText('ゆきぐに').parentElement?.tagName).toBe('RUBY');
+  });
+
+  it('ignores an older StrictMode failure after a newer reader request wins', async () => {
+    const staleDocument = deferred<Document>();
+    const api = client({
+      get: vi.fn()
+        .mockReturnValueOnce(staleDocument.promise)
+        .mockResolvedValue(revisedDocument),
+      analyze: vi.fn().mockResolvedValue(revisedAnalysis),
+    });
+    render(
+      <StrictMode>
+        <App client={api} initialPath={`/documents/${document.id}/read`} />
+      </StrictMode>,
+    );
+
+    expect(await screen.findByRole('heading', {
+      name: revisedDocument.title,
+      level: 1,
+    })).toBeInTheDocument();
+
+    await act(async () => {
+      staleDocument.reject(new Error('stale request failed'));
+      await Promise.resolve();
+    });
+
+    expect(screen.getByRole('heading', {
+      name: revisedDocument.title,
+      level: 1,
+    })).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
   it('disables analysis for empty content and explains how to continue', () => {

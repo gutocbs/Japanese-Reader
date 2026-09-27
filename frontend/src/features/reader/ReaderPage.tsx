@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useDocumentClient, useRouter } from '../../app/providers';
 import type { Analysis, Document } from '../../shared/api/client';
 import { DocumentText } from './DocumentText';
@@ -27,29 +27,37 @@ export function ReaderPage({ documentId }: ReaderPageProps) {
   const [snapshot, setSnapshot] = useState<ReaderSnapshot | null>(routedSnapshot);
   const [isLoading, setIsLoading] = useState(routedSnapshot === null);
   const [hasError, setHasError] = useState(false);
+  const requestGeneration = useRef(0);
 
   const loadReader = useCallback(async (candidate: ReaderSnapshot | null) => {
+    const generation = ++requestGeneration.current;
+    const ownsState = () => requestGeneration.current === generation;
     if (candidate !== null) setSnapshot(candidate);
     setIsLoading(candidate === null);
     setHasError(false);
     try {
       const document = await client.get(documentId);
+      if (!ownsState()) return;
       const analysis = candidate?.analysis.documentRevision === document.revision
         ? candidate.analysis
         : await client.analyze(documentId);
+      if (!ownsState()) return;
       if (analysis.documentRevision !== document.revision) {
         throw new Error('Analysis revision does not match the document');
       }
       setSnapshot({ document, analysis });
     } catch {
-      setHasError(true);
+      if (ownsState()) setHasError(true);
     } finally {
-      setIsLoading(false);
+      if (ownsState()) setIsLoading(false);
     }
   }, [client, documentId]);
 
   useEffect(() => {
     void loadReader(routedSnapshot);
+    return () => {
+      requestGeneration.current += 1;
+    };
   }, [loadReader, routedSnapshot]);
 
   if (isLoading) {
