@@ -1,0 +1,22 @@
+[project]
+name = "japanese-reader"
+version = "0.1.0"
+description = "Local Japanese reading and study application"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "fastapi>=0.115,<1.0",
+    "uvicorn[standard]>=0.34,<1.0",
+    "pydantic>=2.10,<3.0",
+    "SudachiPy==0.6.11",
+    "SudachiDict-core==20250825",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3,<10.0",
+    "httpx>=0.28,<1.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["backend/tests"]
+pythonpath = ["."]
