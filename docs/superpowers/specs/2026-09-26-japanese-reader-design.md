@@ -1,7 +1,7 @@
 # Especificação do leitor local de japonês
 
 **Data:** 2026-09-26  
-**Status:** proposta consolidada para revisão  
+**Status:** aprovado para planejamento
 **Escopo:** arquitetura, experiência, contratos e unidades de trabalho do MVP
 
 ## 1. Finalidade deste documento
@@ -236,6 +236,7 @@ type Token = {
   surface: string;
   lemma: string;
   reading: string | null;
+  dictionaryReading: string | null;
   partOfSpeech: string[];
   isOutOfVocabulary: boolean;
   isLexical: boolean;
@@ -260,10 +261,10 @@ Somente segmentos com leitura serão renderizados com `ruby` e `rt`.
 Identidade normalizada baseada em:
 
 ```text
-lemma + reading
+lemma + dictionaryReading
 ```
 
-A classe gramatical poderá ser mantida como informação auxiliar, mas não fará parte da chave inicial. Leituras diferentes não serão agrupadas. Identificadores internos do dicionário Sudachi não serão usados como identidade persistente.
+`reading` representa a leitura da ocorrência e é usada no furigana. `dictionaryReading` representa a leitura da forma de dicionário e é usada na chave para que formas como `食べる`, `食べた` e `食べます` possam convergir. Quando o analisador não fornecer `dictionaryReading`, a chave usa `reading` como fallback explícito. A classe gramatical poderá ser mantida como informação auxiliar, mas não fará parte da chave inicial. Leituras de dicionário diferentes não serão agrupadas. Identificadores internos do dicionário Sudachi não serão usados como identidade persistente.
 
 ### 8.7 VocabularySelection
 
@@ -332,8 +333,8 @@ DocumentAnalysis estruturada
 Responsabilidades:
 
 1. `MorphologicalAnalyzer` encapsula o Sudachi;
-2. leituras katakana do analisador são normalizadas para hiragana no modelo da aplicação;
-3. tokens lexicais recebem `VocabularyKey`;
+2. leituras da ocorrência e da forma de dicionário são normalizadas de katakana para hiragana no modelo da aplicação;
+3. tokens lexicais recebem `VocabularyKey` a partir de lemma e `dictionaryReading`, com fallback documentado para `reading`;
 4. `ReadingOverrideResolver` escolhe a leitura efetiva;
 5. `FuriganaAligner` produz segmentos renderizáveis;
 6. a análise mantém offsets absolutos.
