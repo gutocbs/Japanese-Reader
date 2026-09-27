@@ -96,6 +96,7 @@ export function ReviewList({ entries, onRemove }: ReviewListProps) {
               <button
                 className="review-list__remove"
                 type="button"
+                aria-label={`Remover ${entry.lemma}（${entry.reading ?? 'sem leitura'}）`}
                 onClick={() => onRemove(entry.key)}
               >
                 Remover {entry.lemma}

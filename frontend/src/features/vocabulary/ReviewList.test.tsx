@@ -97,11 +97,11 @@ describe('ReviewList', () => {
     }
 
     render(<ReviewHarness />);
-    expect(screen.getAllByRole('button', { name: '犬' })).toHaveLength(2);
-    fireEvent.click(screen.getByRole('button', { name: 'Remover 犬' }));
+    expect(screen.getAllByRole('button', { name: '犬（いぬ）' })).toHaveLength(2);
+    fireEvent.click(screen.getByRole('button', { name: 'Remover 犬（いぬ）' }));
 
-    expect(screen.queryByRole('button', { name: 'Remover 犬' })).not.toBeInTheDocument();
-    screen.getAllByRole('button', { name: '犬' }).forEach((token) => {
+    expect(screen.queryByRole('button', { name: 'Remover 犬（いぬ）' })).not.toBeInTheDocument();
+    screen.getAllByRole('button', { name: '犬（いぬ）' }).forEach((token) => {
       expect(token).toHaveAttribute('aria-pressed', 'false');
     });
   });

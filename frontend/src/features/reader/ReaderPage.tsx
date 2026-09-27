@@ -33,9 +33,13 @@ export function ReaderPage({ documentId }: ReaderPageProps) {
   const [snapshot, setSnapshot] = useState<ReaderSnapshot | null>(routedSnapshot);
   const [isLoading, setIsLoading] = useState(routedSnapshot === null);
   const [hasError, setHasError] = useState(false);
+  const [areSelectionsHydrated, setAreSelectionsHydrated] = useState(false);
+  const [persistenceError, setPersistenceError] = useState('');
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(() => new Set());
   const selectedKeysRef = useRef(selectedKeys);
+  const desiredSelectionKeysRef = useRef(selectedKeys);
   const selectionWriteChainRef = useRef<Promise<void>>(Promise.resolve());
+  const selectionIntentVersionRef = useRef(0);
   const requestGeneration = useRef(0);
 
   const loadReader = useCallback(async (candidate: ReaderSnapshot | null) => {
@@ -44,6 +48,8 @@ export function ReaderPage({ documentId }: ReaderPageProps) {
     if (candidate !== null) setSnapshot(candidate);
     setIsLoading(candidate === null);
     setHasError(false);
+    setAreSelectionsHydrated(false);
+    setPersistenceError('');
     try {
       const [document, selections] = await Promise.all([
         client.get(documentId),
@@ -59,8 +65,10 @@ export function ReaderPage({ documentId }: ReaderPageProps) {
       }
       const loadedKeys = new Set(selections.map(encodeVocabularyKey));
       selectedKeysRef.current = loadedKeys;
+      desiredSelectionKeysRef.current = loadedKeys;
       setSelectedKeys(loadedKeys);
       setSnapshot({ document, analysis });
+      setAreSelectionsHydrated(true);
     } catch {
       if (ownsState()) setHasError(true);
     } finally {
@@ -76,28 +84,43 @@ export function ReaderPage({ documentId }: ReaderPageProps) {
   }, [loadReader, routedSnapshot]);
 
   const toggleVocabulary = useCallback((key: string) => {
+    if (!areSelectionsHydrated) return;
     const decoded = decodeVocabularyKey(key);
     if (decoded === null) return;
-    const previous = selectedKeysRef.current;
-    const next = new Set(previous);
+    const next = new Set(desiredSelectionKeysRef.current);
     if (next.has(key)) next.delete(key);
     else next.add(key);
-    selectedKeysRef.current = next;
-    setSelectedKeys(next);
+    desiredSelectionKeysRef.current = next;
+    setPersistenceError('');
+    const intentVersion = ++selectionIntentVersionRef.current;
 
     const selections = [...next]
       .map(decodeVocabularyKey)
       .filter((entry): entry is NonNullable<typeof entry> => entry !== null);
-    const write = selectionWriteChainRef.current.then(() => (
-      client.replaceVocabularySelections(documentId, selections)
-    ));
-    selectionWriteChainRef.current = write.catch(() => undefined);
-    void write.catch(() => {
-      if (selectedKeysRef.current !== next) return;
-      selectedKeysRef.current = previous;
-      setSelectedKeys(previous);
+    const write = selectionWriteChainRef.current.then(async () => {
+      try {
+        await client.replaceVocabularySelections(documentId, selections);
+        selectedKeysRef.current = next;
+        setSelectedKeys(next);
+      } catch {
+        try {
+          const serverSelections = await client.listVocabularySelections(documentId);
+          const confirmedKeys = new Set(serverSelections.map(encodeVocabularyKey));
+          selectedKeysRef.current = confirmedKeys;
+          setSelectedKeys(confirmedKeys);
+          if (selectionIntentVersionRef.current === intentVersion) {
+            desiredSelectionKeysRef.current = confirmedKeys;
+          }
+        } catch {
+          if (selectionIntentVersionRef.current === intentVersion) {
+            desiredSelectionKeysRef.current = selectedKeysRef.current;
+          }
+        }
+        setPersistenceError('Não foi possível salvar as marcações.');
+      }
     });
-  }, [client, documentId]);
+    selectionWriteChainRef.current = write;
+  }, [areSelectionsHydrated, client, documentId]);
 
   if (isLoading) {
     return <p className="page-state" role="status">Preparando leitura…</p>;
@@ -138,11 +161,16 @@ export function ReaderPage({ documentId }: ReaderPageProps) {
         content={snapshot.document.content}
         analysis={snapshot.analysis}
         selectedKeys={selectedKeys}
-        onToggleVocabulary={toggleVocabulary}
+        onToggleVocabulary={areSelectionsHydrated ? toggleVocabulary : undefined}
       />
+      {persistenceError && (
+        <p className="reader-persistence-status" role="status" aria-live="polite" aria-atomic="true">
+          {persistenceError}
+        </p>
+      )}
       <ReviewList
         entries={orderedVocabularyEntries(snapshot.analysis, selectedKeys)}
-        onRemove={toggleVocabulary}
+        onRemove={areSelectionsHydrated ? toggleVocabulary : () => undefined}
       />
     </article>
   );

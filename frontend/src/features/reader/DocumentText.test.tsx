@@ -139,16 +139,17 @@ describe('DocumentText', () => {
     }
 
     render(<SelectionHarness />);
-    const occurrences = screen.getAllByRole('button', { name: '生' });
+    const firstReadingOccurrences = screen.getAllByRole('button', { name: '生（せい）' });
+    const secondReadingOccurrence = screen.getByRole('button', { name: '生（しょう）' });
 
-    fireEvent.click(occurrences[0]);
-    expect(occurrences[0]).toHaveAttribute('aria-pressed', 'true');
-    expect(occurrences[1]).toHaveAttribute('aria-pressed', 'true');
-    expect(occurrences[2]).toHaveAttribute('aria-pressed', 'false');
+    fireEvent.click(firstReadingOccurrences[0]);
+    expect(firstReadingOccurrences[0]).toHaveAttribute('aria-pressed', 'true');
+    expect(firstReadingOccurrences[1]).toHaveAttribute('aria-pressed', 'true');
+    expect(secondReadingOccurrence).toHaveAttribute('aria-pressed', 'false');
 
-    fireEvent.click(occurrences[1]);
-    expect(occurrences[0]).toHaveAttribute('aria-pressed', 'false');
-    expect(occurrences[1]).toHaveAttribute('aria-pressed', 'false');
-    expect(occurrences[2]).toHaveAttribute('aria-pressed', 'false');
+    fireEvent.click(firstReadingOccurrences[1]);
+    expect(firstReadingOccurrences[0]).toHaveAttribute('aria-pressed', 'false');
+    expect(firstReadingOccurrences[1]).toHaveAttribute('aria-pressed', 'false');
+    expect(secondReadingOccurrence).toHaveAttribute('aria-pressed', 'false');
   });
 });

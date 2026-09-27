@@ -9,6 +9,7 @@ interface TokenProps {
 
 export function Token({ token, selected = false, onToggleVocabulary }: TokenProps) {
   const isInteractive = token.vocabularyKey !== null && onToggleVocabulary !== undefined;
+  const accessibleReading = token.dictionaryReading ?? token.reading ?? 'sem leitura';
   const toggle = () => {
     if (token.vocabularyKey !== null) onToggleVocabulary?.(token.vocabularyKey);
   };
@@ -19,7 +20,7 @@ export function Token({ token, selected = false, onToggleVocabulary }: TokenProp
       data-selected={selected || undefined}
       role={isInteractive ? 'button' : undefined}
       tabIndex={isInteractive ? 0 : undefined}
-      aria-label={isInteractive ? token.surface : undefined}
+      aria-label={isInteractive ? `${token.surface}（${accessibleReading}）` : undefined}
       aria-pressed={isInteractive ? selected : undefined}
       onClick={isInteractive ? toggle : undefined}
       onKeyDown={isInteractive ? (event) => {

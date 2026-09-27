@@ -262,7 +262,7 @@ describe('reader routes', () => {
       .mockResolvedValue(undefined);
     const api = client({ replaceVocabularySelections });
     render(<App client={api} initialPath={`/documents/${document.id}/read`} />);
-    const token = await screen.findByRole('button', { name: '国境' });
+    const token = await screen.findByRole('button', { name: '国境（こっきょう）' });
 
     fireEvent.click(token);
     fireEvent.click(token);
@@ -275,6 +275,75 @@ describe('reader routes', () => {
     await act(async () => firstWrite.resolve());
     await waitFor(() => expect(replaceVocabularySelections).toHaveBeenCalledTimes(2));
     expect(replaceVocabularySelections).toHaveBeenNthCalledWith(2, document.id, []);
+  });
+
+  it('does not expose a routed snapshot for vocabulary changes before selections hydrate', async () => {
+    const pendingSelections = deferred<{ lemma: string; reading: string | null }[]>();
+    const replaceVocabularySelections = vi.fn().mockResolvedValue(undefined);
+    const api = client({
+      listVocabularySelections: vi.fn().mockReturnValue(pendingSelections.promise),
+      replaceVocabularySelections,
+    });
+    window.history.replaceState({ document, analysis }, '', `/documents/${document.id}/read`);
+
+    render(<App client={api} />);
+
+    const tokenText = await screen.findByText('国境');
+    fireEvent.click(tokenText);
+    expect(screen.queryByRole('button', { name: '国境（こっきょう）' })).not.toBeInTheDocument();
+    expect(replaceVocabularySelections).not.toHaveBeenCalled();
+
+    await act(async () => pendingSelections.resolve([{ lemma: '国境', reading: 'こっきょう' }]));
+
+    expect(await screen.findByRole('button', { name: '国境（こっきょう）' }))
+      .toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('reconciles with the server when the first queued selection write fails', async () => {
+    const firstWrite = deferred<void>();
+    const listVocabularySelections = vi.fn()
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
+    const replaceVocabularySelections = vi.fn()
+      .mockReturnValueOnce(firstWrite.promise)
+      .mockResolvedValue(undefined);
+    const api = client({ listVocabularySelections, replaceVocabularySelections });
+    render(<App client={api} initialPath={`/documents/${document.id}/read`} />);
+    const token = await screen.findByRole('button', { name: '国境（こっきょう）' });
+
+    fireEvent.click(token);
+    fireEvent.click(token);
+    await waitFor(() => expect(replaceVocabularySelections).toHaveBeenCalledTimes(1));
+    await act(async () => firstWrite.reject(new Error('network unavailable')));
+
+    await waitFor(() => expect(replaceVocabularySelections).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(listVocabularySelections).toHaveBeenCalledTimes(2));
+    expect(screen.getByRole('button', { name: '国境（こっきょう）' }))
+      .toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByText('Não foi possível salvar as marcações.')).toHaveAttribute('role', 'status');
+  });
+
+  it('restores the confirmed server selections when the last queued write fails', async () => {
+    const secondWrite = deferred<void>();
+    const listVocabularySelections = vi.fn()
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ lemma: '国境', reading: 'こっきょう' }]);
+    const replaceVocabularySelections = vi.fn()
+      .mockResolvedValueOnce(undefined)
+      .mockReturnValueOnce(secondWrite.promise);
+    const api = client({ listVocabularySelections, replaceVocabularySelections });
+    render(<App client={api} initialPath={`/documents/${document.id}/read`} />);
+    const token = await screen.findByRole('button', { name: '国境（こっきょう）' });
+
+    fireEvent.click(token);
+    fireEvent.click(token);
+    await waitFor(() => expect(replaceVocabularySelections).toHaveBeenCalledTimes(2));
+    await act(async () => secondWrite.reject(new Error('network unavailable')));
+
+    await waitFor(() => expect(listVocabularySelections).toHaveBeenCalledTimes(2));
+    expect(screen.getByRole('button', { name: '国境（こっきょう）' }))
+      .toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByText('Não foi possível salvar as marcações.')).toHaveAttribute('role', 'status');
   });
 
   it('disables analysis for empty content and explains how to continue', () => {
