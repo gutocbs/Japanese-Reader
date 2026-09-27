@@ -350,8 +350,9 @@ O alinhador será conservador:
 - em kanji com okurigana, kana coincidente serve como âncora;
 - katakana pode ser normalizado para comparação sem alterar a superfície;
 - quando mais de um alinhamento for plausível, não será inventada uma precisão falsa;
-- quando necessário, a leitura será aplicada à unidade lexical completa;
-- quando nem isso for confiável, a superfície será preservada sem furigana e o caso será diagnosticado.
+- quando o alinhamento parcial não puder ser determinado com confiança, a leitura será aplicada à unidade lexical completa;
+- sempre que um token contiver kanji e possuir uma leitura, o furigana deverá ser exibido, mesmo que o fallback não o posicione perfeitamente sobre cada kanji;
+- somente tokens sem leitura disponível serão preservados sem furigana, com o caso registrado para diagnóstico.
 
 Exemplo:
 
@@ -363,7 +364,7 @@ reading: たべた
 べた -> sem furigana
 ```
 
-Perfeita desambiguação contextual não é meta do MVP. Casos incorretos poderão ser corrigidos manualmente.
+Perfeita desambiguação contextual e alinhamento visual por kanji não são metas do MVP. A presença da leitura tem prioridade sobre seu alinhamento preciso. Casos incorretos poderão ser corrigidos manualmente.
 
 ## 12. Contratos HTTP
 
@@ -555,7 +556,7 @@ As otimizações possíveis incluem processamento em blocos, cache, análise ass
 - documento vazio: processamento desabilitado com instrução próxima ao campo;
 - falha do Sudachi: mensagem recuperável sem perda do texto;
 - token sem leitura: superfície preservada, sem furigana inventado;
-- alinhamento incerto: fallback conservador e diagnóstico;
+- alinhamento incerto com leitura disponível: ruby aplicado à palavra inteira e diagnóstico registrado;
 - análise obsoleta: tokens antigos não serão misturados com conteúdo novo;
 - edição de conteúdo: confirmação sobre remoção de overrides;
 - documento ausente: caminho claro de volta à biblioteca;
@@ -591,7 +592,7 @@ As otimizações possíveis incluem processamento em blocos, cache, análise ass
 - comparação normalizada de katakana;
 - leituras irregulares;
 - ambiguidades;
-- fallback conservador;
+- fallback com leitura sobre a unidade lexical completa;
 - preservação exata da superfície.
 
 `VocabularyKey`:
@@ -654,9 +655,9 @@ Não será perseguida uma porcentagem artificial de cobertura.
 
 ### 20.1 Alinhamento de furigana
 
-O Sudachi fornece a leitura da unidade, não o alinhamento exato entre cada kanji e cada mora. Nomes, ateji, jukujikun e leituras irregulares podem ser ambíguos.
+O Sudachi fornece a leitura da unidade, não o alinhamento exato entre cada kanji e cada mora. Nomes, ateji, jukujikun e leituras irregulares podem ser ambíguos. Nesses casos, o furigana poderá aparecer sobre a palavra inteira em vez de ficar perfeitamente alinhado a cada kanji.
 
-**Mitigação:** alinhamento conservador, fallback, testes isolados e override manual.
+**Mitigação:** alinhamento parcial quando confiável, fallback obrigatório sobre a unidade lexical completa quando houver leitura, testes isolados e override manual.
 
 ### 20.2 Mudanças do dicionário
 
@@ -743,7 +744,7 @@ texto -> documento em memória -> Sudachi -> JSON -> React -> ruby
 - versões do analisador/dicionário;
 - validação do Split Mode B.
 
-**Aceite:** casos aprovados passam sem alteração da superfície ou precisão inventada.
+**Aceite:** casos aprovados passam sem alteração da superfície; quando o alinhamento parcial não for confiável, tokens com kanji e leitura continuam exibindo furigana sobre a unidade lexical completa.
 
 ### Unidade 3 — Seleção e fila de revisão
 
@@ -975,4 +976,3 @@ Nenhuma abstração de Anki ou TTS será criada no código do MVP antes de essa 
 - FastAPI Dependencies: <https://fastapi.tiangolo.com/tutorial/dependencies/>
 - Vite production build: <https://vite.dev/guide/build>
 - SQLite isolation: <https://www.sqlite.org/isolation.html>
-
