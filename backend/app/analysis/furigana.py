@@ -9,6 +9,12 @@ class FuriganaSegment:
     reading: str | None
 
 
+@dataclass(frozen=True)
+class FuriganaAlignment:
+    segments: tuple[FuriganaSegment, ...]
+    used_fallback: bool = False
+
+
 def _is_kanji(char: str) -> bool:
     return char in "々〇〆" or name(char, "").startswith(
         ("CJK UNIFIED IDEOGRAPH-", "CJK COMPATIBILITY IDEOGRAPH-")
@@ -27,11 +33,14 @@ def _kana_anchor(text: str) -> str | None:
 
 class FuriganaAligner:
     def align(self, surface: str, reading: str | None) -> tuple[FuriganaSegment, ...]:
+        return self.align_with_diagnostics(surface, reading).segments
+
+    def align_with_diagnostics(self, surface: str, reading: str | None) -> FuriganaAlignment:
         """Align normalized hiragana reading, accepting only unambiguous kana anchors."""
         if not reading or not any(_is_kanji(char) for char in surface):
-            return (FuriganaSegment(surface, None),)
+            return FuriganaAlignment((FuriganaSegment(surface, None),))
 
-        fallback = (FuriganaSegment(surface, reading),)
+        fallback = FuriganaAlignment((FuriganaSegment(surface, reading),), used_fallback=True)
         runs = [(kanji, "".join(chars)) for kanji, chars in groupby(surface, _is_kanji)]
         anchors = [None if kanji else _kana_anchor(text) for kanji, text in runs]
         if any(not kanji and anchor is None for (kanji, _), anchor in zip(runs, anchors)):
@@ -66,4 +75,4 @@ class FuriganaAligner:
             segments.append(FuriganaSegment(text, reading[cursor:end]))
             cursor = end
 
-        return tuple(segments) if cursor == len(reading) else fallback
+        return FuriganaAlignment(tuple(segments)) if cursor == len(reading) else fallback

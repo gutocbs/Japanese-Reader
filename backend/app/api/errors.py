@@ -6,6 +6,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from starlette.exceptions import HTTPException
 
+from backend.app.analysis.service import EmptyDocumentError, StaleDocumentRevisionError
 from backend.app.documents.service import DocumentNotFoundError
 
 
@@ -28,6 +29,14 @@ def problem_response(status: int, detail: str) -> ProblemResponse:
 
 
 def install_error_handlers(app: FastAPI) -> None:
+    @app.exception_handler(EmptyDocumentError)
+    async def empty_document(request: Request, error: EmptyDocumentError):
+        return problem_response(422, str(error))
+
+    @app.exception_handler(StaleDocumentRevisionError)
+    async def stale_revision(request: Request, error: StaleDocumentRevisionError):
+        return problem_response(409, str(error))
+
     @app.exception_handler(DocumentNotFoundError)
     async def document_not_found(request: Request, error: DocumentNotFoundError):
         return problem_response(404, str(error))

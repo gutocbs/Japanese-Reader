@@ -41,6 +41,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/documents/{document_id}/analysis": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Analyze Document */
+        post: operations["analyzeDocument"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/health": {
         parameters: {
             query?: never;
@@ -62,12 +79,94 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AnalysisBlockResponse */
+        AnalysisBlockResponse: {
+            /** Startoffset */
+            startOffset: number;
+            /** Endoffset */
+            endOffset: number;
+            /** Tokens */
+            tokens: components["schemas"]["AnalyzedTokenResponse"][];
+        };
+        /** AnalysisDiagnosticResponse */
+        AnalysisDiagnosticResponse: {
+            /**
+             * Code
+             * @enum {string}
+             */
+            code: "missing_reading" | "furigana_fallback";
+            /** Startoffset */
+            startOffset: number;
+            /** Endoffset */
+            endOffset: number;
+        };
+        /** AnalysisOptionsResponse */
+        AnalysisOptionsResponse: {
+            /** Splitmode */
+            splitMode: string;
+        };
+        /** AnalyzedTokenResponse */
+        AnalyzedTokenResponse: {
+            /** Startoffset */
+            startOffset: number;
+            /** Endoffset */
+            endOffset: number;
+            /** Surface */
+            surface: string;
+            /** Lemma */
+            lemma: string;
+            /** Reading */
+            reading: string | null;
+            /** Dictionaryreading */
+            dictionaryReading: string | null;
+            /** Partofspeech */
+            partOfSpeech: string[];
+            /** Isoutofvocabulary */
+            isOutOfVocabulary: boolean;
+            /** Islexical */
+            isLexical: boolean;
+            /** Vocabularykey */
+            vocabularyKey: string | null;
+            /** Furiganasegments */
+            furiganaSegments: components["schemas"]["FuriganaSegmentResponse"][];
+        };
+        /** AnalyzerMetadataResponse */
+        AnalyzerMetadataResponse: {
+            /** Analyzername */
+            analyzerName: string;
+            /** Analyzerversion */
+            analyzerVersion: string;
+            /** Dictionaryname */
+            dictionaryName: string;
+            /** Dictionaryversion */
+            dictionaryVersion: string;
+            /** Splitmode */
+            splitMode: string;
+        };
         /** CreateDocumentRequest */
         CreateDocumentRequest: {
             /** Title */
             title: string;
             /** Content */
             content: string;
+        };
+        /** DocumentAnalysisResponse */
+        DocumentAnalysisResponse: {
+            /**
+             * Documentid
+             * Format: uuid
+             */
+            documentId: string;
+            /** Documentrevision */
+            documentRevision: number;
+            /** Contenthash */
+            contentHash: string;
+            metadata: components["schemas"]["AnalyzerMetadataResponse"];
+            analysisOptions: components["schemas"]["AnalysisOptionsResponse"];
+            /** Blocks */
+            blocks: components["schemas"]["AnalysisBlockResponse"][];
+            /** Diagnostics */
+            diagnostics: components["schemas"]["AnalysisDiagnosticResponse"][];
         };
         /** DocumentResponse */
         DocumentResponse: {
@@ -94,6 +193,13 @@ export interface components {
             updatedAt: string;
             /** Lastreadat */
             lastReadAt: string | null;
+        };
+        /** FuriganaSegmentResponse */
+        FuriganaSegmentResponse: {
+            /** Text */
+            text: string;
+            /** Reading */
+            reading: string | null;
         };
         /** UpdateDocumentRequest */
         UpdateDocumentRequest: {
@@ -367,6 +473,82 @@ export interface operations {
             };
             /** @description Not Found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        /** Type */
+                        type: string;
+                        /** Title */
+                        title: string;
+                        /** Status */
+                        status: number;
+                        /** Detail */
+                        detail: string;
+                    };
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        /** Type */
+                        type: string;
+                        /** Title */
+                        title: string;
+                        /** Status */
+                        status: number;
+                        /** Detail */
+                        detail: string;
+                    };
+                };
+            };
+        };
+    };
+    analyzeDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentAnalysisResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        /** Type */
+                        type: string;
+                        /** Title */
+                        title: string;
+                        /** Status */
+                        status: number;
+                        /** Detail */
+                        detail: string;
+                    };
+                };
+            };
+            /** @description Conflict */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

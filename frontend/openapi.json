@@ -507,6 +507,144 @@
         }
       }
     },
+    "/api/documents/{document_id}/analysis": {
+      "post": {
+        "tags": [
+          "analysis"
+        ],
+        "summary": "Analyze Document",
+        "operationId": "analyzeDocument",
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Document Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentAnalysisResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "properties": {
+                    "type": {
+                      "title": "Type",
+                      "type": "string"
+                    },
+                    "title": {
+                      "title": "Title",
+                      "type": "string"
+                    },
+                    "status": {
+                      "title": "Status",
+                      "type": "integer"
+                    },
+                    "detail": {
+                      "title": "Detail",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail"
+                  ],
+                  "title": "ProblemDetails",
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "properties": {
+                    "type": {
+                      "title": "Type",
+                      "type": "string"
+                    },
+                    "title": {
+                      "title": "Title",
+                      "type": "string"
+                    },
+                    "status": {
+                      "title": "Status",
+                      "type": "integer"
+                    },
+                    "detail": {
+                      "title": "Detail",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail"
+                  ],
+                  "title": "ProblemDetails",
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "properties": {
+                    "type": {
+                      "title": "Type",
+                      "type": "string"
+                    },
+                    "title": {
+                      "title": "Title",
+                      "type": "string"
+                    },
+                    "status": {
+                      "title": "Status",
+                      "type": "integer"
+                    },
+                    "detail": {
+                      "title": "Detail",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail"
+                  ],
+                  "title": "ProblemDetails",
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/health": {
       "get": {
         "summary": "Health",
@@ -532,6 +670,195 @@
   },
   "components": {
     "schemas": {
+      "AnalysisBlockResponse": {
+        "properties": {
+          "startOffset": {
+            "type": "integer",
+            "title": "Startoffset"
+          },
+          "endOffset": {
+            "type": "integer",
+            "title": "Endoffset"
+          },
+          "tokens": {
+            "items": {
+              "$ref": "#/components/schemas/AnalyzedTokenResponse"
+            },
+            "type": "array",
+            "title": "Tokens"
+          }
+        },
+        "type": "object",
+        "required": [
+          "startOffset",
+          "endOffset",
+          "tokens"
+        ],
+        "title": "AnalysisBlockResponse"
+      },
+      "AnalysisDiagnosticResponse": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "missing_reading",
+              "furigana_fallback"
+            ],
+            "title": "Code"
+          },
+          "startOffset": {
+            "type": "integer",
+            "title": "Startoffset"
+          },
+          "endOffset": {
+            "type": "integer",
+            "title": "Endoffset"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "startOffset",
+          "endOffset"
+        ],
+        "title": "AnalysisDiagnosticResponse"
+      },
+      "AnalysisOptionsResponse": {
+        "properties": {
+          "splitMode": {
+            "type": "string",
+            "title": "Splitmode"
+          }
+        },
+        "type": "object",
+        "required": [
+          "splitMode"
+        ],
+        "title": "AnalysisOptionsResponse"
+      },
+      "AnalyzedTokenResponse": {
+        "properties": {
+          "startOffset": {
+            "type": "integer",
+            "title": "Startoffset"
+          },
+          "endOffset": {
+            "type": "integer",
+            "title": "Endoffset"
+          },
+          "surface": {
+            "type": "string",
+            "title": "Surface"
+          },
+          "lemma": {
+            "type": "string",
+            "title": "Lemma"
+          },
+          "reading": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reading"
+          },
+          "dictionaryReading": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dictionaryreading"
+          },
+          "partOfSpeech": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Partofspeech"
+          },
+          "isOutOfVocabulary": {
+            "type": "boolean",
+            "title": "Isoutofvocabulary"
+          },
+          "isLexical": {
+            "type": "boolean",
+            "title": "Islexical"
+          },
+          "vocabularyKey": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vocabularykey"
+          },
+          "furiganaSegments": {
+            "items": {
+              "$ref": "#/components/schemas/FuriganaSegmentResponse"
+            },
+            "type": "array",
+            "title": "Furiganasegments"
+          }
+        },
+        "type": "object",
+        "required": [
+          "startOffset",
+          "endOffset",
+          "surface",
+          "lemma",
+          "reading",
+          "dictionaryReading",
+          "partOfSpeech",
+          "isOutOfVocabulary",
+          "isLexical",
+          "vocabularyKey",
+          "furiganaSegments"
+        ],
+        "title": "AnalyzedTokenResponse"
+      },
+      "AnalyzerMetadataResponse": {
+        "properties": {
+          "analyzerName": {
+            "type": "string",
+            "title": "Analyzername"
+          },
+          "analyzerVersion": {
+            "type": "string",
+            "title": "Analyzerversion"
+          },
+          "dictionaryName": {
+            "type": "string",
+            "title": "Dictionaryname"
+          },
+          "dictionaryVersion": {
+            "type": "string",
+            "title": "Dictionaryversion"
+          },
+          "splitMode": {
+            "type": "string",
+            "title": "Splitmode"
+          }
+        },
+        "type": "object",
+        "required": [
+          "analyzerName",
+          "analyzerVersion",
+          "dictionaryName",
+          "dictionaryVersion",
+          "splitMode"
+        ],
+        "title": "AnalyzerMetadataResponse"
+      },
       "CreateDocumentRequest": {
         "properties": {
           "title": {
@@ -550,6 +877,54 @@
           "content"
         ],
         "title": "CreateDocumentRequest"
+      },
+      "DocumentAnalysisResponse": {
+        "properties": {
+          "documentId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Documentid"
+          },
+          "documentRevision": {
+            "type": "integer",
+            "title": "Documentrevision"
+          },
+          "contentHash": {
+            "type": "string",
+            "title": "Contenthash"
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/AnalyzerMetadataResponse"
+          },
+          "analysisOptions": {
+            "$ref": "#/components/schemas/AnalysisOptionsResponse"
+          },
+          "blocks": {
+            "items": {
+              "$ref": "#/components/schemas/AnalysisBlockResponse"
+            },
+            "type": "array",
+            "title": "Blocks"
+          },
+          "diagnostics": {
+            "items": {
+              "$ref": "#/components/schemas/AnalysisDiagnosticResponse"
+            },
+            "type": "array",
+            "title": "Diagnostics"
+          }
+        },
+        "type": "object",
+        "required": [
+          "documentId",
+          "documentRevision",
+          "contentHash",
+          "metadata",
+          "analysisOptions",
+          "blocks",
+          "diagnostics"
+        ],
+        "title": "DocumentAnalysisResponse"
       },
       "DocumentResponse": {
         "properties": {
@@ -605,6 +980,31 @@
           "lastReadAt"
         ],
         "title": "DocumentResponse"
+      },
+      "FuriganaSegmentResponse": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "reading": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reading"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text",
+          "reading"
+        ],
+        "title": "FuriganaSegmentResponse"
       },
       "UpdateDocumentRequest": {
         "properties": {

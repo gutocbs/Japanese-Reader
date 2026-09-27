@@ -1,0 +1,97 @@
+from hashlib import sha256
+from uuid import UUID
+
+from backend.app.analysis.furigana import FuriganaAligner
+from backend.app.analysis.models import (
+    AnalysisBlock, AnalysisCacheKey, AnalysisDiagnostic, AnalysisOptions,
+    AnalyzedToken, DocumentAnalysis,
+)
+from backend.app.analysis.morphology import MorphologicalAnalyzer
+from backend.app.analysis.repository import AnalysisRepository
+from backend.app.documents.models import Document
+from backend.app.documents.repository import DocumentRepository
+from backend.app.documents.service import DocumentNotFoundError
+from backend.app.vocabulary.models import VocabularyKey
+
+
+class EmptyDocumentError(ValueError):
+    def __init__(self) -> None:
+        super().__init__("Document content must contain non-whitespace text to analyze")
+
+
+class StaleDocumentRevisionError(ValueError):
+    def __init__(self, document_id: UUID, revision: int) -> None:
+        self.document_id = document_id
+        self.document_revision = revision
+        super().__init__(f"Document {document_id} revision {revision} changed during analysis")
+
+
+class AnalysisService:
+    def __init__(
+        self, documents: DocumentRepository, analyses: AnalysisRepository,
+        analyzer: MorphologicalAnalyzer, aligner: FuriganaAligner,
+    ) -> None:
+        self._documents = documents
+        self._analyses = analyses
+        self._analyzer = analyzer
+        self._aligner = aligner
+
+    def analyze(self, document_id: UUID) -> DocumentAnalysis:
+        document = self._documents.get(document_id)
+        if document is None:
+            raise DocumentNotFoundError(document_id)
+        if not document.content.strip():
+            raise EmptyDocumentError()
+
+        metadata = self._analyzer.metadata
+        options = AnalysisOptions(split_mode=metadata.split_mode)
+        content_hash = sha256(document.content.encode("utf-8")).hexdigest()
+        key = AnalysisCacheKey(document.id, document.revision, content_hash, metadata, options)
+        cached = self._analyses.find_compatible(key)
+        if cached is not None:
+            self._ensure_current(document)
+            return cached
+
+        blocks: list[AnalysisBlock] = []
+        diagnostics: list[AnalysisDiagnostic] = []
+        offset = 0
+        for line in document.content.splitlines(keepends=True):
+            tokens: list[AnalyzedToken] = []
+            for raw in self._analyzer.analyze(line, base_offset=offset):
+                vocabulary_key = VocabularyKey.from_token(raw)
+                alignment = self._aligner.align_with_diagnostics(raw.raw_surface, raw.reading)
+                tokens.append(AnalyzedToken(
+                    start_offset=raw.start_offset, end_offset=raw.end_offset,
+                    surface=raw.raw_surface, lemma=raw.lemma, reading=raw.reading,
+                    dictionary_reading=raw.dictionary_reading, part_of_speech=raw.part_of_speech,
+                    is_out_of_vocabulary=raw.is_out_of_vocabulary,
+                    is_lexical=vocabulary_key is not None,
+                    vocabulary_key=vocabulary_key.encode() if vocabulary_key is not None else None,
+                    furigana_segments=alignment.segments,
+                ))
+                if not raw.reading:
+                    diagnostics.append(AnalysisDiagnostic("missing_reading", raw.start_offset, raw.end_offset))
+                if alignment.used_fallback:
+                    diagnostics.append(AnalysisDiagnostic("furigana_fallback", raw.start_offset, raw.end_offset))
+            blocks.append(AnalysisBlock(offset, offset + len(line), tuple(tokens)))
+            offset += len(line)
+
+        analysis = DocumentAnalysis(
+            document.id, document.revision, content_hash, metadata, options,
+            tuple(blocks), tuple(diagnostics),
+        )
+        self._ensure_current(document)
+        self._analyses.save(analysis)
+        # A persistence adapter may take time to save. Check again before
+        # publishing and discard disposable cache if the document changed there.
+        try:
+            self._ensure_current(document)
+        except StaleDocumentRevisionError:
+            self._analyses.invalidate_document(document.id)
+            raise
+        return analysis
+
+    def _ensure_current(self, document: Document) -> None:
+        current = self._documents.get(document.id)
+        if current is None or current.revision != document.revision:
+            raise StaleDocumentRevisionError(document.id, document.revision)
