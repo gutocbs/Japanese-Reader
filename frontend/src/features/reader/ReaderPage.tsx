@@ -28,12 +28,15 @@ export function ReaderPage({ documentId }: ReaderPageProps) {
   const [isLoading, setIsLoading] = useState(routedSnapshot === null);
   const [hasError, setHasError] = useState(false);
 
-  const loadReader = useCallback(async () => {
-    setIsLoading(true);
+  const loadReader = useCallback(async (candidate: ReaderSnapshot | null) => {
+    if (candidate !== null) setSnapshot(candidate);
+    setIsLoading(candidate === null);
     setHasError(false);
     try {
       const document = await client.get(documentId);
-      const analysis = await client.analyze(documentId);
+      const analysis = candidate?.analysis.documentRevision === document.revision
+        ? candidate.analysis
+        : await client.analyze(documentId);
       if (analysis.documentRevision !== document.revision) {
         throw new Error('Analysis revision does not match the document');
       }
@@ -46,7 +49,7 @@ export function ReaderPage({ documentId }: ReaderPageProps) {
   }, [client, documentId]);
 
   useEffect(() => {
-    if (routedSnapshot === null) void loadReader();
+    void loadReader(routedSnapshot);
   }, [loadReader, routedSnapshot]);
 
   if (isLoading) {
@@ -59,7 +62,7 @@ export function ReaderPage({ documentId }: ReaderPageProps) {
         <p className="eyebrow">Leitura indisponível</p>
         <h1 id="reader-error-title">Não foi possível preparar a leitura.</h1>
         <p>Você pode tentar novamente sem alterar o documento.</p>
-        <button className="button button--primary" type="button" onClick={() => void loadReader()}>
+        <button className="button button--primary" type="button" onClick={() => void loadReader(null)}>
           Tentar novamente
         </button>
       </section>

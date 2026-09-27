@@ -104,7 +104,10 @@ describe('reader routes', () => {
 
   it('loads and updates an existing document from the edit route', async () => {
     const updated = { ...document, title: '雪国 メモ' };
-    const api = client({ update: vi.fn().mockResolvedValue(updated) });
+    const api = client({
+      get: vi.fn().mockResolvedValue(updated),
+      update: vi.fn().mockResolvedValue(updated),
+    });
     render(<App client={api} initialPath={`/documents/${document.id}/edit`} />);
 
     expect(screen.getByText('Carregando documento…')).toBeInTheDocument();
@@ -113,6 +116,72 @@ describe('reader routes', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Salvar e analisar' }));
 
     expect(await screen.findByRole('heading', { name: updated.title, level: 1 })).toBeInTheDocument();
+  });
+
+  it('revalidates an older reader history entry before keeping its snapshot', async () => {
+    const revisedDocument: Document = {
+      ...document,
+      title: '雪国 改訂版',
+      content: '雪国へ戻った。',
+      revision: 2,
+      updatedAt: '2026-09-27T00:00:00Z',
+    };
+    const revisedAnalysis: Analysis = {
+      ...analysis,
+      documentRevision: 2,
+      contentHash: 'revised-hash',
+      blocks: [{
+        startOffset: 0,
+        endOffset: 2,
+        tokens: [{
+          startOffset: 0, endOffset: 2, surface: '雪国', lemma: '雪国', reading: 'ゆきぐに',
+          dictionaryReading: 'ゆきぐに', partOfSpeech: ['名詞', '普通名詞', '一般', '*', '*', '*'],
+          isOutOfVocabulary: false, isLexical: true, vocabularyKey: '雪国\u0000ゆきぐに',
+          furiganaSegments: [{ text: '雪国', reading: 'ゆきぐに' }],
+        }],
+      }],
+    };
+    let currentDocument = document;
+    const api = client({
+      get: vi.fn().mockImplementation(async () => currentDocument),
+      update: vi.fn().mockImplementation(async () => {
+        currentDocument = revisedDocument;
+        return revisedDocument;
+      }),
+      analyze: vi.fn().mockImplementation(async () => (
+        currentDocument.revision === 1 ? analysis : revisedAnalysis
+      )),
+    });
+    render(<App client={api} initialPath="/documents/new" />);
+
+    fireEvent.change(screen.getByLabelText('Título'), { target: { value: document.title } });
+    fireEvent.change(screen.getByLabelText('Texto japonês'), { target: { value: document.content } });
+    fireEvent.click(screen.getByRole('button', { name: 'Analisar e ler' }));
+    expect(await screen.findByRole('heading', { name: document.title, level: 1 })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('link', { name: 'Editar documento' }));
+    expect(await screen.findByLabelText('Texto japonês')).toHaveValue(document.content);
+    fireEvent.change(screen.getByLabelText('Título'), { target: { value: revisedDocument.title } });
+    fireEvent.change(screen.getByLabelText('Texto japonês'), {
+      target: { value: revisedDocument.content },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar e analisar' }));
+    expect(await screen.findByRole('heading', {
+      name: revisedDocument.title,
+      level: 1,
+    })).toBeInTheDocument();
+
+    act(() => window.history.back());
+    expect(await screen.findByLabelText('Texto japonês')).toHaveValue(revisedDocument.content);
+
+    act(() => window.history.back());
+
+    expect(await screen.findByRole('heading', {
+      name: revisedDocument.title,
+      level: 1,
+    })).toBeInTheDocument();
+    expect(window.location.pathname).toBe(`/documents/${document.id}/read`);
+    expect(screen.getByText('ゆきぐに').parentElement?.tagName).toBe('RUBY');
   });
 
   it('disables analysis for empty content and explains how to continue', () => {
