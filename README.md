@@ -7,7 +7,8 @@ O desenvolvimento é executado diretamente na máquina, sem Docker.
 ## Requisitos
 
 - Python 3.12 (`>=3.12,<3.13`) e [uv](https://docs.astral.sh/uv/getting-started/installation/).
-- Node.js 22.12 ou mais recente e npm.
+- Node.js `^22.22.2 || ^24.15.0 || >=26.0.0` e npm (22.x a partir de 22.22.2,
+  24.x a partir de 24.15.0, ou 26.0.0 em diante).
 - PowerShell no Windows para o comando conjunto `npm run dev`.
 
 ## Instalação
