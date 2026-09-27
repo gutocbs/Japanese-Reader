@@ -12,6 +12,7 @@
     "test": "uv run pytest && npm --prefix frontend test -- --run",
     "test:backend": "uv run pytest",
     "test:frontend": "npm --prefix frontend test -- --run",
-    "build": "npm --prefix frontend run build"
+    "build": "npm --prefix frontend run build",
+    "api:generate": "uv run python -m scripts.export_openapi && npm --prefix scripts/openapi run generate"
   }
 }

@@ -1,0 +1,55 @@
+import { describe, expect, it, vi } from 'vitest';
+import { ApiError, createDocumentClient } from './client';
+
+const document = {
+  id: '00000000-0000-0000-0000-000000000001', title: '原文', content: '𠮷野家\n日本語  text',
+  revision: 1, createdAt: '2026-09-26T00:00:00Z', updatedAt: '2026-09-26T00:00:00Z', lastReadAt: null,
+};
+
+describe('document client', () => {
+  it('transports the typed CRUD contract and exact content', async () => {
+    const fetcher = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(new Response(JSON.stringify([document])))
+      .mockResolvedValueOnce(new Response(JSON.stringify(document), { status: 201 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify(document)))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ...document, title: 'new' })))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+    const client = createDocumentClient(fetcher);
+    expect(await client.list()).toEqual([document]);
+    expect(await client.create({ title: '原文', content: document.content })).toEqual(document);
+    expect(await client.get(document.id)).toEqual(document);
+    expect(await client.update(document.id, { title: 'new' })).toEqual({ ...document, title: 'new' });
+    expect(await client.delete(document.id)).toBeUndefined();
+    expect(fetcher.mock.calls.map(([url, init]) => [url, init?.method])).toEqual([
+      ['/api/documents', 'GET'], ['/api/documents', 'POST'],
+      [`/api/documents/${document.id}`, 'GET'], [`/api/documents/${document.id}`, 'PUT'],
+      [`/api/documents/${document.id}`, 'DELETE'],
+    ]);
+    const createInit = fetcher.mock.calls[1][1]!;
+    expect(JSON.parse(createInit.body as string)).toEqual({ title: '原文', content: document.content });
+    expect(new Headers(createInit.headers).get('Content-Type')).toBe('application/json');
+    expect(JSON.parse(fetcher.mock.calls[3][1]!.body as string)).toEqual({ title: 'new' });
+  });
+
+  it('preserves Problem Details and HTTP status for callers', async () => {
+    const problem = { type: 'about:blank', title: 'Not Found', status: 404, detail: 'Document missing' };
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify(problem), {
+      status: 404, headers: { 'Content-Type': 'application/problem+json' },
+    }));
+    try {
+      await createDocumentClient(fetcher).get(document.id);
+      expect.fail('request should reject');
+    } catch (error) {
+      expect(error).toBeInstanceOf(ApiError);
+      expect(error).toMatchObject({ status: 404, problem, body: problem, message: 'Document missing' });
+    }
+  });
+
+  it('preserves non-JSON errors and transport failures', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValueOnce(new Response('upstream unavailable', { status: 502 }));
+    await expect(createDocumentClient(fetcher).list()).rejects.toMatchObject({ status: 502, body: 'upstream unavailable', problem: undefined });
+    const failure = new TypeError('network offline');
+    fetcher.mockRejectedValueOnce(failure);
+    await expect(createDocumentClient(fetcher).list()).rejects.toBe(failure);
+  });
+});

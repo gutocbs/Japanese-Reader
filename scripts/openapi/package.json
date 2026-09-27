@@ -1,0 +1,11 @@
+{
+  "name": "japanese-reader-openapi-tooling",
+  "private": true,
+  "scripts": {
+    "generate": "openapi-typescript ../../frontend/openapi.json -o ../../frontend/src/shared/api/generated.ts"
+  },
+  "devDependencies": {
+    "openapi-typescript": "7.13.0",
+    "typescript": "5.9.3"
+  }
+}

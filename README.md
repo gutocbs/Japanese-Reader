@@ -63,5 +63,25 @@ test` mantém o Vitest em modo watch durante o desenvolvimento.
 
 Consulte [a especificação aprovada](docs/superpowers/specs/2026-09-26-japanese-reader-design.md)
 e [o plano de implementação](docs/superpowers/plans/2026-09-26-japanese-reader-mvp.md).
-As funcionalidades de documentos, análise linguística e persistência serão
-implementadas nas próximas tarefas.
+O CRUD de documentos usa armazenamento em memória. Análise linguística e
+persistência durável serão implementadas nas próximas tarefas.
+
+## API contracts
+
+Document CRUD uses `GET/POST /api/documents` and `GET/PUT/DELETE /api/documents/{id}`.
+`PUT` accepts title, content, or both; omitted fields stay unchanged, null fields
+and empty updates return 422. Documents use camelCase JSON keys. Errors expose
+`type`, `title`, `status`, and `detail` as `application/problem+json`.
+
+OpenAPI is the source for frontend DTOs. After changing HTTP schemas or routes:
+
+```powershell
+npm --prefix scripts/openapi ci
+npm run api:generate
+```
+
+Commit both `frontend/openapi.json` and `frontend/src/shared/api/generated.ts`.
+Do not edit generated types manually. The isolated generator package uses
+TypeScript 5 to satisfy `openapi-typescript`'s peer requirement; the application
+continues using its locked TypeScript 7 compiler. The typed transport lives in
+`frontend/src/shared/api/client.ts` and preserves HTTP error bodies and status.
