@@ -1,0 +1,14 @@
+[
+  {"id": "kana", "text": "ひらがな カタカナ"},
+  {"id": "kanji_okurigana_conjugation", "text": "昨日、食べた。"},
+  {"id": "dictionary_and_polite", "text": "食べる 食べます"},
+  {"id": "kanji_conjugation", "text": "東京へ行った。"},
+  {"id": "numbers_latin_punctuation", "text": "123 ABC！"},
+  {"id": "paragraphs", "text": "一行目\n\n二行目\r\n"},
+  {"id": "spaces", "text": "  猫\t 犬  "},
+  {"id": "probable_oov", "text": "プニョラキュ星"},
+  {"id": "non_bmp", "text": "A𠮷野家"},
+  {"id": "original_width", "text": "附属 ﾈｺ ＡＢＣ"},
+  {"id": "split_mode_b", "text": "国家公務員"},
+  {"id": "empty", "text": ""}
+]
