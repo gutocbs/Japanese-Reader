@@ -49,6 +49,20 @@ def test_uncertain_alignment_keeps_whole_unit_ruby(surface, reading):
     assert "".join(segment.text for segment in segments) == surface
 
 
+@pytest.mark.parametrize("surface, reading", [
+    ("時々", "ときどき"),
+    ("人々", "ひとびと"),
+    ("昨日", "きのう"),
+    ("大人", "おとな"),
+])
+def test_iteration_marks_and_jukujikun_keep_one_whole_token_ruby(surface, reading):
+    """No kana anchor means no defensible per-kanji split, never missing ruby."""
+    alignment = FuriganaAligner().align_with_diagnostics(surface, reading)
+
+    assert alignment.segments == (FuriganaSegment(surface, reading),)
+    assert alignment.used_fallback is False
+
+
 @pytest.mark.parametrize("surface, reading, fallback", [
     ("昨日", "きのう", False), ("猫", None, False),
     ("食べた", "たべた", False), ("食べた", "くった", True),

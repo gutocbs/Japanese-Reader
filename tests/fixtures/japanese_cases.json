@@ -1,14 +1,29 @@
-[
-  {"id": "kana", "text": "ひらがな カタカナ"},
-  {"id": "kanji_okurigana_conjugation", "text": "昨日、食べた。"},
-  {"id": "dictionary_and_polite", "text": "食べる 食べます"},
-  {"id": "kanji_conjugation", "text": "東京へ行った。"},
-  {"id": "numbers_latin_punctuation", "text": "123 ABC！"},
-  {"id": "paragraphs", "text": "一行目\n\n二行目\r\n"},
-  {"id": "spaces", "text": "  猫\t 犬  "},
-  {"id": "probable_oov", "text": "プニョラキュ星"},
-  {"id": "non_bmp", "text": "A𠮷野家"},
-  {"id": "original_width", "text": "附属 ﾈｺ ＡＢＣ"},
-  {"id": "split_mode_b", "text": "国家公務員"},
-  {"id": "empty", "text": ""}
-]
+{
+  "name": "japanese-linguistic-regressions",
+  "version": 1,
+  "pinnedAnalyzer": {
+    "analyzerName": "SudachiPy",
+    "analyzerVersion": "0.6.11",
+    "dictionaryName": "SudachiDict-core",
+    "dictionaryVersion": "20250825",
+    "splitMode": "B"
+  },
+  "cases": [
+    {"id": "kana", "text": "ひらがな カタカナ"},
+    {"id": "kanji_okurigana_conjugation", "text": "昨日、食べた。"},
+    {"id": "dictionary_and_polite", "text": "食べる 食べます"},
+    {"id": "kanji_conjugation", "text": "東京へ行った。"},
+    {"id": "numbers_latin_punctuation", "text": "123 ABC！"},
+    {"id": "paragraphs", "text": "一行目\n\n二行目\r\n"},
+    {"id": "crlf", "text": "猫\r\n犬\r\n", "expectedBlockRanges": [[0, 3], [3, 6]]},
+    {"id": "spaces", "text": "  猫\t 犬  "},
+    {"id": "probable_oov", "text": "プニョラキュ星"},
+    {"id": "non_bmp", "text": "A𠮷野家"},
+    {"id": "original_width", "text": "附属 ﾈｺ ＡＢＣ"},
+    {"id": "full_width_numerals", "text": "１２３４５６７８９０円"},
+    {"id": "iteration_marks", "text": "時々 人々", "wholeTokenRuby": [{"surface": "時々", "reading": "ときどき"}, {"surface": "人々", "reading": "ひとびと"}]},
+    {"id": "ambiguous_jukujikun", "text": "昨日 大人", "wholeTokenRuby": [{"surface": "昨日", "reading": "きのう"}, {"surface": "大人", "reading": "おとな"}]},
+    {"id": "split_mode_b", "text": "国家公務員"},
+    {"id": "empty", "text": ""}
+  ]
+}

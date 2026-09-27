@@ -13,11 +13,12 @@ from backend.app import main
 from backend.app.main import app
 
 
-CASES = json.loads(
+CORPUS = json.loads(
     (Path(__file__).parents[4] / "tests/fixtures/japanese_cases.json").read_text(
         encoding="utf-8"
     )
 )
+CASES = CORPUS["cases"]
 
 
 @pytest.fixture(scope="module")
