@@ -545,7 +545,7 @@ a {
 
 .reader-token[data-lexical]:hover,
 .reader-token[data-lexical]:focus-visible {
-  background: var(--color-surface-muted);
+  background: var(--color-reader-token-hover);
 }
 
 .reader-token[data-selected] {

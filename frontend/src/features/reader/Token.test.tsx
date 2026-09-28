@@ -1,7 +1,12 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { AnalyzedToken } from '../../shared/api/client';
 import { Token } from './Token';
+
+const tokensCss = readFileSync(resolve(process.cwd(), 'src/styles/tokens.css'), 'utf8');
+const globalCss = readFileSync(resolve(process.cwd(), 'src/styles/global.css'), 'utf8');
 
 const lexicalToken: AnalyzedToken = {
   startOffset: 0,
@@ -18,7 +23,29 @@ const lexicalToken: AnalyzedToken = {
   hasReadingOverride: false,
 };
 
+const readerStyles = document.createElement('style');
+
+beforeAll(() => {
+  readerStyles.textContent = `${tokensCss}\n${globalCss.replace("@import './tokens.css';", '')}`;
+  document.head.append(readerStyles);
+});
+
+afterAll(() => readerStyles.remove());
+
 describe('Token', () => {
+  it('uses a translucent primary-derived surface for lexical hover and keyboard focus', () => {
+    const hoverRule = Array.from(document.styleSheets)
+      .flatMap((sheet) => Array.from(sheet.cssRules))
+      .find((rule): rule is CSSStyleRule => (
+        rule instanceof CSSStyleRule
+        && rule.selectorText === '.reader-token[data-lexical]:hover,\n.reader-token[data-lexical]:focus-visible'
+      ));
+
+    expect(getComputedStyle(document.documentElement)
+      .getPropertyValue('--color-reader-token-hover').trim()).toBe('rgb(31 90 67/14%)');
+    expect(hoverRule?.style.background).toBe('var(--color-reader-token-hover)');
+  });
+
   it('keeps ruby bases while hiding only rt according to the resolved preference', () => {
     const { container } = render(<Token token={lexicalToken} furiganaVisible={false} />);
 
