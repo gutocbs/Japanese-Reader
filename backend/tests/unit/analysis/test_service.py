@@ -17,6 +17,8 @@ from backend.app.documents.models import CreateDocument, UpdateDocument
 from backend.app.documents.service import DocumentNotFoundError
 from backend.app.persistence.memory.analyses import InMemoryAnalysisRepository
 from backend.app.persistence.memory.documents import InMemoryDocumentRepository
+from backend.app.persistence.memory.readings import InMemoryReadingOverrideRepository
+from backend.app.readings.service import ReadingOverrideResolver
 
 
 @pytest.fixture
@@ -258,3 +260,36 @@ def test_analysis_records_missing_reading_and_actual_alignment_fallback():
     ]
     assert result.blocks[0].tokens[0].furigana_segments[0].reading is None
     assert result.blocks[0].tokens[1].furigana_segments[0].reading == "くった"
+
+
+def test_analysis_without_overrides_does_not_query_each_token(analyzer):
+    class CountingReadingRepository(InMemoryReadingOverrideRepository):
+        def __init__(self):
+            super().__init__()
+            self.has_document_calls = 0
+            self.get_calls = 0
+
+        def has_document(self, document_id):
+            self.has_document_calls += 1
+            return super().has_document(document_id)
+
+        def get(self, key):
+            self.get_calls += 1
+            return super().get(key)
+
+    documents = InMemoryDocumentRepository()
+    document = documents.create(CreateDocument("title", "昨日、日本語を読みました。"))
+    overrides = CountingReadingRepository()
+    service = AnalysisService(
+        documents,
+        InMemoryAnalysisRepository(),
+        analyzer,
+        FuriganaAligner(),
+        ReadingOverrideResolver(overrides),
+    )
+
+    result = service.analyze(document.id)
+
+    assert sum(len(block.tokens) for block in result.blocks) > 1
+    assert overrides.has_document_calls == 1
+    assert overrides.get_calls == 0

@@ -56,6 +56,10 @@ class AnalysisService:
             self._ensure_current(document, content_hash)
             return cached
 
+        has_reading_overrides = (
+            self._reading_overrides is not None
+            and self._reading_overrides.has_document(document.id)
+        )
         blocks: list[AnalysisBlock] = []
         diagnostics: list[AnalysisDiagnostic] = []
         offset = 0
@@ -73,7 +77,7 @@ class AnalysisService:
                         ),
                         raw.reading,
                     )
-                    if self._reading_overrides is not None
+                    if has_reading_overrides
                     else ResolvedReading(raw.reading, False)
                 )
                 alignment = self._aligner.align_with_diagnostics(

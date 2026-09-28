@@ -67,6 +67,9 @@ class ReadingOverrideResolver:
     def __init__(self, repository: ReadingOverrideRepository) -> None:
         self._repository = repository
 
+    def has_document(self, document_id: UUID) -> bool:
+        return self._repository.has_document(document_id)
+
     def resolve(
         self, key: ReadingOverrideKey, analyzer_reading: str | None
     ) -> ResolvedReading:
