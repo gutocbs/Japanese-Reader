@@ -274,11 +274,14 @@ a {
 }
 
 .reader-token[data-lexical] {
-  position: relative;
   border-radius: var(--radius-small);
   cursor: pointer;
   text-decoration: underline dotted var(--color-border) 0.08em;
   text-underline-offset: 0.2em;
+}
+
+.reader-token-container {
+  position: relative;
 }
 
 .reader-context-menu {

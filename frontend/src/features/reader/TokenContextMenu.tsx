@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef } from 'react';
 import type { FuriganaVisibility } from './preferences';
 
 interface TokenContextMenuProps {
@@ -12,16 +13,33 @@ const actions: readonly { label: string; visibility: FuriganaVisibility }[] = [
 ];
 
 export function TokenContextMenu({ onClose, onSetVisibility }: TokenContextMenuProps) {
+  const firstItemRef = useRef<HTMLButtonElement>(null);
+  const selectVisibility = (visibility: FuriganaVisibility) => {
+    onSetVisibility(visibility);
+    onClose();
+  };
+
+  useLayoutEffect(() => {
+    firstItemRef.current?.focus();
+  }, []);
+
   return (
     <span className="reader-context-menu" role="menu" aria-label="Opções de furigana">
       {actions.map((action) => (
         <button
           key={action.visibility}
+          ref={action.visibility === 'show' ? firstItemRef : undefined}
           type="button"
           role="menuitem"
-          onClick={() => {
-            onSetVisibility(action.visibility);
-            onClose();
+          onClick={(event) => {
+            event.stopPropagation();
+            selectVisibility(action.visibility);
+          }}
+          onKeyDown={(event) => {
+            if (event.key !== 'Enter' && event.key !== ' ') return;
+            event.preventDefault();
+            event.stopPropagation();
+            selectVisibility(action.visibility);
           }}
         >
           {action.label}

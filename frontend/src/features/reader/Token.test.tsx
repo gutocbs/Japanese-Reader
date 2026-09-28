@@ -74,15 +74,67 @@ describe('Token', () => {
     expect(screen.getByRole('menu')).toBeInTheDocument();
   });
 
-  it('closes the context menu on an outside click and returns focus to its token', () => {
-    render(<Token token={lexicalToken} onSetFuriganaVisibility={vi.fn()} />);
+  it('closes the context menu on an outside click without stealing external focus', () => {
+    render(
+      <>
+        <button type="button">Fora do menu</button>
+        <Token token={lexicalToken} onSetFuriganaVisibility={vi.fn()} />
+      </>,
+    );
 
     const token = screen.getByRole('button', { name: '昨日（きのう）' });
+    const outside = screen.getByRole('button', { name: 'Fora do menu' });
     fireEvent.contextMenu(token);
     expect(screen.getByRole('menu')).toBeInTheDocument();
 
-    fireEvent.pointerDown(document.body);
+    outside.focus();
+    fireEvent.pointerDown(outside);
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    expect(outside).toHaveFocus();
+  });
+
+  it.each([
+    ['Sempre mostrar furigana', 'show'],
+    ['Ocultar furigana', 'hide'],
+    ['Seguir configuração geral', 'inherit'],
+  ] as const)('does not toggle vocabulary when selecting %s', (label, visibility) => {
+    const onToggleVocabulary = vi.fn();
+    const onSetFuriganaVisibility = vi.fn();
+    render(
+      <Token
+        token={lexicalToken}
+        onToggleVocabulary={onToggleVocabulary}
+        onSetFuriganaVisibility={onSetFuriganaVisibility}
+      />,
+    );
+
+    fireEvent.contextMenu(screen.getByRole('button', { name: '昨日（きのう）' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: label }));
+
+    expect(onSetFuriganaVisibility).toHaveBeenCalledWith('["昨日","きのう"]', visibility);
+    expect(onToggleVocabulary).not.toHaveBeenCalled();
+  });
+
+  it('focuses the first menu item for Shift+F10 and Enter does not toggle vocabulary', () => {
+    const onToggleVocabulary = vi.fn();
+    const onSetFuriganaVisibility = vi.fn();
+    render(
+      <Token
+        token={lexicalToken}
+        onToggleVocabulary={onToggleVocabulary}
+        onSetFuriganaVisibility={onSetFuriganaVisibility}
+      />,
+    );
+
+    const token = screen.getByRole('button', { name: '昨日（きのう）' });
+    token.focus();
+    fireEvent.keyDown(token, { key: 'F10', shiftKey: true });
+    const firstItem = screen.getByRole('menuitem', { name: 'Sempre mostrar furigana' });
+    expect(firstItem).toHaveFocus();
+
+    fireEvent.keyDown(firstItem, { key: 'Enter' });
+    expect(onSetFuriganaVisibility).toHaveBeenCalledWith('["昨日","きのう"]', 'show');
+    expect(onToggleVocabulary).not.toHaveBeenCalled();
     expect(token).toHaveFocus();
   });
 });
