@@ -9,6 +9,9 @@ export type AnalyzedToken = components['schemas']['AnalyzedTokenResponse'];
 export type VocabularySelection = components['schemas']['VocabularyKeyModel'];
 export type FuriganaVisibility = components['schemas']['FuriganaVisibility'];
 export type VocabularyDisplayPreference = components['schemas']['VocabularyDisplayPreferenceModel'];
+export type ReadingOverrideKey = components['schemas']['ReadingOverrideKeyRequest'];
+export type SetReadingOverride = components['schemas']['SetReadingOverrideRequest'];
+export type ReadingOverride = components['schemas']['ReadingOverrideResponse'];
 export type ProblemDetails = operations['getDocument']['responses'][404]['content']['application/problem+json'];
 
 function isProblemDetails(body: unknown): body is ProblemDetails {
@@ -49,6 +52,7 @@ export function createDocumentClient(fetcher: typeof fetch = globalThis.fetch) {
   const documentPath = (id: string) => `/api/documents/${encodeURIComponent(id)}`;
   const vocabularyPath = (id: string) => `${documentPath(id)}/vocabulary-selections`;
   const displayPreferencesPath = (id: string) => `${documentPath(id)}/vocabulary-display-preferences`;
+  const readingOverridesPath = (id: string) => `${documentPath(id)}/reading-overrides`;
   return {
     list: () => request<Document[]>('/api/documents', 'GET'),
     create: (data: CreateDocument) => request<Document>('/api/documents', 'POST', data),
@@ -67,6 +71,12 @@ export function createDocumentClient(fetcher: typeof fetch = globalThis.fetch) {
     ).preferences,
     setVocabularyDisplayPreference: (id: string, preference: VocabularyDisplayPreference) => (
       request<void>(displayPreferencesPath(id), 'PUT', preference)
+    ),
+    setReadingOverride: (id: string, override: SetReadingOverride) => (
+      request<ReadingOverride>(readingOverridesPath(id), 'PUT', override)
+    ),
+    deleteReadingOverride: (id: string, key: ReadingOverrideKey) => (
+      request<void>(readingOverridesPath(id), 'DELETE', key)
     ),
   };
 }

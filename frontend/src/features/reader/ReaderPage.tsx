@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useDocumentClient, useRouter } from '../../app/providers';
-import type { Analysis, Document } from '../../shared/api/client';
+import type {
+  Analysis,
+  Document,
+  ReadingOverrideKey,
+  SetReadingOverride,
+} from '../../shared/api/client';
 import {
   decodeVocabularyKey,
   encodeVocabularyKey,
@@ -31,6 +36,33 @@ function isReaderSnapshot(value: unknown, documentId: string): value is ReaderSn
   return snapshot.document?.id === documentId
     && snapshot.analysis?.documentId === documentId
     && snapshot.analysis.documentRevision === snapshot.document.revision;
+}
+
+function replaceAnalysisOccurrence(
+  current: Analysis,
+  refreshed: Analysis,
+  key: ReadingOverrideKey,
+): Analysis {
+  if (refreshed.documentRevision !== key.documentRevision) {
+    throw new Error('Reading override analysis revision changed');
+  }
+  const replacement = refreshed.blocks
+    .flatMap((block) => block.tokens)
+    .find((token) => (
+      token.startOffset === key.startOffset && token.endOffset === key.endOffset
+    ));
+  if (replacement === undefined) throw new Error('Reading override token disappeared');
+  let replaced = false;
+  const blocks = current.blocks.map((block) => ({
+    ...block,
+    tokens: block.tokens.map((token) => {
+      if (token.startOffset !== key.startOffset || token.endOffset !== key.endOffset) return token;
+      replaced = true;
+      return replacement;
+    }),
+  }));
+  if (!replaced) throw new Error('Reading override token is not in the current reader');
+  return { ...current, blocks, diagnostics: refreshed.diagnostics };
 }
 
 export function ReaderPage({ documentId }: ReaderPageProps) {
@@ -169,6 +201,49 @@ export function ReaderPage({ documentId }: ReaderPageProps) {
     }
   }, [areDisplayPreferencesHydrated, client, documentId]);
 
+  const refreshReadingOccurrence = useCallback(async (
+    key: ReadingOverrideKey,
+    mutation: () => Promise<unknown>,
+  ) => {
+    setPersistenceError('');
+    try {
+      if (snapshot === null || snapshot.analysis.documentRevision !== key.documentRevision) {
+        throw new Error('Reading override is no longer on the displayed revision');
+      }
+      await mutation();
+      const refreshed = await client.analyze(documentId);
+      const analysis = replaceAnalysisOccurrence(snapshot.analysis, refreshed, key);
+      setSnapshot((current) => {
+        if (current === null || current.analysis.documentRevision !== key.documentRevision) {
+          return current;
+        }
+        return { ...current, analysis };
+      });
+    } catch (error) {
+      setPersistenceError('Não foi possível salvar a correção de leitura.');
+      throw error;
+    }
+  }, [client, documentId, snapshot]);
+
+  const saveReadingOverride = useCallback(async (override: SetReadingOverride) => {
+    const key: ReadingOverrideKey = {
+      documentRevision: override.documentRevision,
+      startOffset: override.startOffset,
+      endOffset: override.endOffset,
+    };
+    await refreshReadingOccurrence(
+      key,
+      () => client.setReadingOverride(documentId, override),
+    );
+  }, [client, documentId, refreshReadingOccurrence]);
+
+  const removeReadingOverride = useCallback(async (key: ReadingOverrideKey) => {
+    await refreshReadingOccurrence(
+      key,
+      () => client.deleteReadingOverride(documentId, key),
+    );
+  }, [client, documentId, refreshReadingOccurrence]);
+
   if (isLoading) {
     return <p className="page-state" role="status">Preparando leitura…</p>;
   }
@@ -219,6 +294,8 @@ export function ReaderPage({ documentId }: ReaderPageProps) {
         onSetFuriganaVisibility={
           areDisplayPreferencesHydrated ? setFuriganaVisibility : undefined
         }
+        onSaveReadingOverride={saveReadingOverride}
+        onRemoveReadingOverride={removeReadingOverride}
       />
       {persistenceError && (
         <p className="reader-persistence-status" role="status" aria-live="polite" aria-atomic="true">

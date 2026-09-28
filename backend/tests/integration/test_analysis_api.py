@@ -50,6 +50,7 @@ def test_analysis_endpoint_returns_camel_case_tokens_segments_and_metadata(clien
         "partOfSpeech": ["動詞", "一般", "*", "*", "下一段-バ行", "連用形-一般"],
         "isOutOfVocabulary": False, "isLexical": True, "vocabularyKey": '["食べる","たべる"]',
         "furiganaSegments": [{"text": "食", "reading": "た"}, {"text": "べ", "reading": None}],
+        "hasReadingOverride": False,
     }
     cursor = 0
     reconstructed = ""

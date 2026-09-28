@@ -42,6 +42,7 @@ class AnalyzedTokenResponse(AnalysisResponseModel):
     is_lexical: bool
     vocabulary_key: str | None
     furigana_segments: list[FuriganaSegmentResponse]
+    has_reading_override: bool = False
 
 
 class AnalysisBlockResponse(AnalysisResponseModel):

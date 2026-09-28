@@ -15,6 +15,7 @@ const lexicalToken: AnalyzedToken = {
   isLexical: true,
   vocabularyKey: '["昨日","きのう"]',
   furiganaSegments: [{ text: '昨日', reading: 'きのう' }],
+  hasReadingOverride: false,
 };
 
 describe('Token', () => {
@@ -136,5 +137,45 @@ describe('Token', () => {
     expect(onSetFuriganaVisibility).toHaveBeenCalledWith('["昨日","きのう"]', 'show');
     expect(onToggleVocabulary).not.toHaveBeenCalled();
     expect(token).toHaveFocus();
+  });
+
+  it('opens reading correction outside ruby and conditionally exposes removal', () => {
+    const onSaveReadingOverride = vi.fn().mockResolvedValue(undefined);
+    const onRemoveReadingOverride = vi.fn().mockResolvedValue(undefined);
+    const { rerender } = render(
+      <Token
+        token={lexicalToken}
+        documentRevision={1}
+        onSaveReadingOverride={onSaveReadingOverride}
+        onRemoveReadingOverride={onRemoveReadingOverride}
+      />,
+    );
+
+    const token = screen.getByRole('button', { name: '昨日（きのう）' });
+    fireEvent.contextMenu(token);
+    expect(screen.queryByRole('menuitem', { name: 'Remover correção' }))
+      .not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Corrigir leitura' }));
+
+    const dialog = screen.getByRole('dialog', { name: 'Corrigir leitura de 昨日' });
+    expect(dialog.closest('ruby')).toBeNull();
+    expect(token.querySelector('button, input, form')).toBeNull();
+
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    rerender(
+      <Token
+        token={{ ...lexicalToken, hasReadingOverride: true }}
+        documentRevision={1}
+        onSaveReadingOverride={onSaveReadingOverride}
+        onRemoveReadingOverride={onRemoveReadingOverride}
+      />,
+    );
+    fireEvent.contextMenu(screen.getByRole('button', { name: '昨日（きのう）' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Remover correção' }));
+    expect(onRemoveReadingOverride).toHaveBeenCalledWith({
+      documentRevision: 1,
+      startOffset: 0,
+      endOffset: 2,
+    });
   });
 });

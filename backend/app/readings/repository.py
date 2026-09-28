@@ -1,0 +1,14 @@
+from typing import Protocol
+from uuid import UUID
+
+from backend.app.readings.models import ReadingOverride, ReadingOverrideKey
+
+
+class ReadingOverrideRepository(Protocol):
+    def get(self, key: ReadingOverrideKey) -> ReadingOverride | None: ...
+
+    def upsert(self, override: ReadingOverride) -> None: ...
+
+    def delete(self, key: ReadingOverrideKey) -> bool: ...
+
+    def delete_document(self, document_id: UUID) -> None: ...

@@ -3,6 +3,8 @@ from uuid import UUID
 
 from backend.app.documents.models import CreateDocument, Document, UpdateDocument
 from backend.app.documents.repository import DocumentRepository
+from backend.app.analysis.repository import AnalysisRepository
+from backend.app.readings.repository import ReadingOverrideRepository
 
 
 class DocumentNotFoundError(LookupError):
@@ -18,8 +20,15 @@ class DocumentUpdateResult:
 
 
 class DocumentService:
-    def __init__(self, repository: DocumentRepository) -> None:
+    def __init__(
+        self,
+        repository: DocumentRepository,
+        analyses: AnalysisRepository | None = None,
+        reading_overrides: ReadingOverrideRepository | None = None,
+    ) -> None:
         self._repository = repository
+        self._analyses = analyses
+        self._reading_overrides = reading_overrides
 
     def create(self, data: CreateDocument) -> Document:
         return self._repository.create(data)
@@ -38,10 +47,16 @@ class DocumentService:
         updated = self._repository.update(document_id, data)
         if updated is None:
             raise DocumentNotFoundError(document_id)
-        return DocumentUpdateResult(
+        result = DocumentUpdateResult(
             document=updated,
             content_changed=updated.content != original.content,
         )
+        if result.content_changed:
+            if self._analyses is not None:
+                self._analyses.invalidate_document(document_id)
+            if self._reading_overrides is not None:
+                self._reading_overrides.delete_document(document_id)
+        return result
 
     def delete(self, document_id: UUID) -> None:
         if not self._repository.delete(document_id):

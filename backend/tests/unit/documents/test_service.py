@@ -5,6 +5,14 @@ import pytest
 from backend.app.documents.models import CreateDocument, UpdateDocument
 from backend.app.documents.service import DocumentNotFoundError, DocumentService
 from backend.app.persistence.memory.documents import InMemoryDocumentRepository
+from backend.app.analysis.models import (
+    AnalysisOptions,
+    AnalyzerMetadata,
+    DocumentAnalysis,
+)
+from backend.app.persistence.memory.analyses import InMemoryAnalysisRepository
+from backend.app.persistence.memory.readings import InMemoryReadingOverrideRepository
+from backend.app.readings.models import ReadingOverride, ReadingOverrideKey
 
 
 @pytest.fixture
@@ -55,3 +63,29 @@ def test_missing_document_raises_domain_error(service, operation):
             getattr(service, operation)(document_id)
     assert error.value.document_id == document_id
     assert service.list() == ()
+
+
+def test_content_edit_removes_cached_analysis_and_reading_overrides():
+    documents = InMemoryDocumentRepository()
+    analyses = InMemoryAnalysisRepository()
+    overrides = InMemoryReadingOverrideRepository()
+    service = DocumentService(documents, analyses, overrides)
+    document = service.create(CreateDocument("First", "猫"))
+    analysis = DocumentAnalysis(
+        document_id=document.id,
+        document_revision=document.revision,
+        content_hash="old-content-hash",
+        metadata=AnalyzerMetadata("test", "1", "dictionary", "1", "B"),
+        analysis_options=AnalysisOptions("B"),
+        blocks=(),
+        diagnostics=(),
+    )
+    analyses.save(analysis)
+    override_key = ReadingOverrideKey(document.id, document.revision, 0, 1)
+    overrides.upsert(ReadingOverride(override_key, "びょう"))
+
+    result = service.update(document.id, UpdateDocument(content="犬"))
+
+    assert result.document.revision == 2
+    assert analyses.find_compatible(analysis.cache_key) is None
+    assert overrides.get(override_key) is None

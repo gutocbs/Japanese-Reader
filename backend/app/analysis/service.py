@@ -12,6 +12,8 @@ from backend.app.documents.models import Document
 from backend.app.documents.repository import DocumentRepository
 from backend.app.documents.service import DocumentNotFoundError
 from backend.app.vocabulary.models import VocabularyKey
+from backend.app.readings.models import ReadingOverrideKey, ResolvedReading
+from backend.app.readings.service import ReadingOverrideResolver
 
 
 class EmptyDocumentError(ValueError):
@@ -30,11 +32,13 @@ class AnalysisService:
     def __init__(
         self, documents: DocumentRepository, analyses: AnalysisRepository,
         analyzer: MorphologicalAnalyzer, aligner: FuriganaAligner,
+        reading_overrides: ReadingOverrideResolver | None = None,
     ) -> None:
         self._documents = documents
         self._analyses = analyses
         self._analyzer = analyzer
         self._aligner = aligner
+        self._reading_overrides = reading_overrides
 
     def analyze(self, document_id: UUID) -> DocumentAnalysis:
         document = self._documents.get(document_id)
@@ -59,15 +63,31 @@ class AnalysisService:
             tokens: list[AnalyzedToken] = []
             for raw in self._analyzer.analyze(line, base_offset=offset):
                 vocabulary_key = VocabularyKey.from_token(raw)
-                alignment = self._aligner.align_with_diagnostics(raw.raw_surface, raw.reading)
+                resolved = (
+                    self._reading_overrides.resolve(
+                        ReadingOverrideKey(
+                            document.id,
+                            document.revision,
+                            raw.start_offset,
+                            raw.end_offset,
+                        ),
+                        raw.reading,
+                    )
+                    if self._reading_overrides is not None
+                    else ResolvedReading(raw.reading, False)
+                )
+                alignment = self._aligner.align_with_diagnostics(
+                    raw.raw_surface, resolved.reading
+                )
                 tokens.append(AnalyzedToken(
                     start_offset=raw.start_offset, end_offset=raw.end_offset,
-                    surface=raw.raw_surface, lemma=raw.lemma, reading=raw.reading,
+                    surface=raw.raw_surface, lemma=raw.lemma, reading=resolved.reading,
                     dictionary_reading=raw.dictionary_reading, part_of_speech=raw.part_of_speech,
                     is_out_of_vocabulary=raw.is_out_of_vocabulary,
                     is_lexical=vocabulary_key is not None,
                     vocabulary_key=vocabulary_key.encode() if vocabulary_key is not None else None,
                     furigana_segments=alignment.segments,
+                    has_reading_override=resolved.has_override,
                 ))
                 if not raw.reading:
                     diagnostics.append(AnalysisDiagnostic("missing_reading", raw.start_offset, raw.end_offset))

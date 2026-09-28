@@ -55,6 +55,7 @@ class AnalyzedToken:
     is_lexical: bool
     vocabulary_key: str | None
     furigana_segments: tuple[FuriganaSegment, ...]
+    has_reading_override: bool = False
 
 
 @dataclass(frozen=True)

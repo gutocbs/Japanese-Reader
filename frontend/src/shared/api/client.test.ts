@@ -98,6 +98,35 @@ describe('document client', () => {
     ]);
   });
 
+  it('upserts and deletes one reading override by revision and code-point offsets', async () => {
+    const override = {
+      documentRevision: 2, startOffset: 4, endOffset: 6, reading: 'さくじつ',
+    };
+    const saved = { documentId: document.id, ...override };
+    const key = {
+      documentRevision: override.documentRevision,
+      startOffset: override.startOffset,
+      endOffset: override.endOffset,
+    };
+    const fetcher = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(new Response(JSON.stringify(saved)))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+    const client = createDocumentClient(fetcher);
+
+    expect(await client.setReadingOverride('doc/one', override)).toEqual(saved);
+    expect(await client.deleteReadingOverride('doc/one', key)).toBeUndefined();
+    expect(fetcher.mock.calls).toEqual([
+      ['/api/documents/doc%2Fone/reading-overrides', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(override),
+      }],
+      ['/api/documents/doc%2Fone/reading-overrides', {
+        method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(key),
+      }],
+    ]);
+  });
+
   it('preserves Problem Details and HTTP status for callers', async () => {
     const problem = { type: 'about:blank', title: 'Not Found', status: 404, detail: 'Document missing' };
     const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify(problem), {

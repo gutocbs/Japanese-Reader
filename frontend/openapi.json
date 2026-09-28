@@ -1059,6 +1059,293 @@
         }
       }
     },
+    "/api/documents/{document_id}/reading-overrides": {
+      "put": {
+        "tags": [
+          "reading-overrides"
+        ],
+        "summary": "Set Reading Override",
+        "operationId": "setReadingOverride",
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Document Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetReadingOverrideRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadingOverrideResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "properties": {
+                    "type": {
+                      "title": "Type",
+                      "type": "string"
+                    },
+                    "title": {
+                      "title": "Title",
+                      "type": "string"
+                    },
+                    "status": {
+                      "title": "Status",
+                      "type": "integer"
+                    },
+                    "detail": {
+                      "title": "Detail",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail"
+                  ],
+                  "title": "ProblemDetails",
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "properties": {
+                    "type": {
+                      "title": "Type",
+                      "type": "string"
+                    },
+                    "title": {
+                      "title": "Title",
+                      "type": "string"
+                    },
+                    "status": {
+                      "title": "Status",
+                      "type": "integer"
+                    },
+                    "detail": {
+                      "title": "Detail",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail"
+                  ],
+                  "title": "ProblemDetails",
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "properties": {
+                    "type": {
+                      "title": "Type",
+                      "type": "string"
+                    },
+                    "title": {
+                      "title": "Title",
+                      "type": "string"
+                    },
+                    "status": {
+                      "title": "Status",
+                      "type": "integer"
+                    },
+                    "detail": {
+                      "title": "Detail",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail"
+                  ],
+                  "title": "ProblemDetails",
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "reading-overrides"
+        ],
+        "summary": "Delete Reading Override",
+        "operationId": "deleteReadingOverride",
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Document Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReadingOverrideKeyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "properties": {
+                    "type": {
+                      "title": "Type",
+                      "type": "string"
+                    },
+                    "title": {
+                      "title": "Title",
+                      "type": "string"
+                    },
+                    "status": {
+                      "title": "Status",
+                      "type": "integer"
+                    },
+                    "detail": {
+                      "title": "Detail",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail"
+                  ],
+                  "title": "ProblemDetails",
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "properties": {
+                    "type": {
+                      "title": "Type",
+                      "type": "string"
+                    },
+                    "title": {
+                      "title": "Title",
+                      "type": "string"
+                    },
+                    "status": {
+                      "title": "Status",
+                      "type": "integer"
+                    },
+                    "detail": {
+                      "title": "Detail",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail"
+                  ],
+                  "title": "ProblemDetails",
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "properties": {
+                    "type": {
+                      "title": "Type",
+                      "type": "string"
+                    },
+                    "title": {
+                      "title": "Title",
+                      "type": "string"
+                    },
+                    "status": {
+                      "title": "Status",
+                      "type": "integer"
+                    },
+                    "detail": {
+                      "title": "Detail",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail"
+                  ],
+                  "title": "ProblemDetails",
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/health": {
       "get": {
         "summary": "Health",
@@ -1222,6 +1509,11 @@
             },
             "type": "array",
             "title": "Furiganasegments"
+          },
+          "hasReadingOverride": {
+            "type": "boolean",
+            "title": "Hasreadingoverride",
+            "default": false
           }
         },
         "type": "object",
@@ -1428,6 +1720,94 @@
           "hide"
         ],
         "title": "FuriganaVisibility"
+      },
+      "ReadingOverrideKeyRequest": {
+        "properties": {
+          "documentRevision": {
+            "type": "integer",
+            "title": "Documentrevision"
+          },
+          "startOffset": {
+            "type": "integer",
+            "title": "Startoffset"
+          },
+          "endOffset": {
+            "type": "integer",
+            "title": "Endoffset"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "documentRevision",
+          "startOffset",
+          "endOffset"
+        ],
+        "title": "ReadingOverrideKeyRequest"
+      },
+      "ReadingOverrideResponse": {
+        "properties": {
+          "documentId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Documentid"
+          },
+          "documentRevision": {
+            "type": "integer",
+            "title": "Documentrevision"
+          },
+          "startOffset": {
+            "type": "integer",
+            "title": "Startoffset"
+          },
+          "endOffset": {
+            "type": "integer",
+            "title": "Endoffset"
+          },
+          "reading": {
+            "type": "string",
+            "title": "Reading"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "documentId",
+          "documentRevision",
+          "startOffset",
+          "endOffset",
+          "reading"
+        ],
+        "title": "ReadingOverrideResponse"
+      },
+      "SetReadingOverrideRequest": {
+        "properties": {
+          "documentRevision": {
+            "type": "integer",
+            "title": "Documentrevision"
+          },
+          "startOffset": {
+            "type": "integer",
+            "title": "Startoffset"
+          },
+          "endOffset": {
+            "type": "integer",
+            "title": "Endoffset"
+          },
+          "reading": {
+            "type": "string",
+            "title": "Reading"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "documentRevision",
+          "startOffset",
+          "endOffset",
+          "reading"
+        ],
+        "title": "SetReadingOverrideRequest"
       },
       "UpdateDocumentRequest": {
         "properties": {

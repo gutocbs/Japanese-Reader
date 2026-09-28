@@ -1,5 +1,9 @@
 import { Fragment, type ReactNode } from 'react';
-import type { Analysis } from '../../shared/api/client';
+import type {
+  Analysis,
+  ReadingOverrideKey,
+  SetReadingOverride,
+} from '../../shared/api/client';
 import { Token } from './Token';
 import { resolveFuriganaVisibility, type FuriganaVisibility } from './preferences';
 
@@ -12,6 +16,8 @@ interface DocumentTextProps {
   fontSizePx?: number;
   furiganaVisibilityByKey?: ReadonlyMap<string, FuriganaVisibility>;
   onSetFuriganaVisibility?: (key: string, visibility: FuriganaVisibility) => void;
+  onSaveReadingOverride?: (override: SetReadingOverride) => Promise<void>;
+  onRemoveReadingOverride?: (key: ReadingOverrideKey) => Promise<void>;
 }
 
 export function DocumentText({
@@ -23,6 +29,8 @@ export function DocumentText({
   fontSizePx,
   furiganaVisibilityByKey = new Map(),
   onSetFuriganaVisibility,
+  onSaveReadingOverride,
+  onRemoveReadingOverride,
 }: DocumentTextProps) {
   const codePoints = [...content];
   const rendered: ReactNode[] = [];
@@ -55,6 +63,9 @@ export function DocumentText({
             showFurigana,
           )}
           onSetFuriganaVisibility={onSetFuriganaVisibility}
+          documentRevision={analysis.documentRevision}
+          onSaveReadingOverride={onSaveReadingOverride}
+          onRemoveReadingOverride={onRemoveReadingOverride}
         />,
       );
       cursor = token.endOffset;

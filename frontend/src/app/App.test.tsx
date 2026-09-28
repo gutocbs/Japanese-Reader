@@ -31,6 +31,7 @@ const analysis: Analysis = {
       dictionaryReading: 'こっきょう', partOfSpeech: ['名詞', '普通名詞', '一般', '*', '*', '*'],
       isOutOfVocabulary: false, isLexical: true, vocabularyKey: '["国境","こっきょう"]',
       furiganaSegments: [{ text: '国境', reading: 'こっきょう' }],
+      hasReadingOverride: false,
     }],
   }],
   diagnostics: [],
@@ -56,6 +57,7 @@ const revisedAnalysis: Analysis = {
       dictionaryReading: 'ゆきぐに', partOfSpeech: ['名詞', '普通名詞', '一般', '*', '*', '*'],
       isOutOfVocabulary: false, isLexical: true, vocabularyKey: '["雪国","ゆきぐに"]',
       furiganaSegments: [{ text: '雪国', reading: 'ゆきぐに' }],
+      hasReadingOverride: false,
     }],
   }],
 };
@@ -82,6 +84,14 @@ function client(overrides: Partial<DocumentClient> = {}): DocumentClient {
     replaceVocabularySelections: vi.fn().mockResolvedValue(undefined),
     listVocabularyDisplayPreferences: vi.fn().mockResolvedValue([]),
     setVocabularyDisplayPreference: vi.fn().mockResolvedValue(undefined),
+    setReadingOverride: vi.fn().mockResolvedValue({
+      documentId: document.id,
+      documentRevision: 1,
+      startOffset: 0,
+      endOffset: 2,
+      reading: 'こっきょう',
+    }),
+    deleteReadingOverride: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   };
 }
@@ -293,7 +303,8 @@ describe('reader routes', () => {
 
     const tokenText = await screen.findByText('国境');
     fireEvent.click(tokenText);
-    expect(screen.queryByRole('button', { name: '国境（こっきょう）' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '国境（こっきょう）' }))
+      .not.toHaveAttribute('aria-pressed');
     expect(replaceVocabularySelections).not.toHaveBeenCalled();
 
     await act(async () => pendingSelections.resolve([{ lemma: '国境', reading: 'こっきょう' }]));
@@ -377,6 +388,90 @@ describe('reader routes', () => {
     await waitFor(() => expect(screen.getAllByText('こっきょう').find(
       (element) => element.tagName === 'RT',
     )).not.toHaveAttribute('hidden'));
+  });
+
+  it('refreshes only the corrected occurrence after saving a manual reading', async () => {
+    const repeatedAnalysis: Analysis = {
+      ...analysis,
+      blocks: [{
+        startOffset: 0,
+        endOffset: 5,
+        tokens: [
+          {
+            ...analysis.blocks[0].tokens[0],
+            startOffset: 0,
+            endOffset: 2,
+            surface: '昨日',
+            lemma: '昨日',
+            reading: 'きのう',
+            dictionaryReading: 'きのう',
+            vocabularyKey: '["昨日","きのう"]',
+            furiganaSegments: [{ text: '昨日', reading: 'きのう' }],
+          },
+          {
+            ...analysis.blocks[0].tokens[0],
+            startOffset: 3,
+            endOffset: 5,
+            surface: '昨日',
+            lemma: '昨日',
+            reading: 'きのう',
+            dictionaryReading: 'きのう',
+            vocabularyKey: '["昨日","きのう"]',
+            furiganaSegments: [{ text: '昨日', reading: 'きのう' }],
+          },
+        ],
+      }],
+    };
+    const overriddenAnalysis: Analysis = {
+      ...repeatedAnalysis,
+      blocks: [{
+        ...repeatedAnalysis.blocks[0],
+        tokens: [
+          repeatedAnalysis.blocks[0].tokens[0],
+          {
+            ...repeatedAnalysis.blocks[0].tokens[1],
+            reading: 'さくじつ',
+            hasReadingOverride: true,
+            furiganaSegments: [{ text: '昨日', reading: 'さくじつ' }],
+          },
+        ],
+      }],
+    };
+    const repeatedDocument = { ...document, content: '昨日、昨日' };
+    const setReadingOverride = vi.fn().mockResolvedValue({
+      documentId: document.id,
+      documentRevision: 1,
+      startOffset: 3,
+      endOffset: 5,
+      reading: 'さくじつ',
+    });
+    const api = client({
+      get: vi.fn().mockResolvedValue(repeatedDocument),
+      analyze: vi.fn()
+        .mockResolvedValueOnce(repeatedAnalysis)
+        .mockResolvedValueOnce(overriddenAnalysis),
+      setReadingOverride,
+    });
+    render(<App client={api} initialPath={`/documents/${document.id}/read`} />);
+
+    const occurrences = await screen.findAllByRole('button', { name: '昨日（きのう）' });
+    fireEvent.contextMenu(occurrences[1]);
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Corrigir leitura' }));
+    fireEvent.change(screen.getByLabelText('Nova leitura em kana'), {
+      target: { value: 'さくじつ' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar correção' }));
+
+    await waitFor(() => expect(setReadingOverride).toHaveBeenCalledWith(document.id, {
+      documentRevision: 1,
+      startOffset: 3,
+      endOffset: 5,
+      reading: 'さくじつ',
+    }));
+    await waitFor(() => {
+      expect(screen.getAllByText('きのう')).toHaveLength(1);
+      expect(screen.getByText('さくじつ')).toBeInTheDocument();
+    });
   });
 
   it('disables analysis for empty content and explains how to continue', () => {

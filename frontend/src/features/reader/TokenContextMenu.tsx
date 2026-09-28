@@ -3,7 +3,9 @@ import type { FuriganaVisibility } from './preferences';
 
 interface TokenContextMenuProps {
   onClose: () => void;
-  onSetVisibility: (visibility: FuriganaVisibility) => void;
+  onSetVisibility?: (visibility: FuriganaVisibility) => void;
+  onEditReading?: () => void;
+  onRemoveReading?: () => void;
 }
 
 const actions: readonly { label: string; visibility: FuriganaVisibility }[] = [
@@ -12,10 +14,15 @@ const actions: readonly { label: string; visibility: FuriganaVisibility }[] = [
   { label: 'Seguir configuração geral', visibility: 'inherit' },
 ];
 
-export function TokenContextMenu({ onClose, onSetVisibility }: TokenContextMenuProps) {
+export function TokenContextMenu({
+  onClose,
+  onSetVisibility,
+  onEditReading,
+  onRemoveReading,
+}: TokenContextMenuProps) {
   const firstItemRef = useRef<HTMLButtonElement>(null);
   const selectVisibility = (visibility: FuriganaVisibility) => {
-    onSetVisibility(visibility);
+    onSetVisibility?.(visibility);
     onClose();
   };
 
@@ -24,11 +31,36 @@ export function TokenContextMenu({ onClose, onSetVisibility }: TokenContextMenuP
   }, []);
 
   return (
-    <span className="reader-context-menu" role="menu" aria-label="Opções de furigana">
-      {actions.map((action) => (
+    <span className="reader-context-menu" role="menu" aria-label="Opções da palavra">
+      {onEditReading && (
+        <button
+          ref={firstItemRef}
+          type="button"
+          role="menuitem"
+          onClick={(event) => {
+            event.stopPropagation();
+            onEditReading();
+          }}
+        >
+          Corrigir leitura
+        </button>
+      )}
+      {onRemoveReading && (
+        <button
+          type="button"
+          role="menuitem"
+          onClick={(event) => {
+            event.stopPropagation();
+            onRemoveReading();
+          }}
+        >
+          Remover correção
+        </button>
+      )}
+      {onSetVisibility && actions.map((action) => (
         <button
           key={action.visibility}
-          ref={action.visibility === 'show' ? firstItemRef : undefined}
+          ref={!onEditReading && action.visibility === 'show' ? firstItemRef : undefined}
           type="button"
           role="menuitem"
           onClick={(event) => {

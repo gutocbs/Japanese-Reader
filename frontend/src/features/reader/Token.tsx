@@ -1,6 +1,11 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
-import type { AnalyzedToken } from '../../shared/api/client';
+import type {
+  AnalyzedToken,
+  ReadingOverrideKey,
+  SetReadingOverride,
+} from '../../shared/api/client';
 import type { FuriganaVisibility } from './preferences';
+import { ReadingOverrideDialog } from './ReadingOverrideDialog';
 import { TokenContextMenu } from './TokenContextMenu';
 
 interface TokenProps {
@@ -9,6 +14,9 @@ interface TokenProps {
   onToggleVocabulary?: (key: string) => void;
   furiganaVisible?: boolean;
   onSetFuriganaVisibility?: (key: string, visibility: FuriganaVisibility) => void;
+  documentRevision?: number;
+  onSaveReadingOverride?: (override: SetReadingOverride) => Promise<void>;
+  onRemoveReadingOverride?: (key: ReadingOverrideKey) => Promise<void>;
 }
 
 export function Token({
@@ -17,14 +25,23 @@ export function Token({
   onToggleVocabulary,
   furiganaVisible = true,
   onSetFuriganaVisibility,
+  documentRevision,
+  onSaveReadingOverride,
+  onRemoveReadingOverride,
 }: TokenProps) {
   const [isContextMenuOpen, setIsContextMenuOpen] = useState(false);
+  const [isReadingDialogOpen, setIsReadingDialogOpen] = useState(false);
   const containerRef = useRef<HTMLSpanElement>(null);
   const triggerRef = useRef<HTMLSpanElement>(null);
   const isInteractive = token.vocabularyKey !== null && onToggleVocabulary !== undefined;
-  const supportsContextMenu = token.isLexical
-    && token.vocabularyKey !== null
-    && onSetFuriganaVisibility !== undefined;
+  const supportsReadingOverride = token.isLexical
+    && documentRevision !== undefined
+    && onSaveReadingOverride !== undefined
+    && onRemoveReadingOverride !== undefined;
+  const supportsContextMenu = token.isLexical && (
+    (token.vocabularyKey !== null && onSetFuriganaVisibility !== undefined)
+    || supportsReadingOverride
+  );
   const isFocusable = isInteractive || supportsContextMenu;
   const accessibleReading = token.dictionaryReading ?? token.reading ?? 'sem leitura';
   const toggle = () => {
@@ -103,10 +120,40 @@ export function Token({
               </Fragment>
         ))}
       </span>
-      {isContextMenuOpen && token.vocabularyKey !== null && onSetFuriganaVisibility && (
+      {isContextMenuOpen && (
         <TokenContextMenu
           onClose={closeContextMenu}
-          onSetVisibility={(visibility) => onSetFuriganaVisibility(token.vocabularyKey!, visibility)}
+          onSetVisibility={
+            token.vocabularyKey !== null && onSetFuriganaVisibility
+              ? (visibility) => onSetFuriganaVisibility(token.vocabularyKey!, visibility)
+              : undefined
+          }
+          onEditReading={supportsReadingOverride ? () => {
+            setIsContextMenuOpen(false);
+            setIsReadingDialogOpen(true);
+          } : undefined}
+          onRemoveReading={
+            supportsReadingOverride && token.hasReadingOverride
+              ? () => {
+                  closeContextMenu();
+                  void onRemoveReadingOverride({
+                    documentRevision,
+                    startOffset: token.startOffset,
+                    endOffset: token.endOffset,
+                  }).catch(() => undefined);
+                }
+              : undefined
+          }
+        />
+      )}
+      {isReadingDialogOpen && supportsReadingOverride && (
+        <ReadingOverrideDialog
+          token={token}
+          documentRevision={documentRevision}
+          returnFocusRef={triggerRef}
+          onClose={() => setIsReadingDialogOpen(false)}
+          onSave={onSaveReadingOverride}
+          onRemove={onRemoveReadingOverride}
         />
       )}
     </span>

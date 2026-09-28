@@ -94,6 +94,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/documents/{document_id}/reading-overrides": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Set Reading Override */
+        put: operations["setReadingOverride"];
+        post?: never;
+        /** Delete Reading Override */
+        delete: operations["deleteReadingOverride"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/health": {
         parameters: {
             query?: never;
@@ -165,6 +183,11 @@ export interface components {
             vocabularyKey: string | null;
             /** Furiganasegments */
             furiganaSegments: components["schemas"]["FuriganaSegmentResponse"][];
+            /**
+             * Hasreadingoverride
+             * @default false
+             */
+            hasReadingOverride: boolean;
         };
         /** AnalyzerMetadataResponse */
         AnalyzerMetadataResponse: {
@@ -242,6 +265,42 @@ export interface components {
          * @enum {string}
          */
         FuriganaVisibility: "inherit" | "show" | "hide";
+        /** ReadingOverrideKeyRequest */
+        ReadingOverrideKeyRequest: {
+            /** Documentrevision */
+            documentRevision: number;
+            /** Startoffset */
+            startOffset: number;
+            /** Endoffset */
+            endOffset: number;
+        };
+        /** ReadingOverrideResponse */
+        ReadingOverrideResponse: {
+            /**
+             * Documentid
+             * Format: uuid
+             */
+            documentId: string;
+            /** Documentrevision */
+            documentRevision: number;
+            /** Startoffset */
+            startOffset: number;
+            /** Endoffset */
+            endOffset: number;
+            /** Reading */
+            reading: string;
+        };
+        /** SetReadingOverrideRequest */
+        SetReadingOverrideRequest: {
+            /** Documentrevision */
+            documentRevision: number;
+            /** Startoffset */
+            startOffset: number;
+            /** Endoffset */
+            endOffset: number;
+            /** Reading */
+            reading: string;
+        };
         /** UpdateDocumentRequest */
         UpdateDocumentRequest: {
             /** Title */
@@ -848,6 +907,164 @@ export interface operations {
             };
             /** @description Not Found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        /** Type */
+                        type: string;
+                        /** Title */
+                        title: string;
+                        /** Status */
+                        status: number;
+                        /** Detail */
+                        detail: string;
+                    };
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        /** Type */
+                        type: string;
+                        /** Title */
+                        title: string;
+                        /** Status */
+                        status: number;
+                        /** Detail */
+                        detail: string;
+                    };
+                };
+            };
+        };
+    };
+    setReadingOverride: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetReadingOverrideRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReadingOverrideResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        /** Type */
+                        type: string;
+                        /** Title */
+                        title: string;
+                        /** Status */
+                        status: number;
+                        /** Detail */
+                        detail: string;
+                    };
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        /** Type */
+                        type: string;
+                        /** Title */
+                        title: string;
+                        /** Status */
+                        status: number;
+                        /** Detail */
+                        detail: string;
+                    };
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        /** Type */
+                        type: string;
+                        /** Title */
+                        title: string;
+                        /** Status */
+                        status: number;
+                        /** Detail */
+                        detail: string;
+                    };
+                };
+            };
+        };
+    };
+    deleteReadingOverride: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReadingOverrideKeyRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        /** Type */
+                        type: string;
+                        /** Title */
+                        title: string;
+                        /** Status */
+                        status: number;
+                        /** Detail */
+                        detail: string;
+                    };
+                };
+            };
+            /** @description Conflict */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

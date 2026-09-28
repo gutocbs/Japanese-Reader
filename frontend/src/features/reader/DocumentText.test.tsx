@@ -36,6 +36,7 @@ const analysis: Analysis = {
             { text: '食', reading: 'た' },
             { text: 'べた', reading: null },
           ],
+          hasReadingOverride: false,
         },
         {
           startOffset: 5,
@@ -49,6 +50,7 @@ const analysis: Analysis = {
           isLexical: false,
           vocabularyKey: null,
           furiganaSegments: [{ text: '。', reading: null }],
+          hasReadingOverride: false,
         },
       ],
     },
@@ -68,6 +70,7 @@ const analysis: Analysis = {
           isLexical: true,
           vocabularyKey: '昨日\u0000きのう',
           furiganaSegments: [{ text: '昨日', reading: 'きのう' }],
+          hasReadingOverride: false,
         },
       ],
     },
