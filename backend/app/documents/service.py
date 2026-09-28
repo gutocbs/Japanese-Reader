@@ -43,20 +43,21 @@ class DocumentService:
         return self._repository.list()
 
     def update(self, document_id: UUID, data: UpdateDocument) -> DocumentUpdateResult:
-        original = self.get(document_id)
-        updated = self._repository.update(document_id, data)
-        if updated is None:
-            raise DocumentNotFoundError(document_id)
-        result = DocumentUpdateResult(
-            document=updated,
-            content_changed=updated.content != original.content,
-        )
-        if result.content_changed:
-            if self._analyses is not None:
-                self._analyses.invalidate_document(document_id)
-            if self._reading_overrides is not None:
-                self._reading_overrides.delete_document(document_id)
-        return result
+        with self._repository.revision_guard(document_id):
+            original = self.get(document_id)
+            updated = self._repository.update(document_id, data)
+            if updated is None:
+                raise DocumentNotFoundError(document_id)
+            result = DocumentUpdateResult(
+                document=updated,
+                content_changed=updated.content != original.content,
+            )
+            if result.content_changed:
+                if self._analyses is not None:
+                    self._analyses.invalidate_document(document_id)
+                if self._reading_overrides is not None:
+                    self._reading_overrides.delete_document(document_id)
+            return result
 
     def delete(self, document_id: UUID) -> None:
         if not self._repository.delete(document_id):

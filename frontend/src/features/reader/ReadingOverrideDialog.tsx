@@ -50,6 +50,7 @@ export function ReadingOverrideDialog({
   }, []);
 
   const close = () => {
+    if (isSaving) return;
     returnFocusRef.current?.focus();
     onClose();
   };
@@ -87,7 +88,7 @@ export function ReadingOverrideDialog({
         if (event.key !== 'Escape') return;
         event.preventDefault();
         event.stopPropagation();
-        close();
+        if (!isSaving) close();
       }}
     >
       <form onSubmit={submit}>
@@ -118,7 +119,12 @@ export function ReadingOverrideDialog({
               Remover correção
             </button>
           )}
-          <button className="button button--secondary" type="button" onClick={close}>
+          <button
+            className="button button--secondary"
+            type="button"
+            disabled={isSaving}
+            onClick={close}
+          >
             Cancelar
           </button>
           <button className="button button--primary" type="submit" disabled={isSaving}>

@@ -212,12 +212,14 @@ export function ReaderPage({ documentId }: ReaderPageProps) {
       }
       await mutation();
       const refreshed = await client.analyze(documentId);
-      const analysis = replaceAnalysisOccurrence(snapshot.analysis, refreshed, key);
       setSnapshot((current) => {
         if (current === null || current.analysis.documentRevision !== key.documentRevision) {
           return current;
         }
-        return { ...current, analysis };
+        return {
+          ...current,
+          analysis: replaceAnalysisOccurrence(current.analysis, refreshed, key),
+        };
       });
     } catch (error) {
       setPersistenceError('Não foi possível salvar a correção de leitura.');

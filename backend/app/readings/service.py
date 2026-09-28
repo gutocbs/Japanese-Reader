@@ -90,19 +90,21 @@ class ReadingOverrideService:
         self._analysis_repository = analysis_repository
 
     def set_override(self, key: ReadingOverrideKey, reading: str) -> ReadingOverride:
-        self._validate_target(key)
-        normalized = normalize_kana_reading(reading)
-        override = ReadingOverride(key, normalized)
-        self._overrides.upsert(override)
-        self._analysis_repository.invalidate_document(key.document_id)
-        return override
+        with self._documents.revision_guard(key.document_id):
+            self._validate_target(key)
+            normalized = normalize_kana_reading(reading)
+            override = ReadingOverride(key, normalized)
+            self._overrides.upsert(override)
+            self._analysis_repository.invalidate_document(key.document_id)
+            return override
 
     def delete_override(self, key: ReadingOverrideKey) -> bool:
-        self._validate_target(key)
-        deleted = self._overrides.delete(key)
-        if deleted:
-            self._analysis_repository.invalidate_document(key.document_id)
-        return deleted
+        with self._documents.revision_guard(key.document_id):
+            self._validate_target(key)
+            deleted = self._overrides.delete(key)
+            if deleted:
+                self._analysis_repository.invalidate_document(key.document_id)
+            return deleted
 
     def _validate_target(self, key: ReadingOverrideKey) -> None:
         document = self._documents.get(key.document_id)

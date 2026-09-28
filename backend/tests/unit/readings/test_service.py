@@ -1,13 +1,16 @@
+from threading import Event, Thread
+
 import pytest
 
 from backend.app.analysis.furigana import FuriganaAligner, FuriganaSegment
 from backend.app.analysis.models import AnalyzerMetadata, RawToken
 from backend.app.analysis.service import AnalysisService
-from backend.app.documents.models import CreateDocument
+from backend.app.documents.models import CreateDocument, UpdateDocument
+from backend.app.documents.service import DocumentService
 from backend.app.persistence.memory.analyses import InMemoryAnalysisRepository
 from backend.app.persistence.memory.documents import InMemoryDocumentRepository
 from backend.app.persistence.memory.readings import InMemoryReadingOverrideRepository
-from backend.app.readings.models import ReadingOverrideKey
+from backend.app.readings.models import ReadingOverride, ReadingOverrideKey
 from backend.app.readings.service import (
     InvalidReadingError,
     InvalidReadingOverrideTargetError,
@@ -33,6 +36,18 @@ class RepeatedTokenAnalyzer:
                 "たべる", part_of_speech, False,
             ),
         )
+
+
+class BlockingUpsertRepository(InMemoryReadingOverrideRepository):
+    def __init__(self) -> None:
+        super().__init__()
+        self.upsert_started = Event()
+        self.continue_upsert = Event()
+
+    def upsert(self, override: ReadingOverride) -> None:
+        self.upsert_started.set()
+        assert self.continue_upsert.wait(timeout=2)
+        super().upsert(override)
 
 
 @pytest.fixture
@@ -116,3 +131,50 @@ def test_override_rejects_a_stale_document_revision_before_analysis(services):
     assert error.value.document_id == document.id
     assert error.value.document_revision == document.revision + 1
     assert overrides.get(stale) is None
+
+
+def test_content_edit_cannot_interleave_between_override_validation_and_storage():
+    documents = InMemoryDocumentRepository()
+    analyses = InMemoryAnalysisRepository()
+    overrides = BlockingUpsertRepository()
+    analysis = AnalysisService(
+        documents,
+        analyses,
+        RepeatedTokenAnalyzer(),
+        FuriganaAligner(),
+        ReadingOverrideResolver(overrides),
+    )
+    readings = ReadingOverrideService(documents, overrides, analysis, analyses)
+    document_service = DocumentService(documents, analyses, overrides)
+    document = document_service.create(CreateDocument("title", "食べた食べた"))
+    key = ReadingOverrideKey(document.id, document.revision, 0, 3)
+    write_errors: list[BaseException] = []
+
+    def write_override() -> None:
+        try:
+            readings.set_override(key, "くった")
+        except BaseException as error:  # pragma: no cover - asserted below
+            write_errors.append(error)
+
+    edit_finished = Event()
+
+    def edit_document() -> None:
+        document_service.update(document.id, UpdateDocument(content="食べた食べる"))
+        edit_finished.set()
+
+    writer = Thread(target=write_override)
+    editor = Thread(target=edit_document)
+    writer.start()
+    assert overrides.upsert_started.wait(timeout=2)
+    editor.start()
+    edited_before_override_finished = edit_finished.wait(timeout=0.5)
+    overrides.continue_upsert.set()
+    writer.join(timeout=2)
+    editor.join(timeout=2)
+
+    assert not writer.is_alive()
+    assert not editor.is_alive()
+    assert write_errors == []
+    assert not edited_before_override_finished
+    assert document_service.get(document.id).revision == 2
+    assert overrides.get(key) is None

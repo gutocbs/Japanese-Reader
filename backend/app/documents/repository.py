@@ -1,3 +1,4 @@
+from contextlib import AbstractContextManager
 from typing import Protocol
 from uuid import UUID
 
@@ -12,6 +13,8 @@ class DocumentRepository(Protocol):
     def get(self, document_id: UUID) -> Document | None: ...
 
     def list(self) -> tuple[Document, ...]: ...
+
+    def revision_guard(self, document_id: UUID) -> AbstractContextManager[None]: ...
 
     def update(self, document_id: UUID, data: UpdateDocument) -> Document | None: ...
 

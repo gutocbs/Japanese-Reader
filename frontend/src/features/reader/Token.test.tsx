@@ -27,6 +27,24 @@ describe('Token', () => {
     expect(ruby?.querySelector('rt')).toHaveAttribute('hidden');
   });
 
+  it('announces the effective override reading instead of the dictionary reading', () => {
+    render(
+      <Token
+        token={{
+          ...lexicalToken,
+          reading: 'さくじつ',
+          hasReadingOverride: true,
+          furiganaSegments: [{ text: '昨日', reading: 'さくじつ' }],
+        }}
+        documentRevision={1}
+        onSaveReadingOverride={vi.fn().mockResolvedValue(undefined)}
+        onRemoveReadingOverride={vi.fn().mockResolvedValue(undefined)}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: '昨日（さくじつ）' })).toBeInTheDocument();
+  });
+
   it('opens the lexical context menu with pointer or keyboard and returns focus on Escape', () => {
     const onSetFuriganaVisibility = vi.fn();
     render(

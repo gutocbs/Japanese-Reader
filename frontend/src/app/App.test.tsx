@@ -1,5 +1,5 @@
 import { StrictMode } from 'react';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Analysis, Document, DocumentClient } from '../shared/api/client';
 import { App } from './App';
@@ -472,6 +472,130 @@ describe('reader routes', () => {
       expect(screen.getAllByText('きのう')).toHaveLength(1);
       expect(screen.getByText('さくじつ')).toBeInTheDocument();
     });
+  });
+
+  it('keeps both occurrences when two reading corrections finish concurrently', async () => {
+    const baseAnalysis: Analysis = {
+      ...analysis,
+      blocks: [{
+        startOffset: 0,
+        endOffset: 4,
+        tokens: [
+          {
+            ...analysis.blocks[0].tokens[0],
+            startOffset: 0,
+            endOffset: 2,
+            surface: '昨日',
+            lemma: '昨日',
+            reading: 'きのう',
+            dictionaryReading: 'きのう',
+            vocabularyKey: '["昨日","きのう"]',
+            furiganaSegments: [{ text: '昨日', reading: 'きのう' }],
+          },
+          {
+            ...analysis.blocks[0].tokens[0],
+            startOffset: 2,
+            endOffset: 4,
+            surface: '今日',
+            lemma: '今日',
+            reading: 'きょう',
+            dictionaryReading: 'きょう',
+            vocabularyKey: '["今日","きょう"]',
+            furiganaSegments: [{ text: '今日', reading: 'きょう' }],
+          },
+        ],
+      }],
+    };
+    const firstOverride: Analysis = {
+      ...baseAnalysis,
+      blocks: [{
+        ...baseAnalysis.blocks[0],
+        tokens: [
+          {
+            ...baseAnalysis.blocks[0].tokens[0],
+            reading: 'さくじつ',
+            hasReadingOverride: true,
+            furiganaSegments: [{ text: '昨日', reading: 'さくじつ' }],
+          },
+          baseAnalysis.blocks[0].tokens[1],
+        ],
+      }],
+    };
+    const bothOverrides: Analysis = {
+      ...firstOverride,
+      blocks: [{
+        ...firstOverride.blocks[0],
+        tokens: [
+          firstOverride.blocks[0].tokens[0],
+          {
+            ...firstOverride.blocks[0].tokens[1],
+            reading: 'こんにち',
+            hasReadingOverride: true,
+            furiganaSegments: [{ text: '今日', reading: 'こんにち' }],
+          },
+        ],
+      }],
+    };
+    const firstWrite = deferred<Awaited<ReturnType<DocumentClient['setReadingOverride']>>>();
+    const secondWrite = deferred<Awaited<ReturnType<DocumentClient['setReadingOverride']>>>();
+    const firstRefresh = deferred<Analysis>();
+    const secondRefresh = deferred<Analysis>();
+    const setReadingOverride = vi.fn((_: string, override) => (
+      override.startOffset === 0 ? firstWrite.promise : secondWrite.promise
+    ));
+    const analyze = vi.fn()
+      .mockResolvedValueOnce(baseAnalysis)
+      .mockReturnValueOnce(firstRefresh.promise)
+      .mockReturnValueOnce(secondRefresh.promise);
+    const api = client({
+      get: vi.fn().mockResolvedValue({ ...document, content: '昨日今日' }),
+      analyze,
+      setReadingOverride,
+    });
+    render(<App client={api} initialPath={`/documents/${document.id}/read`} />);
+
+    const yesterday = await screen.findByRole('button', { name: '昨日（きのう）' });
+    const today = screen.getByRole('button', { name: '今日（きょう）' });
+    fireEvent.contextMenu(yesterday);
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Corrigir leitura' }));
+    const yesterdayDialog = screen.getByRole('dialog', { name: 'Corrigir leitura de 昨日' });
+    fireEvent.change(within(yesterdayDialog).getByLabelText('Nova leitura em kana'), {
+      target: { value: 'さくじつ' },
+    });
+    fireEvent.click(within(yesterdayDialog).getByRole('button', { name: 'Salvar correção' }));
+
+    fireEvent.contextMenu(today);
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Corrigir leitura' }));
+    const todayDialog = screen.getByRole('dialog', { name: 'Corrigir leitura de 今日' });
+    fireEvent.change(within(todayDialog).getByLabelText('Nova leitura em kana'), {
+      target: { value: 'こんにち' },
+    });
+    fireEvent.click(within(todayDialog).getByRole('button', { name: 'Salvar correção' }));
+
+    expect(setReadingOverride).toHaveBeenCalledTimes(2);
+    await act(async () => firstWrite.resolve({
+      documentId: document.id,
+      documentRevision: 1,
+      startOffset: 0,
+      endOffset: 2,
+      reading: 'さくじつ',
+    }));
+    await waitFor(() => expect(analyze).toHaveBeenCalledTimes(2));
+    await act(async () => firstRefresh.resolve(firstOverride));
+    expect(await screen.findByText('さくじつ')).toBeInTheDocument();
+
+    await act(async () => secondWrite.resolve({
+      documentId: document.id,
+      documentRevision: 1,
+      startOffset: 2,
+      endOffset: 4,
+      reading: 'こんにち',
+    }));
+    await waitFor(() => expect(analyze).toHaveBeenCalledTimes(3));
+    await act(async () => secondRefresh.resolve(bothOverrides));
+
+    expect(await screen.findByText('さくじつ')).toBeInTheDocument();
+    expect(screen.getByText('こんにち')).toBeInTheDocument();
   });
 
   it('disables analysis for empty content and explains how to continue', () => {

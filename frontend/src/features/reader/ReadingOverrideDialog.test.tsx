@@ -109,4 +109,20 @@ describe('ReadingOverrideDialog', () => {
     expect(onClose).toHaveBeenCalledOnce();
     expect(returnFocusRef.current).toHaveFocus();
   });
+
+  it('does not allow Cancel or Escape while a save is in progress', () => {
+    const pendingSave = new Promise<void>(() => undefined);
+    const { onClose } = renderDialog({
+      onSave: vi.fn().mockReturnValue(pendingSave),
+    });
+    fireEvent.change(screen.getByLabelText('Nova leitura em kana'), {
+      target: { value: 'さくじつ' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar correção' }));
+
+    expect(screen.getByRole('button', { name: 'Cancelar' })).toBeDisabled();
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+    expect(onClose).not.toHaveBeenCalled();
+  });
 });

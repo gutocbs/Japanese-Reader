@@ -1,7 +1,9 @@
 from collections.abc import Callable
+from contextlib import contextmanager
 from dataclasses import replace
 from datetime import datetime, timezone
-from threading import Lock
+from threading import Lock, RLock
+from typing import Iterator
 from uuid import UUID, uuid4
 
 from backend.app.documents.models import CreateDocument, Document, UpdateDocument
@@ -22,6 +24,7 @@ class InMemoryDocumentRepository:
         self._uuid_factory = uuid_factory
         self._documents: dict[UUID, Document] = {}
         self._lock = Lock()
+        self._revision_locks: dict[UUID, RLock] = {}
 
     def _now(self) -> datetime:
         timestamp = self._clock()
@@ -50,6 +53,13 @@ class InMemoryDocumentRepository:
     def list(self) -> tuple[Document, ...]:
         with self._lock:
             return tuple(self._documents.values())
+
+    @contextmanager
+    def revision_guard(self, document_id: UUID) -> Iterator[None]:
+        with self._lock:
+            revision_lock = self._revision_locks.setdefault(document_id, RLock())
+        with revision_lock:
+            yield
 
     def update(self, document_id: UUID, data: UpdateDocument) -> Document | None:
         with self._lock:

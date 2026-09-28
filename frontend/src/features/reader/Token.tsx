@@ -43,7 +43,7 @@ export function Token({
     || supportsReadingOverride
   );
   const isFocusable = isInteractive || supportsContextMenu;
-  const accessibleReading = token.dictionaryReading ?? token.reading ?? 'sem leitura';
+  const accessibleReading = token.reading ?? token.dictionaryReading ?? 'sem leitura';
   const toggle = () => {
     if (token.vocabularyKey !== null) onToggleVocabulary?.(token.vocabularyKey);
   };
