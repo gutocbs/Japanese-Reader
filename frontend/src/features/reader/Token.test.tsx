@@ -46,6 +46,21 @@ describe('Token', () => {
     expect(hoverRule?.style.background).toBe('var(--color-reader-token-hover)');
   });
 
+  it('uses a distinct translucent surface for a selected token without changing its ruby reading', () => {
+    const selectedRule = Array.from(document.styleSheets)
+      .flatMap((sheet) => Array.from(sheet.cssRules))
+      .find((rule): rule is CSSStyleRule => (
+        rule instanceof CSSStyleRule && rule.selectorText === '.reader-token[data-selected]'
+      ));
+    const { container } = render(<Token token={lexicalToken} selected />);
+
+    expect(getComputedStyle(document.documentElement)
+      .getPropertyValue('--color-reader-token-selected').trim()).toBe('rgb(31 90 67/22%)');
+    expect(selectedRule?.style.background).toBe('var(--color-reader-token-selected)');
+    expect(container.querySelector('.reader-token')).toHaveAttribute('data-selected');
+    expect(container.querySelector('ruby > rt')).toHaveTextContent('きのう');
+  });
+
   it('keeps ruby bases while hiding only rt according to the resolved preference', () => {
     const { container } = render(<Token token={lexicalToken} furiganaVisible={false} />);
 

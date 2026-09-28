@@ -549,7 +549,7 @@ a {
 }
 
 .reader-token[data-selected] {
-  background: var(--color-surface-muted);
+  background: var(--color-reader-token-selected);
   text-decoration-line: underline;
   text-decoration-style: double;
   text-decoration-color: var(--color-primary);
