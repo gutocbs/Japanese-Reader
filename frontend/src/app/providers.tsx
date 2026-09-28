@@ -17,6 +17,7 @@ interface RouterLocation {
 interface RouterContextValue {
   location: RouterLocation;
   navigate: (path: string, state?: unknown) => void;
+  replaceState: (state: unknown) => void;
 }
 
 interface AppProvidersProps {
@@ -49,7 +50,15 @@ export function AppProviders({ children, client = documentClient, initialPath }:
     setLocation({ path, state: state ?? null });
   }, []);
 
-  const router = useMemo(() => ({ location, navigate }), [location, navigate]);
+  const replaceState = useCallback((state: unknown) => {
+    window.history.replaceState(state ?? null, '', window.location.href);
+    setLocation((current) => ({ ...current, state: state ?? null }));
+  }, []);
+
+  const router = useMemo(
+    () => ({ location, navigate, replaceState }),
+    [location, navigate, replaceState],
+  );
 
   return (
     <ApiContext.Provider value={client}>

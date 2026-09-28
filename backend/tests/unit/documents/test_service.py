@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 import pytest
@@ -89,3 +90,30 @@ def test_content_edit_removes_cached_analysis_and_reading_overrides():
     assert result.document.revision == 2
     assert analyses.find_compatible(analysis.cache_key) is None
     assert overrides.get(override_key) is None
+
+
+def test_mark_read_uses_the_domain_clock_without_changing_canonical_content():
+    created_at = datetime(2026, 9, 28, 12, tzinfo=timezone.utc)
+    read_at = created_at + timedelta(minutes=5)
+    repository = InMemoryDocumentRepository(clock=lambda: created_at)
+    service = DocumentService(repository, clock=lambda: read_at)
+    original = service.create(CreateDocument("First", "猫"))
+
+    marked = service.mark_read(original.id)
+
+    assert marked.last_read_at == read_at
+    assert marked.content == original.content
+    assert marked.revision == original.revision
+    assert marked.updated_at == original.updated_at
+    assert service.get(original.id) == marked
+
+
+def test_mark_read_rejects_a_naive_domain_timestamp():
+    repository = InMemoryDocumentRepository()
+    service = DocumentService(repository, clock=lambda: datetime(2026, 9, 28, 12))
+    original = service.create(CreateDocument("First", "猫"))
+
+    with pytest.raises(ValueError, match="timezone-aware"):
+        service.mark_read(original.id)
+
+    assert service.get(original.id).last_read_at is None

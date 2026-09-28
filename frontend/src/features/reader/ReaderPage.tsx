@@ -270,20 +270,32 @@ export function ReaderPage({ documentId }: ReaderPageProps) {
           <p className="eyebrow">Modo de leitura</p>
           <h1 id="reader-title">{snapshot.document.title || 'Sem título'}</h1>
         </div>
-        <a
-          className="text-link"
-          href={`/documents/${encodeURIComponent(documentId)}/edit`}
-          onClick={(event) => {
-            event.preventDefault();
-            navigate(`/documents/${encodeURIComponent(documentId)}/edit`);
-          }}
-        >
-          Editar documento
-        </a>
-        <ReaderMenu
-          preferences={readerPreferences}
-          onPreferencesChange={updateReaderPreferences}
-        />
+        <div className="reader-heading__actions">
+          <a
+            className="text-link"
+            href="/"
+            onClick={(event) => {
+              event.preventDefault();
+              navigate('/');
+            }}
+          >
+            Voltar à biblioteca
+          </a>
+          <a
+            className="text-link"
+            href={`/documents/${encodeURIComponent(documentId)}/edit`}
+            onClick={(event) => {
+              event.preventDefault();
+              navigate(`/documents/${encodeURIComponent(documentId)}/edit`);
+            }}
+          >
+            Editar documento
+          </a>
+          <ReaderMenu
+            preferences={readerPreferences}
+            onPreferencesChange={updateReaderPreferences}
+          />
+        </div>
       </header>
       <DocumentText
         content={snapshot.document.content}

@@ -7,6 +7,7 @@ from pydantic.alias_generators import to_camel
 
 from backend.app.analysis.service import AnalysisService
 from backend.app.api.errors import PROBLEM_RESPONSES, ProblemDetails
+from backend.app.documents.api import DocumentServiceDependency
 
 
 class AnalysisResponseModel(BaseModel):
@@ -82,5 +83,11 @@ router = APIRouter(prefix="/documents", tags=["analysis"], responses={
 
 
 @router.post("/{document_id}/analysis", response_model=DocumentAnalysisResponse, operation_id="analyzeDocument")
-def analyze_document(document_id: UUID, service: AnalysisServiceDependency):
-    return DocumentAnalysisResponse.model_validate(service.analyze(document_id))
+def analyze_document(
+    document_id: UUID,
+    service: AnalysisServiceDependency,
+    documents: DocumentServiceDependency,
+):
+    analysis = service.analyze(document_id)
+    documents.mark_read(document_id)
+    return DocumentAnalysisResponse.model_validate(analysis)

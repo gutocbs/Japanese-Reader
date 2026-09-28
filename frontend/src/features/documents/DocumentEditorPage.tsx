@@ -1,18 +1,41 @@
-import { type FormEvent, useCallback, useEffect, useState } from 'react';
+import { type FormEvent, useCallback, useEffect, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import type { Document } from '../../shared/api/client';
 import { useDocumentClient, useRouter } from '../../app/providers';
+import { documentKeys } from './queries';
 
 interface DocumentEditorPageProps {
   documentId?: string;
 }
 
-type OperationError = 'load' | 'save' | 'analysis' | null;
+type OperationError = 'load' | 'save' | 'analysis' | 'stale-analysis' | null;
+
+interface EditorDraft {
+  documentId: string | null;
+  title: string;
+  content: string;
+}
+
+function routedDraft(state: unknown, documentId: string | undefined): EditorDraft | null {
+  if (typeof state !== 'object' || state === null || !('editorDraft' in state)) return null;
+  const draft = (state as { editorDraft?: unknown }).editorDraft;
+  if (typeof draft !== 'object' || draft === null) return null;
+  const candidate = draft as Partial<EditorDraft>;
+  if (
+    candidate.documentId !== (documentId ?? null)
+    || typeof candidate.title !== 'string'
+    || typeof candidate.content !== 'string'
+  ) return null;
+  return candidate as EditorDraft;
+}
 
 export function DocumentEditorPage({ documentId }: DocumentEditorPageProps) {
   const client = useDocumentClient();
-  const { navigate } = useRouter();
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
+  const { location, navigate, replaceState } = useRouter();
+  const queryClient = useQueryClient();
+  const initialDraft = useRef(routedDraft(location.state, documentId));
+  const [title, setTitle] = useState(initialDraft.current?.title ?? '');
+  const [content, setContent] = useState(initialDraft.current?.content ?? '');
   const [savedDocument, setSavedDocument] = useState<Document | null>(null);
   const [isLoading, setIsLoading] = useState(documentId !== undefined);
   const [isPending, setIsPending] = useState(false);
@@ -24,15 +47,18 @@ export function DocumentEditorPage({ documentId }: DocumentEditorPageProps) {
     setError(null);
     try {
       const document = await client.get(documentId);
+      queryClient.setQueryData(documentKeys.detail(documentId), document);
       setSavedDocument(document);
-      setTitle(document.title);
-      setContent(document.content);
+      if (initialDraft.current === null) {
+        setTitle(document.title);
+        setContent(document.content);
+      }
     } catch {
       setError('load');
     } finally {
       setIsLoading(false);
     }
-  }, [client, documentId]);
+  }, [client, documentId, queryClient]);
 
   useEffect(() => {
     void loadDocument();
@@ -51,6 +77,8 @@ export function DocumentEditorPage({ documentId }: DocumentEditorPageProps) {
         document = await client.update(document.id, { title, content });
       }
       setSavedDocument(document);
+      queryClient.setQueryData(documentKeys.detail(document.id), document);
+      await queryClient.invalidateQueries({ queryKey: documentKeys.list() });
     } catch {
       setError('save');
       setIsPending(false);
@@ -59,6 +87,15 @@ export function DocumentEditorPage({ documentId }: DocumentEditorPageProps) {
 
     try {
       const analysis = await client.analyze(document.id);
+      if (analysis.documentRevision !== document.revision) {
+        setError('stale-analysis');
+        return;
+      }
+      queryClient.setQueryData(
+        documentKeys.analysis(document.id, document.revision),
+        analysis,
+      );
+      await queryClient.invalidateQueries({ queryKey: documentKeys.list() });
       navigate(`/documents/${encodeURIComponent(document.id)}/read`, { document, analysis });
     } catch {
       setError('analysis');
@@ -70,6 +107,16 @@ export function DocumentEditorPage({ documentId }: DocumentEditorPageProps) {
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     void analyzeAndRead();
+  };
+
+  const preserveDraft = (nextTitle: string, nextContent: string) => {
+    replaceState({
+      editorDraft: {
+        documentId: documentId ?? null,
+        title: nextTitle,
+        content: nextContent,
+      },
+    });
   };
 
   if (isLoading) {
@@ -96,7 +143,21 @@ export function DocumentEditorPage({ documentId }: DocumentEditorPageProps) {
         <p className="eyebrow">Leitura local</p>
         <h1 id="editor-title">{documentId === undefined ? 'Novo documento' : 'Editar documento'}</h1>
         <p>O texto original permanece intacto enquanto a leitura é preparada.</p>
+        <a
+          className="text-link"
+          href="/"
+          onClick={(event) => {
+            event.preventDefault();
+            navigate('/');
+          }}
+        >
+          Voltar à biblioteca
+        </a>
       </header>
+
+      <p className="memory-notice" role="note">
+        Persistência temporária: este documento será perdido ao reiniciar o servidor.
+      </p>
 
       <form className="editor-form" onSubmit={handleSubmit}>
         <label className="field">
@@ -104,7 +165,11 @@ export function DocumentEditorPage({ documentId }: DocumentEditorPageProps) {
           <input
             name="title"
             value={title}
-            onChange={(event) => setTitle(event.target.value)}
+            onChange={(event) => {
+              const nextTitle = event.target.value;
+              setTitle(nextTitle);
+              preserveDraft(nextTitle, content);
+            }}
             disabled={isPending}
           />
         </label>
@@ -114,7 +179,11 @@ export function DocumentEditorPage({ documentId }: DocumentEditorPageProps) {
           <textarea
             name="content"
             value={content}
-            onChange={(event) => setContent(event.target.value)}
+            onChange={(event) => {
+              const nextContent = event.target.value;
+              setContent(nextContent);
+              preserveDraft(title, nextContent);
+            }}
             disabled={isPending}
             rows={16}
           />
@@ -127,9 +196,11 @@ export function DocumentEditorPage({ documentId }: DocumentEditorPageProps) {
         {error !== null && (
           <div className="error-message" role="alert">
             <p>
-              {error === 'analysis'
-                ? 'Não foi possível analisar o documento. Seu texto continua aqui.'
-                : 'Não foi possível salvar o documento. Seu texto continua aqui.'}
+              {error === 'stale-analysis'
+                ? 'A análise recebida pertence a uma versão anterior do documento. Seu texto continua aqui.'
+                : error === 'analysis'
+                  ? 'Não foi possível analisar o documento. Seu texto continua aqui.'
+                  : 'Não foi possível salvar o documento. Seu texto continua aqui.'}
             </p>
             <button className="button button--secondary" type="button" onClick={() => void analyzeAndRead()}>
               Tentar novamente

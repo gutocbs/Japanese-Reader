@@ -77,6 +77,15 @@ class InMemoryDocumentRepository:
             self._documents[document_id] = updated
             return updated
 
+    def mark_read(self, document_id: UUID, read_at: datetime) -> Document | None:
+        with self._lock:
+            document = self._documents.get(document_id)
+            if document is None:
+                return None
+            marked = replace(document, last_read_at=read_at)
+            self._documents[document_id] = marked
+            return marked
+
     def delete(self, document_id: UUID) -> bool:
         with self._lock:
             return self._documents.pop(document_id, None) is not None

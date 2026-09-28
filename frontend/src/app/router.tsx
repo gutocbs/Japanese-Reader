@@ -1,19 +1,24 @@
 import { DocumentEditorPage } from '../features/documents/DocumentEditorPage';
+import { DocumentLibraryPage } from '../features/documents/DocumentLibraryPage';
 import { ReaderPage } from '../features/reader/ReaderPage';
 import { useRouter } from './providers';
 
 export function AppRouter() {
   const { location } = useRouter();
 
-  if (location.path === '/' || location.path === '/documents/new') {
-    return <DocumentEditorPage />;
+  if (location.path === '/') {
+    return <DocumentLibraryPage />;
+  }
+
+  if (location.path === '/documents/new') {
+    return <DocumentEditorPage key="new-document" />;
   }
 
   const match = /^\/documents\/([^/]+)\/(edit|read)$/.exec(location.path);
   if (match !== null) {
     const documentId = decodeURIComponent(match[1]);
     return match[2] === 'edit'
-      ? <DocumentEditorPage documentId={documentId} />
+      ? <DocumentEditorPage key={`edit-${documentId}`} documentId={documentId} />
       : <ReaderPage documentId={documentId} />;
   }
 
@@ -21,7 +26,7 @@ export function AppRouter() {
     <section className="page-state" aria-labelledby="not-found-title">
       <p className="eyebrow">Caminho desconhecido</p>
       <h1 id="not-found-title">Página não encontrada</h1>
-      <a className="text-link" href="/documents/new">Criar um documento</a>
+      <a className="text-link" href="/">Voltar à biblioteca</a>
     </section>
   );
 }

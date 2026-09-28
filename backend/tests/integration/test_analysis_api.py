@@ -1,4 +1,5 @@
 from dataclasses import replace
+from datetime import datetime
 from hashlib import sha256
 
 import pytest
@@ -69,6 +70,17 @@ def test_missing_document_analysis_returns_404_problem(client):
     assert response.headers["content-type"] == "application/problem+json"
     assert response.json()["status"] == 404
     assert "was not found" in response.json()["detail"]
+
+
+def test_successful_analysis_marks_the_document_as_read_on_the_backend(client):
+    document_id = create_document(client, "猫")
+
+    response = client.post(f"/api/documents/{document_id}/analysis")
+
+    assert response.status_code == 200
+    stored = client.get(f"/api/documents/{document_id}").json()
+    last_read_at = datetime.fromisoformat(stored["lastReadAt"].replace("Z", "+00:00"))
+    assert last_read_at.utcoffset().total_seconds() == 0
 
 
 @pytest.mark.parametrize("content", ["", " \r\n\t\u3000"])

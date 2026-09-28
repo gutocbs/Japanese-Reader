@@ -10,6 +10,7 @@ from backend.app.documents.repository import DocumentRepository
 CONTENT = "𠮷野家\n日本語  text"
 CREATED_AT = datetime(2026, 9, 27, 3, 0, tzinfo=timezone.utc)
 UPDATED_AT = datetime(2026, 9, 27, 3, 1, tzinfo=timezone.utc)
+LAST_READ_AT = datetime(2026, 9, 28, 12, 5, tzinfo=timezone.utc)
 
 
 class DocumentRepositoryContract:
@@ -79,6 +80,20 @@ class DocumentRepositoryContract:
         assert updated.title == ""
         assert updated.content == ""
         assert updated.revision == 2
+
+    def test_mark_read_changes_only_the_read_timestamp(self, repository):
+        original = repository.create(CreateDocument(title="First", content=CONTENT))
+
+        marked = repository.mark_read(original.id, LAST_READ_AT)
+
+        assert marked.last_read_at == LAST_READ_AT
+        assert marked.title == original.title
+        assert marked.content == original.content
+        assert marked.revision == original.revision
+        assert marked.created_at == original.created_at
+        assert marked.updated_at == original.updated_at
+        assert repository.get(original.id) == marked
+        assert repository.mark_read(UUID(int=99), LAST_READ_AT) is None
 
     def test_delete_and_missing_operations_are_explicit(self, repository):
         missing_id = UUID("00000000-0000-0000-0000-000000000099")

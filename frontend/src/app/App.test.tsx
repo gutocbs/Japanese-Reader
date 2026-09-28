@@ -158,6 +158,36 @@ describe('reader routes', () => {
     expect(await screen.findByRole('heading', { name: updated.title, level: 1 })).toBeInTheDocument();
   });
 
+  it('discards an analysis from revision 1 after the editor saves revision 2', async () => {
+    const staleAnalysis = deferred<Analysis>();
+    let currentDocument = document;
+    const api = client({
+      get: vi.fn().mockImplementation(async () => currentDocument),
+      update: vi.fn().mockImplementation(async () => {
+        currentDocument = revisedDocument;
+        return revisedDocument;
+      }),
+      analyze: vi.fn().mockReturnValue(staleAnalysis.promise),
+    });
+    render(<App client={api} initialPath={`/documents/${document.id}/edit`} />);
+
+    expect(await screen.findByLabelText('Texto japonês')).toHaveValue(document.content);
+    fireEvent.change(screen.getByLabelText('Título'), { target: { value: revisedDocument.title } });
+    fireEvent.change(screen.getByLabelText('Texto japonês'), {
+      target: { value: revisedDocument.content },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar e analisar' }));
+    await act(async () => staleAnalysis.resolve(analysis));
+
+    expect(await screen.findByRole('heading', { name: 'Editar documento', level: 1 }))
+      .toBeInTheDocument();
+    expect(screen.getByLabelText('Texto japonês')).toHaveValue(revisedDocument.content);
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'A análise recebida pertence a uma versão anterior do documento.',
+    );
+    expect(window.location.pathname).toBe(`/documents/${document.id}/edit`);
+  });
+
   it('revalidates an older reader history entry before keeping its snapshot', async () => {
     let currentDocument = document;
     const api = client({

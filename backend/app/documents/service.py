@@ -1,10 +1,16 @@
+from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from uuid import UUID
 
 from backend.app.documents.models import CreateDocument, Document, UpdateDocument
 from backend.app.documents.repository import DocumentRepository
 from backend.app.analysis.repository import AnalysisRepository
 from backend.app.readings.repository import ReadingOverrideRepository
+
+
+def utc_now() -> datetime:
+    return datetime.now(timezone.utc)
 
 
 class DocumentNotFoundError(LookupError):
@@ -25,10 +31,13 @@ class DocumentService:
         repository: DocumentRepository,
         analyses: AnalysisRepository | None = None,
         reading_overrides: ReadingOverrideRepository | None = None,
+        *,
+        clock: Callable[[], datetime] = utc_now,
     ) -> None:
         self._repository = repository
         self._analyses = analyses
         self._reading_overrides = reading_overrides
+        self._clock = clock
 
     def create(self, data: CreateDocument) -> Document:
         return self._repository.create(data)
@@ -62,3 +71,12 @@ class DocumentService:
     def delete(self, document_id: UUID) -> None:
         if not self._repository.delete(document_id):
             raise DocumentNotFoundError(document_id)
+
+    def mark_read(self, document_id: UUID) -> Document:
+        timestamp = self._clock()
+        if timestamp.utcoffset() is None:
+            raise ValueError("Document clock must return a timezone-aware datetime")
+        marked = self._repository.mark_read(document_id, timestamp.astimezone(timezone.utc))
+        if marked is None:
+            raise DocumentNotFoundError(document_id)
+        return marked

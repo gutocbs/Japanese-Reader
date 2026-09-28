@@ -1,4 +1,5 @@
 from contextlib import AbstractContextManager
+from datetime import datetime
 from typing import Protocol
 from uuid import UUID
 
@@ -17,5 +18,7 @@ class DocumentRepository(Protocol):
     def revision_guard(self, document_id: UUID) -> AbstractContextManager[None]: ...
 
     def update(self, document_id: UUID, data: UpdateDocument) -> Document | None: ...
+
+    def mark_read(self, document_id: UUID, read_at: datetime) -> Document | None: ...
 
     def delete(self, document_id: UUID) -> bool: ...
