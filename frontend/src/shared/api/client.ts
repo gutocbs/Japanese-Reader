@@ -7,6 +7,8 @@ export type Analysis = components['schemas']['DocumentAnalysisResponse'];
 export type AnalysisBlock = components['schemas']['AnalysisBlockResponse'];
 export type AnalyzedToken = components['schemas']['AnalyzedTokenResponse'];
 export type VocabularySelection = components['schemas']['VocabularyKeyModel'];
+export type FuriganaVisibility = components['schemas']['FuriganaVisibility'];
+export type VocabularyDisplayPreference = components['schemas']['VocabularyDisplayPreferenceModel'];
 export type ProblemDetails = operations['getDocument']['responses'][404]['content']['application/problem+json'];
 
 function isProblemDetails(body: unknown): body is ProblemDetails {
@@ -46,6 +48,7 @@ export function createDocumentClient(fetcher: typeof fetch = globalThis.fetch) {
 
   const documentPath = (id: string) => `/api/documents/${encodeURIComponent(id)}`;
   const vocabularyPath = (id: string) => `${documentPath(id)}/vocabulary-selections`;
+  const displayPreferencesPath = (id: string) => `${documentPath(id)}/vocabulary-display-preferences`;
   return {
     list: () => request<Document[]>('/api/documents', 'GET'),
     create: (data: CreateDocument) => request<Document>('/api/documents', 'POST', data),
@@ -58,6 +61,12 @@ export function createDocumentClient(fetcher: typeof fetch = globalThis.fetch) {
     ).selections,
     replaceVocabularySelections: (id: string, selections: VocabularySelection[]) => (
       request<void>(vocabularyPath(id), 'PUT', { selections })
+    ),
+    listVocabularyDisplayPreferences: async (id: string) => (
+      await request<{ preferences: VocabularyDisplayPreference[] }>(displayPreferencesPath(id), 'GET')
+    ).preferences,
+    setVocabularyDisplayPreference: (id: string, preference: VocabularyDisplayPreference) => (
+      request<void>(displayPreferencesPath(id), 'PUT', preference)
     ),
   };
 }

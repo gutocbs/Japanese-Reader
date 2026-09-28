@@ -27,6 +27,7 @@ async def lifespan(application: FastAPI):
             application.state.document_repository,
             application.state.vocabulary_repository,
             application.state.analysis_service,
+            application.state.vocabulary_repository,
         )
         yield
     finally:

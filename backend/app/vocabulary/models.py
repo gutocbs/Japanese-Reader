@@ -1,5 +1,6 @@
 import json
 from dataclasses import dataclass
+from enum import Enum
 
 from backend.app.analysis.models import RawToken
 
@@ -22,3 +23,15 @@ class VocabularyKey:
     def encode(self) -> str:
         """Stable wire/storage identity; JSON preserves boundaries and null."""
         return json.dumps([self.lemma, self.reading], ensure_ascii=False, separators=(",", ":"))
+
+
+class FuriganaVisibility(str, Enum):
+    INHERIT = "inherit"
+    SHOW = "show"
+    HIDE = "hide"
+
+
+@dataclass(frozen=True)
+class VocabularyDisplayPreference:
+    key: VocabularyKey
+    visibility: FuriganaVisibility

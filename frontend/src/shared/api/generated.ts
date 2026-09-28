@@ -76,6 +76,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/documents/{document_id}/vocabulary-display-preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Vocabulary Display Preferences */
+        get: operations["listVocabularyDisplayPreferences"];
+        /** Set Vocabulary Display Preference */
+        put: operations["setVocabularyDisplayPreference"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/health": {
         parameters: {
             query?: never;
@@ -219,12 +237,27 @@ export interface components {
             /** Reading */
             reading: string | null;
         };
+        /**
+         * FuriganaVisibility
+         * @enum {string}
+         */
+        FuriganaVisibility: "inherit" | "show" | "hide";
         /** UpdateDocumentRequest */
         UpdateDocumentRequest: {
             /** Title */
             title?: string;
             /** Content */
             content?: string;
+        };
+        /** VocabularyDisplayPreferenceModel */
+        VocabularyDisplayPreferenceModel: {
+            key: components["schemas"]["VocabularyKeyModel"];
+            visibility: components["schemas"]["FuriganaVisibility"];
+        };
+        /** VocabularyDisplayPreferencesModel */
+        VocabularyDisplayPreferencesModel: {
+            /** Preferences */
+            preferences: components["schemas"]["VocabularyDisplayPreferenceModel"][];
         };
         /** VocabularyKeyModel */
         VocabularyKeyModel: {
@@ -685,6 +718,124 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["VocabularySelectionsModel"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        /** Type */
+                        type: string;
+                        /** Title */
+                        title: string;
+                        /** Status */
+                        status: number;
+                        /** Detail */
+                        detail: string;
+                    };
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        /** Type */
+                        type: string;
+                        /** Title */
+                        title: string;
+                        /** Status */
+                        status: number;
+                        /** Detail */
+                        detail: string;
+                    };
+                };
+            };
+        };
+    };
+    listVocabularyDisplayPreferences: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VocabularyDisplayPreferencesModel"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        /** Type */
+                        type: string;
+                        /** Title */
+                        title: string;
+                        /** Status */
+                        status: number;
+                        /** Detail */
+                        detail: string;
+                    };
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        /** Type */
+                        type: string;
+                        /** Title */
+                        title: string;
+                        /** Status */
+                        status: number;
+                        /** Detail */
+                        detail: string;
+                    };
+                };
+            };
+        };
+    };
+    setVocabularyDisplayPreference: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VocabularyDisplayPreferenceModel"];
             };
         };
         responses: {

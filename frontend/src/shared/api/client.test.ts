@@ -78,6 +78,26 @@ describe('document client', () => {
     ]);
   });
 
+  it('lists and upserts document-scoped furigana display preferences', async () => {
+    const preference = { key: { lemma: '猫', reading: 'ねこ' }, visibility: 'hide' as const };
+    const fetcher = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ preferences: [preference] })))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+    const client = createDocumentClient(fetcher);
+
+    expect(await client.listVocabularyDisplayPreferences('doc/one')).toEqual([preference]);
+    expect(await client.setVocabularyDisplayPreference('doc/one', preference)).toBeUndefined();
+    expect(fetcher.mock.calls).toEqual([
+      ['/api/documents/doc%2Fone/vocabulary-display-preferences', {
+        method: 'GET', headers: undefined, body: undefined,
+      }],
+      ['/api/documents/doc%2Fone/vocabulary-display-preferences', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(preference),
+      }],
+    ]);
+  });
+
   it('preserves Problem Details and HTTP status for callers', async () => {
     const problem = { type: 'about:blank', title: 'Not Found', status: 404, detail: 'Document missing' };
     const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify(problem), {

@@ -8,6 +8,13 @@ import {
   ReviewList,
 } from '../vocabulary/ReviewList';
 import { DocumentText } from './DocumentText';
+import { ReaderMenu } from './ReaderMenu';
+import {
+  loadReaderPreferences,
+  saveReaderPreferences,
+  type FuriganaVisibility,
+  type ReaderPreferences,
+} from './preferences';
 
 interface ReaderPageProps {
   documentId: string;
@@ -35,7 +42,14 @@ export function ReaderPage({ documentId }: ReaderPageProps) {
   const [hasError, setHasError] = useState(false);
   const [areSelectionsHydrated, setAreSelectionsHydrated] = useState(false);
   const [persistenceError, setPersistenceError] = useState('');
+  const [readerPreferences, setReaderPreferences] = useState<ReaderPreferences>(
+    loadReaderPreferences,
+  );
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(() => new Set());
+  const [displayPreferences, setDisplayPreferences] = useState<
+    ReadonlyMap<string, FuriganaVisibility>
+  >(() => new Map());
+  const [areDisplayPreferencesHydrated, setAreDisplayPreferencesHydrated] = useState(false);
   const selectedKeysRef = useRef(selectedKeys);
   const desiredSelectionKeysRef = useRef(selectedKeys);
   const selectionWriteChainRef = useRef<Promise<void>>(Promise.resolve());
@@ -49,11 +63,13 @@ export function ReaderPage({ documentId }: ReaderPageProps) {
     setIsLoading(candidate === null);
     setHasError(false);
     setAreSelectionsHydrated(false);
+    setAreDisplayPreferencesHydrated(false);
     setPersistenceError('');
     try {
-      const [document, selections] = await Promise.all([
+      const [document, selections, loadedDisplayPreferences] = await Promise.all([
         client.get(documentId),
         client.listVocabularySelections(documentId),
+        client.listVocabularyDisplayPreferences(documentId),
       ]);
       if (!ownsState()) return;
       const analysis = candidate?.analysis.documentRevision === document.revision
@@ -67,8 +83,12 @@ export function ReaderPage({ documentId }: ReaderPageProps) {
       selectedKeysRef.current = loadedKeys;
       desiredSelectionKeysRef.current = loadedKeys;
       setSelectedKeys(loadedKeys);
+      setDisplayPreferences(new Map(loadedDisplayPreferences.map((preference) => [
+        encodeVocabularyKey(preference.key), preference.visibility,
+      ])));
       setSnapshot({ document, analysis });
       setAreSelectionsHydrated(true);
+      setAreDisplayPreferencesHydrated(true);
     } catch {
       if (ownsState()) setHasError(true);
     } finally {
@@ -122,6 +142,33 @@ export function ReaderPage({ documentId }: ReaderPageProps) {
     selectionWriteChainRef.current = write;
   }, [areSelectionsHydrated, client, documentId]);
 
+  const updateReaderPreferences = useCallback((nextPreferences: ReaderPreferences) => {
+    saveReaderPreferences(nextPreferences);
+    setReaderPreferences(nextPreferences);
+  }, []);
+
+  const setFuriganaVisibility = useCallback(async (
+    key: string,
+    visibility: FuriganaVisibility,
+  ) => {
+    if (!areDisplayPreferencesHydrated) return;
+    const decoded = decodeVocabularyKey(key);
+    if (decoded === null) return;
+    try {
+      await client.setVocabularyDisplayPreference(documentId, {
+        key: decoded,
+        visibility,
+      });
+      setDisplayPreferences((current) => {
+        const next = new Map(current);
+        next.set(key, visibility);
+        return next;
+      });
+    } catch {
+      setPersistenceError('Não foi possível salvar a preferência de furigana.');
+    }
+  }, [areDisplayPreferencesHydrated, client, documentId]);
+
   if (isLoading) {
     return <p className="page-state" role="status">Preparando leitura…</p>;
   }
@@ -156,12 +203,22 @@ export function ReaderPage({ documentId }: ReaderPageProps) {
         >
           Editar documento
         </a>
+        <ReaderMenu
+          preferences={readerPreferences}
+          onPreferencesChange={updateReaderPreferences}
+        />
       </header>
       <DocumentText
         content={snapshot.document.content}
         analysis={snapshot.analysis}
         selectedKeys={selectedKeys}
         onToggleVocabulary={areSelectionsHydrated ? toggleVocabulary : undefined}
+        showFurigana={readerPreferences.showFurigana}
+        fontSizePx={readerPreferences.fontSizePx}
+        furiganaVisibilityByKey={displayPreferences}
+        onSetFuriganaVisibility={
+          areDisplayPreferencesHydrated ? setFuriganaVisibility : undefined
+        }
       />
       {persistenceError && (
         <p className="reader-persistence-status" role="status" aria-live="polite" aria-atomic="true">

@@ -80,12 +80,15 @@ function client(overrides: Partial<DocumentClient> = {}): DocumentClient {
     analyze: vi.fn().mockResolvedValue(analysis),
     listVocabularySelections: vi.fn().mockResolvedValue([]),
     replaceVocabularySelections: vi.fn().mockResolvedValue(undefined),
+    listVocabularyDisplayPreferences: vi.fn().mockResolvedValue([]),
+    setVocabularyDisplayPreference: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   };
 }
 
 beforeEach(() => {
   window.history.replaceState(null, '', '/');
+  localStorage.clear();
 });
 
 describe('reader routes', () => {
@@ -344,6 +347,36 @@ describe('reader routes', () => {
     expect(screen.getByRole('button', { name: '国境（こっきょう）' }))
       .toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByText('Não foi possível salvar as marcações.')).toHaveAttribute('role', 'status');
+  });
+
+  it('applies a key display preference over the global setting without reanalyzing', async () => {
+    const listVocabularyDisplayPreferences = vi.fn().mockResolvedValue([
+      { key: { lemma: '国境', reading: 'こっきょう' }, visibility: 'hide' as const },
+    ]);
+    const setVocabularyDisplayPreference = vi.fn().mockResolvedValue(undefined);
+    const api = client({ listVocabularyDisplayPreferences, setVocabularyDisplayPreference });
+    render(<App client={api} initialPath={`/documents/${document.id}/read`} />);
+
+    const token = await screen.findByRole('button', { name: '国境（こっきょう）' });
+    expect(screen.getByText('こっきょう')).toHaveAttribute('hidden');
+    expect(api.analyze).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId('document-text')).toHaveStyle({ fontSize: '24px' });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Preferências de leitura' }));
+    fireEvent.change(screen.getByLabelText('Tamanho da fonte japonesa'), { target: { value: '28' } });
+    expect(screen.getByTestId('document-text')).toHaveStyle({ fontSize: '28px' });
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Exibir furigana' }));
+    expect(api.analyze).toHaveBeenCalledTimes(1);
+
+    fireEvent.contextMenu(token);
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Sempre mostrar furigana' }));
+    await waitFor(() => expect(setVocabularyDisplayPreference).toHaveBeenCalledWith(document.id, {
+      key: { lemma: '国境', reading: 'こっきょう' },
+      visibility: 'show',
+    }));
+    await waitFor(() => expect(screen.getAllByText('こっきょう').find(
+      (element) => element.tagName === 'RT',
+    )).not.toHaveAttribute('hidden'));
   });
 
   it('disables analysis for empty content and explains how to continue', () => {

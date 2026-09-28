@@ -5,7 +5,11 @@ from fastapi import APIRouter, Depends, Request, Response
 from pydantic import BaseModel, ConfigDict
 
 from backend.app.api.errors import PROBLEM_RESPONSES
-from backend.app.vocabulary.models import VocabularyKey
+from backend.app.vocabulary.models import (
+    FuriganaVisibility,
+    VocabularyDisplayPreference,
+    VocabularyKey,
+)
 from backend.app.vocabulary.service import VocabularySelectionService
 
 
@@ -27,6 +31,24 @@ class VocabularyKeyModel(VocabularyHttpModel):
 
 class VocabularySelectionsModel(VocabularyHttpModel):
     selections: list[VocabularyKeyModel]
+
+
+class VocabularyDisplayPreferenceModel(VocabularyHttpModel):
+    key: VocabularyKeyModel
+    visibility: FuriganaVisibility
+
+    @classmethod
+    def from_preference(
+        cls, preference: VocabularyDisplayPreference
+    ) -> "VocabularyDisplayPreferenceModel":
+        return cls(
+            key=VocabularyKeyModel.from_key(preference.key),
+            visibility=preference.visibility,
+        )
+
+
+class VocabularyDisplayPreferencesModel(VocabularyHttpModel):
+    preferences: list[VocabularyDisplayPreferenceModel]
 
 
 def get_vocabulary_service(request: Request) -> VocabularySelectionService:
@@ -70,4 +92,34 @@ def replace_vocabulary_selections(
     service: VocabularyServiceDependency,
 ) -> Response:
     service.replace_selections(document_id, (key.to_key() for key in data.selections))
+    return Response(status_code=204)
+
+
+@router.get(
+    "/{document_id}/vocabulary-display-preferences",
+    response_model=VocabularyDisplayPreferencesModel,
+    operation_id="listVocabularyDisplayPreferences",
+)
+def list_vocabulary_display_preferences(
+    document_id: UUID, service: VocabularyServiceDependency
+) -> VocabularyDisplayPreferencesModel:
+    return VocabularyDisplayPreferencesModel(
+        preferences=[
+            VocabularyDisplayPreferenceModel.from_preference(preference)
+            for preference in service.list_display_preferences(document_id)
+        ]
+    )
+
+
+@router.put(
+    "/{document_id}/vocabulary-display-preferences",
+    status_code=204,
+    operation_id="setVocabularyDisplayPreference",
+)
+def set_vocabulary_display_preference(
+    document_id: UUID,
+    data: VocabularyDisplayPreferenceModel,
+    service: VocabularyServiceDependency,
+) -> Response:
+    service.set_display_preference(document_id, data.key.to_key(), data.visibility)
     return Response(status_code=204)

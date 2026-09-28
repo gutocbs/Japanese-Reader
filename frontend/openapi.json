@@ -852,6 +852,213 @@
         }
       }
     },
+    "/api/documents/{document_id}/vocabulary-display-preferences": {
+      "get": {
+        "tags": [
+          "vocabulary"
+        ],
+        "summary": "List Vocabulary Display Preferences",
+        "operationId": "listVocabularyDisplayPreferences",
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Document Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VocabularyDisplayPreferencesModel"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "properties": {
+                    "type": {
+                      "title": "Type",
+                      "type": "string"
+                    },
+                    "title": {
+                      "title": "Title",
+                      "type": "string"
+                    },
+                    "status": {
+                      "title": "Status",
+                      "type": "integer"
+                    },
+                    "detail": {
+                      "title": "Detail",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail"
+                  ],
+                  "title": "ProblemDetails",
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "properties": {
+                    "type": {
+                      "title": "Type",
+                      "type": "string"
+                    },
+                    "title": {
+                      "title": "Title",
+                      "type": "string"
+                    },
+                    "status": {
+                      "title": "Status",
+                      "type": "integer"
+                    },
+                    "detail": {
+                      "title": "Detail",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail"
+                  ],
+                  "title": "ProblemDetails",
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "vocabulary"
+        ],
+        "summary": "Set Vocabulary Display Preference",
+        "operationId": "setVocabularyDisplayPreference",
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Document Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VocabularyDisplayPreferenceModel"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "properties": {
+                    "type": {
+                      "title": "Type",
+                      "type": "string"
+                    },
+                    "title": {
+                      "title": "Title",
+                      "type": "string"
+                    },
+                    "status": {
+                      "title": "Status",
+                      "type": "integer"
+                    },
+                    "detail": {
+                      "title": "Detail",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail"
+                  ],
+                  "title": "ProblemDetails",
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "properties": {
+                    "type": {
+                      "title": "Type",
+                      "type": "string"
+                    },
+                    "title": {
+                      "title": "Title",
+                      "type": "string"
+                    },
+                    "status": {
+                      "title": "Status",
+                      "type": "integer"
+                    },
+                    "detail": {
+                      "title": "Detail",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail"
+                  ],
+                  "title": "ProblemDetails",
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/health": {
       "get": {
         "summary": "Health",
@@ -1213,6 +1420,15 @@
         ],
         "title": "FuriganaSegmentResponse"
       },
+      "FuriganaVisibility": {
+        "type": "string",
+        "enum": [
+          "inherit",
+          "show",
+          "hide"
+        ],
+        "title": "FuriganaVisibility"
+      },
       "UpdateDocumentRequest": {
         "properties": {
           "title": {
@@ -1228,6 +1444,40 @@
         "type": "object",
         "minProperties": 1,
         "title": "UpdateDocumentRequest"
+      },
+      "VocabularyDisplayPreferenceModel": {
+        "properties": {
+          "key": {
+            "$ref": "#/components/schemas/VocabularyKeyModel"
+          },
+          "visibility": {
+            "$ref": "#/components/schemas/FuriganaVisibility"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "key",
+          "visibility"
+        ],
+        "title": "VocabularyDisplayPreferenceModel"
+      },
+      "VocabularyDisplayPreferencesModel": {
+        "properties": {
+          "preferences": {
+            "items": {
+              "$ref": "#/components/schemas/VocabularyDisplayPreferenceModel"
+            },
+            "type": "array",
+            "title": "Preferences"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "preferences"
+        ],
+        "title": "VocabularyDisplayPreferencesModel"
       },
       "VocabularyKeyModel": {
         "properties": {

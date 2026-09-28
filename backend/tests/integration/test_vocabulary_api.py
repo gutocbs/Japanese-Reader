@@ -83,3 +83,54 @@ def test_missing_document_and_invalid_keys_use_problem_details(client):
     assert put_response.status_code == 404
     assert invalid_response.status_code == 422
     assert invalid_response.headers["content-type"] == "application/problem+json"
+
+
+def test_display_preferences_default_to_inherit_and_are_document_scoped(client):
+    first = create_document(client, "猫")
+    second = create_document(client, "猫")
+    first_path = f"/api/documents/{first}/vocabulary-display-preferences"
+    second_path = f"/api/documents/{second}/vocabulary-display-preferences"
+
+    assert client.get(first_path).json() == {"preferences": []}
+    assert client.put(
+        first_path, json={"key": CAT, "visibility": "show"}
+    ).status_code == 204
+
+    assert client.get(first_path).json() == {
+        "preferences": [{"key": CAT, "visibility": "show"}]
+    }
+    assert client.get(second_path).json() == {"preferences": []}
+
+
+def test_display_preference_upserts_and_survives_document_revision(client):
+    document_id = create_document(client, "猫")
+    path = f"/api/documents/{document_id}/vocabulary-display-preferences"
+
+    assert client.put(path, json={"key": CAT, "visibility": "show"}).status_code == 204
+    assert client.put(path, json={"key": CAT, "visibility": "hide"}).status_code == 204
+    update = client.put(
+        f"/api/documents/{document_id}", json={"content": "犬だけになった。"}
+    )
+
+    assert update.status_code == 200
+    assert update.json()["revision"] == 2
+    assert client.get(path).json() == {
+        "preferences": [{"key": CAT, "visibility": "hide"}]
+    }
+
+
+def test_display_preferences_validate_visibility_and_missing_document(client):
+    missing = (
+        "/api/documents/00000000-0000-0000-0000-000000000099/"
+        "vocabulary-display-preferences"
+    )
+
+    get_response = client.get(missing)
+    put_response = client.put(missing, json={"key": CAT, "visibility": "show"})
+    invalid_response = client.put(missing, json={"key": CAT, "visibility": "sometimes"})
+
+    assert get_response.status_code == 404
+    assert get_response.headers["content-type"] == "application/problem+json"
+    assert put_response.status_code == 404
+    assert invalid_response.status_code == 422
+    assert invalid_response.headers["content-type"] == "application/problem+json"
