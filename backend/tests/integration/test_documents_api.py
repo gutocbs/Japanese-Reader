@@ -91,7 +91,17 @@ def test_list_orders_last_read_descending_with_unread_last(client):
     asyncio.run(exercise())
 
 
-@pytest.mark.parametrize("payload", [{}, {"title": None}, {"content": None}, {"unknown": "value"}])
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {},
+        {"title": None},
+        {"content": None},
+        {"confirmReadingOverrideRemoval": True},
+        {"title": "new", "confirmReadingOverrideRemoval": None},
+        {"unknown": "value"},
+    ],
+)
 def test_invalid_update_returns_validation_problem(client, payload):
     async def exercise():
         async with client:
@@ -108,10 +118,19 @@ def test_openapi_matches_update_and_problem_payloads():
     schema = app.openapi()
     update = schema["components"]["schemas"]["UpdateDocumentRequest"]
     assert update["minProperties"] == 1
+    assert update["not"] == {
+        "maxProperties": 1,
+        "required": ["confirmReadingOverrideRemoval"],
+    }
     for field in ("title", "content"):
         assert update["properties"][field]["type"] == "string"
         assert "default" not in update["properties"][field]
+    assert update["properties"]["confirmReadingOverrideRemoval"]["type"] == "boolean"
+    assert "default" not in update["properties"]["confirmReadingOverrideRemoval"]
     for operation in ("get", "put", "delete"):
         responses = schema["paths"]["/api/documents/{document_id}"][operation]["responses"]
         assert set(responses["404"]["content"]) == {"application/problem+json"}
         assert set(responses["422"]["content"]) == {"application/problem+json"}
+    assert set(
+        schema["paths"]["/api/documents/{document_id}"]["put"]["responses"]["409"]["content"]
+    ) == {"application/problem+json"}

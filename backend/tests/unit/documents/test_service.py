@@ -4,7 +4,11 @@ from uuid import UUID
 import pytest
 
 from backend.app.documents.models import CreateDocument, UpdateDocument
-from backend.app.documents.service import DocumentNotFoundError, DocumentService
+from backend.app.documents.service import (
+    DocumentNotFoundError,
+    DocumentService,
+    ReadingOverridesConfirmationRequiredError,
+)
 from backend.app.persistence.memory.documents import InMemoryDocumentRepository
 from backend.app.analysis.models import (
     AnalysisOptions,
@@ -66,7 +70,7 @@ def test_missing_document_raises_domain_error(service, operation):
     assert service.list() == ()
 
 
-def test_content_edit_removes_cached_analysis_and_reading_overrides():
+def test_content_edit_requires_confirmation_before_removing_manual_reading_overrides():
     documents = InMemoryDocumentRepository()
     analyses = InMemoryAnalysisRepository()
     overrides = InMemoryReadingOverrideRepository()
@@ -85,11 +89,41 @@ def test_content_edit_removes_cached_analysis_and_reading_overrides():
     override_key = ReadingOverrideKey(document.id, document.revision, 0, 1)
     overrides.upsert(ReadingOverride(override_key, "びょう"))
 
-    result = service.update(document.id, UpdateDocument(content="犬"))
+    with pytest.raises(ReadingOverridesConfirmationRequiredError):
+        service.update(document.id, UpdateDocument(content="犬"))
+
+    assert service.get(document.id) == document
+    assert analyses.find_compatible(analysis.cache_key) == analysis
+    assert overrides.get(override_key) == ReadingOverride(override_key, "びょう")
+
+    result = service.update(
+        document.id,
+        UpdateDocument(content="犬"),
+        confirm_reading_override_removal=True,
+    )
 
     assert result.document.revision == 2
     assert analyses.find_compatible(analysis.cache_key) is None
     assert overrides.get(override_key) is None
+
+
+@pytest.mark.parametrize(
+    "update",
+    [UpdateDocument(title="Renamed"), UpdateDocument(content="猫")],
+)
+def test_update_does_not_require_confirmation_when_overrides_are_unaffected(update):
+    documents = InMemoryDocumentRepository()
+    overrides = InMemoryReadingOverrideRepository()
+    service = DocumentService(documents, reading_overrides=overrides)
+    document = service.create(CreateDocument("First", "猫"))
+    override_key = ReadingOverrideKey(document.id, document.revision, 0, 1)
+    override = ReadingOverride(override_key, "びょう")
+    overrides.upsert(override)
+
+    result = service.update(document.id, update)
+
+    assert not result.content_changed
+    assert overrides.get(override_key) == override
 
 
 def test_mark_read_uses_the_domain_clock_without_changing_canonical_content():

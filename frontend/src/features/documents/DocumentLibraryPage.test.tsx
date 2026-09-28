@@ -165,14 +165,28 @@ describe('document library flows', () => {
     });
     render(<App client={api} initialPath="/" />);
     const row = await screen.findByRole('listitem', { name: '雪国' });
-    fireEvent.click(within(row).getByRole('button', { name: 'Excluir' }));
+    const deleteButton = within(row).getByRole('button', { name: 'Excluir' });
+    fireEvent.click(deleteButton);
     const dialog = screen.getByRole('dialog', { name: 'Excluir documento' });
+    const cancelButton = within(dialog).getByRole('button', { name: 'Cancelar' });
+    const confirmButton = within(dialog).getByRole('button', { name: 'Excluir definitivamente' });
 
     expect(within(dialog).getByText(/雪国/)).toBeInTheDocument();
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
+    expect(cancelButton).toHaveFocus();
+    fireEvent.keyDown(dialog, { key: 'Tab', shiftKey: true });
+    expect(confirmButton).toHaveFocus();
+    fireEvent.keyDown(dialog, { key: 'Tab' });
+    expect(cancelButton).toHaveFocus();
+    fireEvent.click(cancelButton);
     expect(deleteDocument).not.toHaveBeenCalled();
+    expect(deleteButton).toHaveFocus();
 
-    fireEvent.click(within(row).getByRole('button', { name: 'Excluir' }));
+    fireEvent.click(deleteButton);
+    fireEvent.keyDown(screen.getByRole('dialog', { name: 'Excluir documento' }), { key: 'Escape' });
+    expect(screen.queryByRole('dialog', { name: 'Excluir documento' })).not.toBeInTheDocument();
+    expect(deleteButton).toHaveFocus();
+
+    fireEvent.click(deleteButton);
     fireEvent.click(screen.getByRole('button', { name: 'Excluir definitivamente' }));
     await waitFor(() => expect(deleteDocument).toHaveBeenCalledWith(firstDocument.id));
     expect(screen.getByRole('listitem', { name: '雪国' })).toBeInTheDocument();

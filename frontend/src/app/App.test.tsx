@@ -1,7 +1,7 @@
 import { StrictMode } from 'react';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Analysis, Document, DocumentClient } from '../shared/api/client';
+import { ApiError, type Analysis, type Document, type DocumentClient } from '../shared/api/client';
 import { App } from './App';
 
 const document: Document = {
@@ -102,6 +102,42 @@ beforeEach(() => {
 });
 
 describe('reader routes', () => {
+  it('offers a clear route back to the library when the document is missing', async () => {
+    const api = client({
+      get: vi.fn().mockRejectedValue(new ApiError(404, {
+        type: 'about:blank',
+        title: 'Not Found',
+        status: 404,
+        detail: 'Document not found',
+      })),
+    });
+    render(<App client={api} initialPath={`/documents/${document.id}/read`} />);
+
+    expect(await screen.findByRole('heading', { name: 'Documento não encontrado.', level: 1 }))
+      .toBeInTheDocument();
+    fireEvent.click(screen.getByRole('link', { name: 'Voltar à biblioteca' }));
+
+    expect(await screen.findByRole('heading', { name: 'Biblioteca', level: 1 })).toBeInTheDocument();
+    expect(window.location.pathname).toBe('/');
+  });
+
+  it('keeps retry available for transient reader loading failures', async () => {
+    const get = vi.fn()
+      .mockRejectedValueOnce(new Error('temporarily unavailable'))
+      .mockResolvedValueOnce(document);
+    render(<App client={client({ get })} initialPath={`/documents/${document.id}/read`} />);
+
+    expect(await screen.findByRole('heading', {
+      name: 'Não foi possível preparar a leitura.',
+      level: 1,
+    })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Tentar novamente' }));
+
+    expect(await screen.findByRole('heading', { name: document.title, level: 1 }))
+      .toBeInTheDocument();
+    expect(get).toHaveBeenCalledTimes(2);
+  });
+
   it('creates, analyzes, and navigates from the editor to semantic reading', async () => {
     const pendingAnalysis = deferred<Analysis>();
     const api = client({ analyze: vi.fn().mockReturnValue(pendingAnalysis.promise) });
@@ -156,6 +192,115 @@ describe('reader routes', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Salvar e analisar' }));
 
     expect(await screen.findByRole('heading', { name: updated.title, level: 1 })).toBeInTheDocument();
+  });
+
+  it('asks before discarding reading corrections and preserves the edited form on cancel', async () => {
+    const analyze = vi.fn().mockResolvedValue(revisedAnalysis);
+    const update = vi.fn().mockRejectedValue(new ApiError(409, {
+      type: 'urn:japanese-reader:reading-overrides-confirmation-required',
+      title: 'Conflict',
+      status: 409,
+      detail: 'Editing this content will remove its manual reading corrections',
+    }));
+    const api = client({ get: vi.fn().mockResolvedValue(document), update, analyze });
+    render(<App client={api} initialPath={`/documents/${document.id}/edit`} />);
+
+    const contentField = await screen.findByLabelText('Texto japonês');
+    fireEvent.change(contentField, { target: { value: revisedDocument.content } });
+    const saveButton = screen.getByRole('button', { name: 'Salvar e analisar' });
+    fireEvent.click(saveButton);
+
+    const dialog = await screen.findByRole('dialog', { name: 'Remover correções de leitura?' });
+    expect(within(dialog).getByText(/correções manuais de leitura serão removidas/i))
+      .toBeInTheDocument();
+    expect(dialog).toHaveAttribute('aria-modal', 'true');
+    const cancelButton = within(dialog).getByRole('button', { name: 'Cancelar' });
+    const confirmButton = within(dialog).getByRole('button', {
+      name: 'Continuar e remover correções',
+    });
+    expect(cancelButton).toHaveFocus();
+    fireEvent.keyDown(dialog, { key: 'Tab', shiftKey: true });
+    expect(confirmButton).toHaveFocus();
+    fireEvent.keyDown(dialog, { key: 'Tab' });
+    expect(cancelButton).toHaveFocus();
+    fireEvent.click(cancelButton);
+
+    expect(screen.queryByRole('dialog', { name: 'Remover correções de leitura?' }))
+      .not.toBeInTheDocument();
+    expect(contentField).toHaveValue(revisedDocument.content);
+    expect(saveButton).toHaveFocus();
+    expect(update).toHaveBeenCalledTimes(1);
+    expect(analyze).not.toHaveBeenCalled();
+  });
+
+  it('repeats an affected content edit only after explicit confirmation', async () => {
+    let currentDocument = document;
+    const update = vi.fn()
+      .mockRejectedValueOnce(new ApiError(409, {
+        type: 'urn:japanese-reader:reading-overrides-confirmation-required',
+        title: 'Conflict',
+        status: 409,
+        detail: 'Editing this content will remove its manual reading corrections',
+      }))
+      .mockImplementationOnce(async () => {
+        currentDocument = revisedDocument;
+        return revisedDocument;
+      });
+    const api = client({
+      get: vi.fn().mockImplementation(async () => currentDocument),
+      update,
+      analyze: vi.fn().mockResolvedValue(revisedAnalysis),
+    });
+    render(<App client={api} initialPath={`/documents/${document.id}/edit`} />);
+
+    await screen.findByLabelText('Texto japonês');
+    fireEvent.change(screen.getByLabelText('Título'), { target: { value: revisedDocument.title } });
+    fireEvent.change(screen.getByLabelText('Texto japonês'), {
+      target: { value: revisedDocument.content },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar e analisar' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Remover correções de leitura?' });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Continuar e remover correções' }));
+
+    expect(await screen.findByRole('heading', { name: revisedDocument.title, level: 1 }))
+      .toBeInTheDocument();
+    expect(update).toHaveBeenNthCalledWith(1, document.id, {
+      title: revisedDocument.title,
+      content: revisedDocument.content,
+    });
+    expect(update).toHaveBeenNthCalledWith(2, document.id, {
+      title: revisedDocument.title,
+      content: revisedDocument.content,
+      confirmReadingOverrideRemoval: true,
+    });
+  });
+
+  it('keeps the edited form when the confirmed content update fails', async () => {
+    const update = vi.fn()
+      .mockRejectedValueOnce(new ApiError(409, {
+        type: 'urn:japanese-reader:reading-overrides-confirmation-required',
+        title: 'Conflict',
+        status: 409,
+        detail: 'Editing this content will remove its manual reading corrections',
+      }))
+      .mockRejectedValueOnce(new Error('server unavailable'));
+    const api = client({ get: vi.fn().mockResolvedValue(document), update });
+    render(<App client={api} initialPath={`/documents/${document.id}/edit`} />);
+
+    const contentField = await screen.findByLabelText('Texto japonês');
+    fireEvent.change(contentField, { target: { value: revisedDocument.content } });
+    const saveButton = screen.getByRole('button', { name: 'Salvar e analisar' });
+    fireEvent.click(saveButton);
+    const dialog = await screen.findByRole('dialog', { name: 'Remover correções de leitura?' });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Continuar e remover correções' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Não foi possível salvar o documento. Seu texto continua aqui.',
+    );
+    expect(contentField).toHaveValue(revisedDocument.content);
+    expect(screen.queryByRole('dialog', { name: 'Remover correções de leitura?' }))
+      .not.toBeInTheDocument();
+    expect(saveButton).toHaveFocus();
   });
 
   it('discards an analysis from revision 1 after the editor saves revision 2', async () => {

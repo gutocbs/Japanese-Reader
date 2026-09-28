@@ -1,4 +1,4 @@
-import { type FormEvent, useMemo, useState } from 'react';
+import { type FormEvent, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useDocumentClient, useRouter } from '../../app/providers';
 import type { Document } from '../../shared/api/client';
@@ -31,6 +31,7 @@ export function DocumentLibraryPage() {
   const [renameError, setRenameError] = useState(false);
   const [deleting, setDeleting] = useState<Document | null>(null);
   const [deleteError, setDeleteError] = useState(false);
+  const deleteTriggerRef = useRef<HTMLButtonElement | null>(null);
 
   const documentsQuery = useQuery({
     queryKey: documentKeys.list(),
@@ -193,7 +194,8 @@ export function DocumentLibraryPage() {
                   <button
                     className="button button--quiet button--destructive-text"
                     type="button"
-                    onClick={() => {
+                    onClick={(event) => {
+                      deleteTriggerRef.current = event.currentTarget;
                       setDeleting(document);
                       setDeleteError(false);
                     }}
@@ -212,6 +214,7 @@ export function DocumentLibraryPage() {
           document={deleting}
           error={deleteError}
           isPending={deleteMutation.isPending}
+          returnFocusRef={deleteTriggerRef}
           onCancel={() => {
             setDeleting(null);
             setDeleteError(false);

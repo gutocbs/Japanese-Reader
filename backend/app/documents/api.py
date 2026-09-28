@@ -7,7 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from pydantic.alias_generators import to_camel
 from pydantic.json_schema import SkipJsonSchema
 
-from backend.app.api.errors import PROBLEM_RESPONSES
+from backend.app.api.errors import PROBLEM_RESPONSES, ProblemDetails
 from backend.app.documents.models import CreateDocument, Document, UpdateDocument
 from backend.app.documents.service import DocumentService
 
@@ -22,7 +22,16 @@ class CreateDocumentRequest(HttpModel):
 
 
 class UpdateDocumentRequest(HttpModel):
-    model_config = ConfigDict(extra="forbid", json_schema_extra={"minProperties": 1})
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "minProperties": 1,
+            "not": {
+                "maxProperties": 1,
+                "required": ["confirmReadingOverrideRemoval"],
+            },
+        },
+    )
 
     # None represents omission internally, never an accepted JSON value.
     title: str | SkipJsonSchema[None] = Field(
@@ -31,13 +40,22 @@ class UpdateDocumentRequest(HttpModel):
     content: str | SkipJsonSchema[None] = Field(
         default=None, json_schema_extra=lambda schema: schema.pop("default", None)
     )
+    confirmReadingOverrideRemoval: bool | SkipJsonSchema[None] = Field(  # noqa: N815
+        default=None, json_schema_extra=lambda schema: schema.pop("default", None)
+    )
 
     @model_validator(mode="after")
     def validate_update(self) -> Self:
-        if not self.model_fields_set:
+        update_fields = self.model_fields_set & {"title", "content"}
+        if not update_fields:
             raise ValueError("Document update requires at least one field")
-        if any(getattr(self, field) is None for field in self.model_fields_set):
+        if any(getattr(self, field) is None for field in update_fields):
             raise ValueError("Document update fields cannot be null")
+        if (
+            "confirmReadingOverrideRemoval" in self.model_fields_set
+            and self.confirmReadingOverrideRemoval is None
+        ):
+            raise ValueError("Reading override confirmation cannot be null")
         return self
 
 
@@ -88,9 +106,27 @@ def get_document(document_id: UUID, service: DocumentServiceDependency):
     return DocumentResponse.from_document(service.get(document_id))
 
 
-@router.put("/{document_id}", response_model=DocumentResponse, operation_id="updateDocument")
+@router.put(
+    "/{document_id}",
+    response_model=DocumentResponse,
+    operation_id="updateDocument",
+    responses={
+        409: {
+            "description": "Conflict",
+            "content": {
+                "application/problem+json": {
+                    "schema": ProblemDetails.model_json_schema()
+                }
+            },
+        }
+    },
+)
 def update_document(document_id: UUID, data: UpdateDocumentRequest, service: DocumentServiceDependency):
-    result = service.update(document_id, UpdateDocument(title=data.title, content=data.content))
+    result = service.update(
+        document_id,
+        UpdateDocument(title=data.title, content=data.content),
+        confirm_reading_override_removal=data.confirmReadingOverrideRemoval is True,
+    )
     return DocumentResponse.from_document(result.document)
 
 

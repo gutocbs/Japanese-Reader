@@ -45,3 +45,18 @@ class ReadingOverrideRepositoryContract:
 
         assert repository.get(first) is None
         assert repository.get(second) == ReadingOverride(second, "しょう")
+
+    def test_reports_whether_a_document_has_manual_overrides(
+        self, repository: ReadingOverrideRepository
+    ):
+        first = ReadingOverrideKey(FIRST_DOCUMENT, 1, 0, 1)
+        second = ReadingOverrideKey(SECOND_DOCUMENT, 1, 0, 1)
+
+        assert not repository.has_document(FIRST_DOCUMENT)
+        repository.upsert(ReadingOverride(first, "せい"))
+        repository.upsert(ReadingOverride(second, "しょう"))
+        assert repository.has_document(FIRST_DOCUMENT)
+
+        repository.delete_document(FIRST_DOCUMENT)
+        assert not repository.has_document(FIRST_DOCUMENT)
+        assert repository.has_document(SECOND_DOCUMENT)

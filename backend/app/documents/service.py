@@ -19,6 +19,14 @@ class DocumentNotFoundError(LookupError):
         super().__init__(f"Document {document_id} was not found")
 
 
+class ReadingOverridesConfirmationRequiredError(RuntimeError):
+    def __init__(self, document_id: UUID) -> None:
+        self.document_id = document_id
+        super().__init__(
+            "Editing this content will remove its manual reading corrections"
+        )
+
+
 @dataclass(frozen=True)
 class DocumentUpdateResult:
     document: Document
@@ -51,9 +59,23 @@ class DocumentService:
     def list(self) -> tuple[Document, ...]:
         return self._repository.list()
 
-    def update(self, document_id: UUID, data: UpdateDocument) -> DocumentUpdateResult:
+    def update(
+        self,
+        document_id: UUID,
+        data: UpdateDocument,
+        *,
+        confirm_reading_override_removal: bool = False,
+    ) -> DocumentUpdateResult:
         with self._repository.revision_guard(document_id):
             original = self.get(document_id)
+            content_will_change = data.content is not None and data.content != original.content
+            if (
+                content_will_change
+                and self._reading_overrides is not None
+                and self._reading_overrides.has_document(document_id)
+                and not confirm_reading_override_removal
+            ):
+                raise ReadingOverridesConfirmationRequiredError(document_id)
             updated = self._repository.update(document_id, data)
             if updated is None:
                 raise DocumentNotFoundError(document_id)

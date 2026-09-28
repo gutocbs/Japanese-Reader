@@ -409,6 +409,41 @@
                 }
               }
             }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "properties": {
+                    "type": {
+                      "title": "Type",
+                      "type": "string"
+                    },
+                    "title": {
+                      "title": "Title",
+                      "type": "string"
+                    },
+                    "status": {
+                      "title": "Status",
+                      "type": "integer"
+                    },
+                    "detail": {
+                      "title": "Detail",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail"
+                  ],
+                  "title": "ProblemDetails",
+                  "type": "object"
+                }
+              }
+            }
           }
         }
       },
@@ -1810,6 +1845,12 @@
         "title": "SetReadingOverrideRequest"
       },
       "UpdateDocumentRequest": {
+        "not": {
+          "maxProperties": 1,
+          "required": [
+            "confirmReadingOverrideRemoval"
+          ]
+        },
         "properties": {
           "title": {
             "type": "string",
@@ -1818,6 +1859,10 @@
           "content": {
             "type": "string",
             "title": "Content"
+          },
+          "confirmReadingOverrideRemoval": {
+            "type": "boolean",
+            "title": "Confirmreadingoverrideremoval"
           }
         },
         "additionalProperties": false,

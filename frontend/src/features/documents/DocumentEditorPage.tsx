@@ -1,7 +1,11 @@
 import { type FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import type { Document } from '../../shared/api/client';
+import {
+  isReadingOverridesConfirmationRequired,
+  type Document,
+} from '../../shared/api/client';
 import { useDocumentClient, useRouter } from '../../app/providers';
+import { ContentEditConfirmationDialog } from './ContentEditConfirmationDialog';
 import { documentKeys } from './queries';
 
 interface DocumentEditorPageProps {
@@ -40,6 +44,15 @@ export function DocumentEditorPage({ documentId }: DocumentEditorPageProps) {
   const [isLoading, setIsLoading] = useState(documentId !== undefined);
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<OperationError>(null);
+  const [needsOverrideConfirmation, setNeedsOverrideConfirmation] = useState(false);
+  const submitButtonRef = useRef<HTMLButtonElement>(null);
+  const restoreSubmitFocusRef = useRef(false);
+
+  useEffect(() => {
+    if (isPending || needsOverrideConfirmation || !restoreSubmitFocusRef.current) return;
+    restoreSubmitFocusRef.current = false;
+    submitButtonRef.current?.focus();
+  }, [isPending, needsOverrideConfirmation]);
 
   const loadDocument = useCallback(async () => {
     if (documentId === undefined) return;
@@ -64,7 +77,7 @@ export function DocumentEditorPage({ documentId }: DocumentEditorPageProps) {
     void loadDocument();
   }, [loadDocument]);
 
-  const analyzeAndRead = async () => {
+  const analyzeAndRead = async (confirmReadingOverrideRemoval = false) => {
     if (isPending || content.trim().length === 0) return;
     setIsPending(true);
     setError(null);
@@ -74,13 +87,31 @@ export function DocumentEditorPage({ documentId }: DocumentEditorPageProps) {
       if (document === null) {
         document = await client.create({ title, content });
       } else if (document.title !== title || document.content !== content) {
-        document = await client.update(document.id, { title, content });
+        document = await client.update(document.id, {
+          title,
+          content,
+          ...(confirmReadingOverrideRemoval
+            ? { confirmReadingOverrideRemoval: true }
+            : {}),
+        });
       }
       setSavedDocument(document);
       queryClient.setQueryData(documentKeys.detail(document.id), document);
       await queryClient.invalidateQueries({ queryKey: documentKeys.list() });
-    } catch {
+    } catch (saveError) {
+      if (
+        !confirmReadingOverrideRemoval
+        && isReadingOverridesConfirmationRequired(saveError)
+      ) {
+        setNeedsOverrideConfirmation(true);
+        setIsPending(false);
+        return;
+      }
       setError('save');
+      if (confirmReadingOverrideRemoval) {
+        restoreSubmitFocusRef.current = true;
+        setNeedsOverrideConfirmation(false);
+      }
       setIsPending(false);
       return;
     }
@@ -210,6 +241,7 @@ export function DocumentEditorPage({ documentId }: DocumentEditorPageProps) {
 
         <div className="form-actions">
           <button
+            ref={submitButtonRef}
             className="button button--primary"
             type="submit"
             disabled={isPending || content.trim().length === 0}
@@ -218,6 +250,14 @@ export function DocumentEditorPage({ documentId }: DocumentEditorPageProps) {
           </button>
         </div>
       </form>
+      {needsOverrideConfirmation && (
+        <ContentEditConfirmationDialog
+          isPending={isPending}
+          returnFocusRef={submitButtonRef}
+          onCancel={() => setNeedsOverrideConfirmation(false)}
+          onConfirm={() => void analyzeAndRead(true)}
+        />
+      )}
     </section>
   );
 }

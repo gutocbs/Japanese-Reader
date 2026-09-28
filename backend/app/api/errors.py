@@ -7,7 +7,10 @@ from pydantic import BaseModel
 from starlette.exceptions import HTTPException
 
 from backend.app.analysis.service import EmptyDocumentError, StaleDocumentRevisionError
-from backend.app.documents.service import DocumentNotFoundError
+from backend.app.documents.service import (
+    DocumentNotFoundError,
+    ReadingOverridesConfirmationRequiredError,
+)
 from backend.app.readings.service import (
     InvalidReadingError,
     InvalidReadingOverrideTargetError,
@@ -26,9 +29,16 @@ class ProblemResponse(JSONResponse):
     media_type = "application/problem+json"
 
 
-def problem_response(status: int, detail: str) -> ProblemResponse:
+READING_OVERRIDES_CONFIRMATION_REQUIRED_TYPE = (
+    "urn:japanese-reader:reading-overrides-confirmation-required"
+)
+
+
+def problem_response(
+    status: int, detail: str, *, problem_type: str = "about:blank"
+) -> ProblemResponse:
     problem = ProblemDetails(
-        type="about:blank", title=HTTPStatus(status).phrase, status=status, detail=detail
+        type=problem_type, title=HTTPStatus(status).phrase, status=status, detail=detail
     )
     return ProblemResponse(status_code=status, content=problem.model_dump())
 
@@ -41,6 +51,16 @@ def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(StaleDocumentRevisionError)
     async def stale_revision(request: Request, error: StaleDocumentRevisionError):
         return problem_response(409, str(error))
+
+    @app.exception_handler(ReadingOverridesConfirmationRequiredError)
+    async def reading_overrides_confirmation_required(
+        request: Request, error: ReadingOverridesConfirmationRequiredError
+    ):
+        return problem_response(
+            409,
+            str(error),
+            problem_type=READING_OVERRIDES_CONFIRMATION_REQUIRED_TYPE,
+        )
 
     @app.exception_handler(StaleReadingOverrideRevisionError)
     async def stale_override_revision(

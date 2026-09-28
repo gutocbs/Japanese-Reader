@@ -32,6 +32,15 @@ export class ApiError extends Error {
   }
 }
 
+export const READING_OVERRIDES_CONFIRMATION_REQUIRED_TYPE =
+  'urn:japanese-reader:reading-overrides-confirmation-required';
+
+export function isReadingOverridesConfirmationRequired(error: unknown): boolean {
+  return error instanceof ApiError
+    && error.status === 409
+    && error.problem?.type === READING_OVERRIDES_CONFIRMATION_REQUIRED_TYPE;
+}
+
 export function createDocumentClient(fetcher: typeof fetch = globalThis.fetch) {
   async function request<T>(path: string, method: string, body?: unknown): Promise<T> {
     const response = await fetcher(path, {

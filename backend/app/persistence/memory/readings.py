@@ -9,6 +9,10 @@ class InMemoryReadingOverrideRepository:
         self._overrides: dict[ReadingOverrideKey, ReadingOverride] = {}
         self._lock = Lock()
 
+    def has_document(self, document_id: UUID) -> bool:
+        with self._lock:
+            return any(key.document_id == document_id for key in self._overrides)
+
     def get(self, key: ReadingOverrideKey) -> ReadingOverride | None:
         with self._lock:
             return self._overrides.get(key)

@@ -307,6 +307,8 @@ export interface components {
             title?: string;
             /** Content */
             content?: string;
+            /** Confirmreadingoverrideremoval */
+            confirmReadingOverrideRemoval?: boolean;
         };
         /** VocabularyDisplayPreferenceModel */
         VocabularyDisplayPreferenceModel: {
@@ -539,6 +541,24 @@ export interface operations {
             };
             /** @description Not Found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": {
+                        /** Type */
+                        type: string;
+                        /** Title */
+                        title: string;
+                        /** Status */
+                        status: number;
+                        /** Detail */
+                        detail: string;
+                    };
+                };
+            };
+            /** @description Conflict */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -159,7 +159,11 @@ def test_content_edit_cannot_interleave_between_override_validation_and_storage(
     edit_finished = Event()
 
     def edit_document() -> None:
-        document_service.update(document.id, UpdateDocument(content="食べた食べる"))
+        document_service.update(
+            document.id,
+            UpdateDocument(content="食べた食べる"),
+            confirm_reading_override_removal=True,
+        )
         edit_finished.set()
 
     writer = Thread(target=write_override)

@@ -135,7 +135,24 @@ def test_content_edit_invalidates_analysis_and_overrides_but_preserves_study_sta
         },
     ).status_code == 200
 
-    edited = client.put(f"/api/documents/{document_id}", json={"content": "犬"})
+    confirmation_required = client.put(
+        f"/api/documents/{document_id}", json={"content": "犬"}
+    )
+
+    assert confirmation_required.status_code == 409
+    assert confirmation_required.headers["content-type"] == "application/problem+json"
+    assert confirmation_required.json()["type"] == (
+        "urn:japanese-reader:reading-overrides-confirmation-required"
+    )
+    assert client.get(f"/api/documents/{document_id}").json()["content"] == "猫"
+    assert app.state.reading_override_repository.get(
+        ReadingOverrideKey(UUID(document_id), 1, 0, 1)
+    ) is not None
+
+    edited = client.put(
+        f"/api/documents/{document_id}",
+        json={"content": "犬", "confirmReadingOverrideRemoval": True},
+    )
 
     assert edited.status_code == 200
     assert edited.json()["revision"] == 2

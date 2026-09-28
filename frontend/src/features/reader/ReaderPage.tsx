@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useDocumentClient, useRouter } from '../../app/providers';
+import { ApiError } from '../../shared/api/client';
 import type {
   Analysis,
   Document,
@@ -72,6 +73,7 @@ export function ReaderPage({ documentId }: ReaderPageProps) {
   const [snapshot, setSnapshot] = useState<ReaderSnapshot | null>(routedSnapshot);
   const [isLoading, setIsLoading] = useState(routedSnapshot === null);
   const [hasError, setHasError] = useState(false);
+  const [loadErrorStatus, setLoadErrorStatus] = useState<number | null>(null);
   const [areSelectionsHydrated, setAreSelectionsHydrated] = useState(false);
   const [persistenceError, setPersistenceError] = useState('');
   const [readerPreferences, setReaderPreferences] = useState<ReaderPreferences>(
@@ -94,6 +96,7 @@ export function ReaderPage({ documentId }: ReaderPageProps) {
     if (candidate !== null) setSnapshot(candidate);
     setIsLoading(candidate === null);
     setHasError(false);
+    setLoadErrorStatus(null);
     setAreSelectionsHydrated(false);
     setAreDisplayPreferencesHydrated(false);
     setPersistenceError('');
@@ -121,8 +124,11 @@ export function ReaderPage({ documentId }: ReaderPageProps) {
       setSnapshot({ document, analysis });
       setAreSelectionsHydrated(true);
       setAreDisplayPreferencesHydrated(true);
-    } catch {
-      if (ownsState()) setHasError(true);
+    } catch (error) {
+      if (ownsState()) {
+        setHasError(true);
+        setLoadErrorStatus(error instanceof ApiError ? error.status : null);
+      }
     } finally {
       if (ownsState()) setIsLoading(false);
     }
@@ -251,6 +257,25 @@ export function ReaderPage({ documentId }: ReaderPageProps) {
   }
 
   if (hasError || snapshot === null) {
+    if (loadErrorStatus === 404) {
+      return (
+        <section className="page-state" aria-labelledby="reader-error-title">
+          <p className="eyebrow">Leitura indisponível</p>
+          <h1 id="reader-error-title">Documento não encontrado.</h1>
+          <p>Ele pode ter sido excluído da biblioteca.</p>
+          <a
+            className="button button--primary button-link"
+            href="/"
+            onClick={(event) => {
+              event.preventDefault();
+              navigate('/');
+            }}
+          >
+            Voltar à biblioteca
+          </a>
+        </section>
+      );
+    }
     return (
       <section className="page-state" aria-labelledby="reader-error-title">
         <p className="eyebrow">Leitura indisponível</p>
