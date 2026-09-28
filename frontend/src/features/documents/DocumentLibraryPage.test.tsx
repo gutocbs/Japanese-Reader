@@ -83,12 +83,12 @@ beforeEach(() => {
 });
 
 describe('document library flows', () => {
-  it('shows the volatile empty library and a path to create the first document', async () => {
+  it('shows the durable empty library and a path to create the first document', async () => {
     render(<App client={client()} initialPath="/" />);
 
     expect(await screen.findByRole('heading', { name: 'Biblioteca', level: 1 })).toBeInTheDocument();
     expect(screen.getByText('Nenhum documento na biblioteca.')).toBeInTheDocument();
-    expect(screen.getByText(/documentos serão perdidos ao reiniciar o servidor/i)).toBeInTheDocument();
+    expect(screen.queryByText(/documentos serão perdidos ao reiniciar o servidor/i)).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Novo documento' })).toHaveAttribute(
       'href', '/documents/new',
     );

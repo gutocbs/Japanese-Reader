@@ -186,10 +186,6 @@ export function DocumentEditorPage({ documentId }: DocumentEditorPageProps) {
         </a>
       </header>
 
-      <p className="memory-notice" role="note">
-        Persistência temporária: este documento será perdido ao reiniciar o servidor.
-      </p>
-
       <form className="editor-form" onSubmit={handleSubmit}>
         <label className="field">
           <span>Título</span>

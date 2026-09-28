@@ -1,8 +1,9 @@
 # Japanese Reader
 
-Aplicação local para leitura e estudo de japonês. A fundação atual contém React,
-TypeScript e Vite no frontend, FastAPI no backend e testes dos dois projetos.
-O desenvolvimento é executado diretamente na máquina, sem Docker.
+Aplicação local para leitura e estudo de japonês. A aplicação usa React,
+TypeScript e Vite no frontend, FastAPI no backend e SQLite para manter a
+biblioteca e o cache de análises. O desenvolvimento é executado diretamente na
+máquina, sem Docker.
 
 ## Requisitos
 
@@ -47,6 +48,20 @@ O Vite encaminha `/api` para `http://localhost:8000`. O endpoint
 `GET /api/health` retorna exatamente `{"status":"ok"}`. A documentação da API
 fica em <http://127.0.0.1:8000/docs>.
 
+Por padrão, o backend grava em `./data/japanese-reader.db`, relativo ao diretório
+em que ele é iniciado. Defina `DATABASE_PATH` com um caminho de arquivo diferente
+quando necessário, por exemplo:
+
+```powershell
+$env:DATABASE_PATH = 'D:\JapaneseReader\japanese-reader.db'
+npm run dev:backend
+```
+
+O diretório pai é criado automaticamente. `DATABASE_PATH=:memory:` é destinado
+somente a execuções explícitas e testes. O caminho configurável poderá apontar
+para um volume persistente quando o empacotamento Docker for implementado; esta
+etapa ainda não adiciona arquivos Docker.
+
 ## Verificação
 
 ```powershell
@@ -63,8 +78,9 @@ test` mantém o Vitest em modo watch durante o desenvolvimento.
 
 Consulte [a especificação aprovada](docs/superpowers/specs/2026-09-26-japanese-reader-design.md)
 e [o plano de implementação](docs/superpowers/plans/2026-09-26-japanese-reader-mvp.md).
-O CRUD de documentos usa armazenamento em memória. Análise linguística e
-persistência durável serão implementadas nas próximas tarefas.
+Documentos, seleções, preferências de furigana, overrides de leitura e análises
+compatíveis são persistidos em SQLite. O conteúdo de `Document.content` continua
+sendo a fonte canônica; análises são cache derivado e podem ser recriadas.
 
 ## API contracts
 

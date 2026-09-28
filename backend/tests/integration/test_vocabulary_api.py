@@ -1,10 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from backend.app.documents.service import DocumentService
-from backend.app.main import app
-from backend.app.persistence.memory.documents import InMemoryDocumentRepository
-from backend.app.persistence.memory.vocabulary import InMemoryVocabularySelectionRepository
+from backend.app.main import create_app
 
 
 CAT = {"lemma": "猫", "reading": "ねこ"}
@@ -12,17 +9,8 @@ DOG = {"lemma": "犬", "reading": "いぬ"}
 
 
 @pytest.fixture
-def client(monkeypatch):
-    documents = InMemoryDocumentRepository()
-    monkeypatch.setattr(app.state, "document_repository", documents, raising=False)
-    monkeypatch.setattr(app.state, "document_service", DocumentService(documents))
-    monkeypatch.setattr(
-        app.state,
-        "vocabulary_repository",
-        InMemoryVocabularySelectionRepository(),
-        raising=False,
-    )
-    with TestClient(app) as client:
+def client():
+    with TestClient(create_app(":memory:")) as client:
         yield client
 
 

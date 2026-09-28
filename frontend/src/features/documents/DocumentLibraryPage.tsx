@@ -120,10 +120,6 @@ export function DocumentLibraryPage() {
         </a>
       </header>
 
-      <p className="memory-notice" role="note">
-        Persistência temporária: os documentos serão perdidos ao reiniciar o servidor.
-      </p>
-
       {documents.length === 0 ? (
         <div className="library-empty">
           <h2>Nenhum documento na biblioteca.</h2>

@@ -124,16 +124,6 @@ a {
   text-decoration: none;
 }
 
-.memory-notice {
-  max-width: var(--reading-width);
-  margin: 0 0 var(--space-8);
-  border-left: 0.2rem solid var(--color-border);
-  background: var(--color-surface-muted);
-  color: var(--color-text-muted);
-  padding: var(--space-3) var(--space-4);
-  line-height: 1.5;
-}
-
 .library-empty {
   max-width: var(--reading-width);
   border-top: 1px solid var(--color-border);

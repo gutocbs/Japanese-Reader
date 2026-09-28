@@ -3,29 +3,13 @@ from uuid import UUID
 import pytest
 from fastapi.testclient import TestClient
 
-from backend.app.documents.service import DocumentService
-from backend.app.main import app
-from backend.app.persistence.memory.analyses import InMemoryAnalysisRepository
-from backend.app.persistence.memory.documents import InMemoryDocumentRepository
-from backend.app.persistence.memory.readings import InMemoryReadingOverrideRepository
+from backend.app.main import create_app
 from backend.app.readings.models import ReadingOverrideKey
 
 
 @pytest.fixture
-def client(monkeypatch):
-    documents = InMemoryDocumentRepository()
-    analyses = InMemoryAnalysisRepository()
-    overrides = InMemoryReadingOverrideRepository()
-    monkeypatch.setattr(app.state, "document_repository", documents, raising=False)
-    monkeypatch.setattr(app.state, "analysis_repository", analyses, raising=False)
-    monkeypatch.setattr(app.state, "reading_override_repository", overrides, raising=False)
-    monkeypatch.setattr(
-        app.state,
-        "document_service",
-        DocumentService(documents, analyses, overrides),
-        raising=False,
-    )
-    with TestClient(app) as test_client:
+def client():
+    with TestClient(create_app(":memory:")) as test_client:
         yield test_client
 
 
@@ -145,7 +129,7 @@ def test_content_edit_invalidates_analysis_and_overrides_but_preserves_study_sta
         "urn:japanese-reader:reading-overrides-confirmation-required"
     )
     assert client.get(f"/api/documents/{document_id}").json()["content"] == "猫"
-    assert app.state.reading_override_repository.get(
+    assert client.app.state.reading_override_repository.get(
         ReadingOverrideKey(UUID(document_id), 1, 0, 1)
     ) is not None
 
@@ -156,7 +140,7 @@ def test_content_edit_invalidates_analysis_and_overrides_but_preserves_study_sta
 
     assert edited.status_code == 200
     assert edited.json()["revision"] == 2
-    assert app.state.reading_override_repository.get(
+    assert client.app.state.reading_override_repository.get(
         ReadingOverrideKey(UUID(document_id), 1, 0, 1)
     ) is None
     assert client.get(
@@ -172,7 +156,7 @@ def test_content_edit_invalidates_analysis_and_overrides_but_preserves_study_sta
 
 
 def test_reading_override_openapi_documents_success_conflict_and_validation():
-    operations = app.openapi()["paths"][
+    operations = create_app(":memory:").openapi()["paths"][
         "/api/documents/{document_id}/reading-overrides"
     ]
     assert operations["put"]["operationId"] == "setReadingOverride"

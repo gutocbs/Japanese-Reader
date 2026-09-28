@@ -1,4 +1,5 @@
 from http import HTTPStatus
+import sqlite3
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -44,6 +45,12 @@ def problem_response(
 
 
 def install_error_handlers(app: FastAPI) -> None:
+    @app.exception_handler(sqlite3.Error)
+    async def sqlite_error(request: Request, error: sqlite3.Error):
+        return problem_response(
+            503, "The local database operation failed; changes were not saved"
+        )
+
     @app.exception_handler(EmptyDocumentError)
     async def empty_document(request: Request, error: EmptyDocumentError):
         return problem_response(422, str(error))
@@ -94,5 +101,5 @@ PROBLEM_RESPONSES = {
         "description": HTTPStatus(status).phrase,
         "content": {"application/problem+json": {"schema": ProblemDetails.model_json_schema()}},
     }
-    for status in (404, 422)
+    for status in (404, 422, 503)
 }

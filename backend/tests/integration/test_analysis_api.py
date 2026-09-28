@@ -5,17 +5,12 @@ from hashlib import sha256
 import pytest
 from fastapi.testclient import TestClient
 
-from backend.app.documents.service import DocumentService
-from backend.app.main import app
-from backend.app.persistence.memory.documents import InMemoryDocumentRepository
+from backend.app.main import app, create_app
 
 
 @pytest.fixture
-def client(monkeypatch):
-    repository = InMemoryDocumentRepository()
-    monkeypatch.setattr(app.state, "document_repository", repository, raising=False)
-    monkeypatch.setattr(app.state, "document_service", DocumentService(repository))
-    with TestClient(app) as client:
+def client():
+    with TestClient(create_app(":memory:")) as client:
         yield client
 
 
@@ -88,7 +83,7 @@ def test_empty_analysis_returns_422_without_invoking_morphology(client, monkeypa
     def forbidden(*args, **kwargs):
         raise AssertionError("Empty document must not invoke morphology")
 
-    monkeypatch.setattr(app.state.morphological_analyzer, "analyze", forbidden)
+    monkeypatch.setattr(client.app.state.morphological_analyzer, "analyze", forbidden)
     document_id = create_document(client, content)
     response = client.post(f"/api/documents/{document_id}/analysis")
     assert response.status_code == 422
@@ -98,19 +93,19 @@ def test_empty_analysis_returns_422_without_invoking_morphology(client, monkeypa
 
 def test_edit_during_analysis_returns_409_problem_and_next_request_uses_new_revision(client, monkeypatch):
     document_id = create_document(client, "猫")
-    original = app.state.morphological_analyzer.analyze
+    original = client.app.state.morphological_analyzer.analyze
 
     def changing_analyze(text, base_offset=0):
         result = original(text, base_offset)
         assert client.put(f"/api/documents/{document_id}", json={"content": "犬"}).status_code == 200
         return result
 
-    monkeypatch.setattr(app.state.morphological_analyzer, "analyze", changing_analyze)
+    monkeypatch.setattr(client.app.state.morphological_analyzer, "analyze", changing_analyze)
     response = client.post(f"/api/documents/{document_id}/analysis")
     assert response.status_code == 409
     assert response.headers["content-type"] == "application/problem+json"
     assert response.json()["status"] == 409
-    monkeypatch.setattr(app.state.morphological_analyzer, "analyze", original)
+    monkeypatch.setattr(client.app.state.morphological_analyzer, "analyze", original)
     fresh = client.post(f"/api/documents/{document_id}/analysis")
     assert fresh.status_code == 200
     assert fresh.json()["documentRevision"] == 2
@@ -119,7 +114,7 @@ def test_edit_during_analysis_returns_409_problem_and_next_request_uses_new_revi
 
 def test_derived_diagnostics_are_serialized_with_code_point_ranges(client, monkeypatch):
     document_id = create_document(client, "猫 食べた")
-    original = app.state.morphological_analyzer.analyze
+    original = client.app.state.morphological_analyzer.analyze
 
     def missing_and_irregular_reading(text, base_offset=0):
         return tuple(
@@ -129,7 +124,11 @@ def test_derived_diagnostics_are_serialized_with_code_point_ranges(client, monke
             for token in original(text, base_offset)
         )
 
-    monkeypatch.setattr(app.state.morphological_analyzer, "analyze", missing_and_irregular_reading)
+    monkeypatch.setattr(
+        client.app.state.morphological_analyzer,
+        "analyze",
+        missing_and_irregular_reading,
+    )
     response = client.post(f"/api/documents/{document_id}/analysis")
     assert response.status_code == 200
     assert response.json()["diagnostics"] == [

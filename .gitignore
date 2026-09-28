@@ -8,4 +8,5 @@ node_modules/
 frontend/dist/
 *.tsbuildinfo
 .dev/
+data/
 

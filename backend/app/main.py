@@ -1,4 +1,6 @@
 from contextlib import asynccontextmanager
+import os
+from pathlib import Path
 
 from fastapi import FastAPI
 
@@ -8,12 +10,15 @@ from backend.app.analysis.service import AnalysisService
 from backend.app.api.errors import install_error_handlers
 from backend.app.api.router import router
 from backend.app.documents.service import DocumentService
-from backend.app.persistence.memory.analyses import InMemoryAnalysisRepository
-from backend.app.persistence.memory.documents import InMemoryDocumentRepository
-from backend.app.persistence.memory.readings import InMemoryReadingOverrideRepository
-from backend.app.persistence.memory.vocabulary import InMemoryVocabularySelectionRepository
-from backend.app.vocabulary.service import VocabularySelectionService
+from backend.app.persistence.sqlite.connection import SqliteDatabase
+from backend.app.persistence.sqlite.repositories import (
+    SqliteAnalysisRepository,
+    SqliteDocumentRepository,
+    SqliteReadingOverrideRepository,
+    SqliteVocabularyRepository,
+)
 from backend.app.readings.service import ReadingOverrideResolver, ReadingOverrideService
+from backend.app.vocabulary.service import VocabularySelectionService
 
 
 @asynccontextmanager
@@ -47,22 +52,36 @@ async def lifespan(application: FastAPI):
         del application.state.analysis_service
         del application.state.reading_override_service
         del application.state.vocabulary_service
+        application.state.database.close()
 
 
-app = FastAPI(title="Japanese Reader", lifespan=lifespan)
-app.state.document_repository = InMemoryDocumentRepository()
-app.state.analysis_repository = InMemoryAnalysisRepository()
-app.state.reading_override_repository = InMemoryReadingOverrideRepository()
-app.state.document_service = DocumentService(
-    app.state.document_repository,
-    app.state.analysis_repository,
-    app.state.reading_override_repository,
-)
-app.state.vocabulary_repository = InMemoryVocabularySelectionRepository()
-install_error_handlers(app)
-app.include_router(router)
+def create_app(database_path: str | Path | None = None) -> FastAPI:
+    configured_path = database_path or os.environ.get(
+        "DATABASE_PATH", "./data/japanese-reader.db"
+    )
+    database = SqliteDatabase(configured_path)
+    documents = SqliteDocumentRepository(database)
+    analyses = SqliteAnalysisRepository(database)
+    reading_overrides = SqliteReadingOverrideRepository(database)
+    vocabulary = SqliteVocabularyRepository(database)
+
+    application = FastAPI(title="Japanese Reader", lifespan=lifespan)
+    application.state.database = database
+    application.state.document_repository = documents
+    application.state.analysis_repository = analyses
+    application.state.reading_override_repository = reading_overrides
+    application.state.vocabulary_repository = vocabulary
+    application.state.document_service = DocumentService(
+        documents, analyses, reading_overrides
+    )
+    install_error_handlers(application)
+    application.include_router(router)
+
+    @application.get("/api/health")
+    def health() -> dict[str, str]:
+        return {"status": "ok"}
+
+    return application
 
 
-@app.get("/api/health")
-def health() -> dict[str, str]:
-    return {"status": "ok"}
+app = create_app()

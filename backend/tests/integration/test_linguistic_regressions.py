@@ -5,9 +5,7 @@ from unicodedata import name
 import pytest
 from fastapi.testclient import TestClient
 
-from backend.app.documents.service import DocumentService
-from backend.app.main import app
-from backend.app.persistence.memory.documents import InMemoryDocumentRepository
+from backend.app.main import create_app
 
 
 CORPUS = json.loads(
@@ -19,11 +17,8 @@ CASES = CORPUS["cases"]
 
 
 @pytest.fixture
-def client(monkeypatch):
-    repository = InMemoryDocumentRepository()
-    monkeypatch.setattr(app.state, "document_repository", repository, raising=False)
-    monkeypatch.setattr(app.state, "document_service", DocumentService(repository))
-    with TestClient(app) as instance:
+def client():
+    with TestClient(create_app(":memory:")) as instance:
         yield instance
 
 
