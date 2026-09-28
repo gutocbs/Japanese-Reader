@@ -14,8 +14,11 @@ measured machine.
   file and application lifespan per sample, three independent samples per
   size, median reported. Cold analysis includes analysis, SQLite cache write,
   response-model conversion, and JSON transport. Cache read repeats the same
-  request. Process RSS is sampled every 5 ms.
-- Frontend: Vitest 5.0.2 + jsdom 30.1.1, one sample per size. The fixture uses
+  request. Process RSS is sampled every 5 ms. On Windows the ctypes structure
+  and opaque-pointer function signatures are initialized once at module import;
+  a focused probe performs 1,000 reads across eight threads.
+- Frontend: Vitest 5.0.2 + jsdom 30.1.1, three samples per size with the median
+  reported. The fixture uses
   real paragraph blocks, about one token component per two code points, native
   text/ruby, and one shared vocabulary key per block. It measures synchronous
   render and a `Set<VocabularyKey>` toggle. jsdom timings are a reproducible
@@ -31,13 +34,20 @@ npm --prefix frontend test -- --run src/features/reader/reader.performance.test.
 
 The generated corpora and raw JSON result are written below `.dev/performance`
 and are intentionally ignored. The scripts reject fewer than three backend
-runs. The frontend test prints a single `READER_PERFORMANCE` JSON line.
+runs. The frontend test prints a single `READER_PERFORMANCE` JSON line with
+every sample and its median. Timings have no pass/fail threshold; deterministic
+DOM, hash, reconstruction, and selection assertions are the regression gate.
 
 ## Deterministic corpora
 
 The generator repeats one fixed Japanese paragraph containing ordinary kanji,
 supplementary kanji (`𠮷`), emoji (`🍵`), punctuation, and a newline, then cuts
 at the requested Unicode code-point count.
+
+The frontend independently calculates UTF-8 SHA-256 with Node's crypto API for
+every generated size and compares it with this same manifest before rendering.
+Changing its seed or truncation behavior therefore fails with an explicit
+`Corpus SHA-256 mismatch` instead of silently benchmarking a different corpus.
 
 | Code points | UTF-8 bytes | SHA-256 |
 |---:|---:|---|
@@ -64,17 +74,28 @@ Documents with overrides keep the existing exact-occurrence resolution path.
 
 Cold-analysis median improved by 84.2% at 10k and 87.6% at 250k. Response
 shape, response byte count, blocks, tokens, SHA-256, and offset/surface
-validation remained identical. Cache time did not improve because it was not
-the chosen first bottleneck.
+validation remained identical. Cold and cached payloads are both checked for
+block bounds and contiguous coverage, ordered non-overlapping token bounds,
+exact surfaces, preserved gaps, and full canonical-text reconstruction. Cache
+time did not improve because it was not the chosen first bottleneck.
 
 ## Frontend
 
 | Code points | Blocks | Token components | Render | Shared-key toggle |
 |---:|---:|---:|---:|---:|
-| 10,000 | 193 | 5,000 | 728 ms | 210 ms |
-| 50,000 | 962 | 25,000 | 2,147 ms | 1,202 ms |
-| 100,000 | 1,924 | 50,000 | 3,437 ms | 1,788 ms |
-| 250,000 | 4,808 | 125,000 | 15,045 ms | 5,394 ms |
+| 10,000 | 193 | 5,000 | 388 ms | 402 ms |
+| 50,000 | 962 | 25,000 | 1,743 ms | 973 ms |
+| 100,000 | 1,924 | 50,000 | 3,205 ms | 1,634 ms |
+| 250,000 | 4,808 | 125,000 | 7,612 ms | 4,739 ms |
+
+Raw frontend samples in milliseconds:
+
+| Code points | Render samples | Toggle samples |
+|---:|---|---|
+| 10,000 | 877.725, 387.952, 295.188 | 476.735, 402.272, 149.174 |
+| 50,000 | 1,743.473, 1,621.836, 1,791.155 | 1,031.485, 969.639, 973.069 |
+| 100,000 | 3,374.133, 2,851.445, 3,204.556 | 1,663.539, 1,634.497, 1,602.285 |
+| 250,000 | 7,611.625, 7,552.669, 8,215.538 | 3,644.586, 4,739.244, 5,209.978 |
 
 For every size the test removes all `rt` nodes and proves the remaining native
 text equals the canonical content exactly. It also proves there is no
@@ -115,7 +136,7 @@ introduced.
 On this machine 10k is comfortable and 50k is usable with a visible initial
 wait. At 100k, cache transport and dense DOM interactions are already
 multi-second. At 250k, the 57.84 MiB response, roughly 0.9 GiB backend RSS,
-8-second cache read, 15-second dense jsdom render, 5-second toggle, and failed
+8-second cache read, 7.6-second dense jsdom render, 4.7-second toggle, and failed
 manual-browser attempt mean comfortable support is **not demonstrated**.
 
 Per the Task 14 one-round limit, the remaining first candidates are documented

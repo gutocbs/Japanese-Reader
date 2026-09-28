@@ -35,6 +35,53 @@ from tests.performance.generate_documents import (  # noqa: E402
 MEBIBYTE = 1024 * 1024
 
 
+if sys.platform == "win32":
+    import ctypes
+    from ctypes import wintypes
+
+    class _ProcessMemoryCounters(ctypes.Structure):
+        _fields_ = [
+            ("cb", wintypes.DWORD),
+            ("PageFaultCount", wintypes.DWORD),
+            ("PeakWorkingSetSize", ctypes.c_size_t),
+            ("WorkingSetSize", ctypes.c_size_t),
+            ("QuotaPeakPagedPoolUsage", ctypes.c_size_t),
+            ("QuotaPagedPoolUsage", ctypes.c_size_t),
+            ("QuotaPeakNonPagedPoolUsage", ctypes.c_size_t),
+            ("QuotaNonPagedPoolUsage", ctypes.c_size_t),
+            ("PagefileUsage", ctypes.c_size_t),
+            ("PeakPagefileUsage", ctypes.c_size_t),
+        ]
+
+    class _WindowsRssReader:
+        """Own stable ctypes signatures; each call only allocates its counter."""
+
+        def __init__(self) -> None:
+            self._get_current_process = ctypes.windll.kernel32.GetCurrentProcess
+            self._get_current_process.argtypes = []
+            self._get_current_process.restype = wintypes.HANDLE
+            self._get_memory_info = ctypes.windll.psapi.GetProcessMemoryInfo
+            self._get_memory_info.argtypes = [
+                wintypes.HANDLE,
+                wintypes.LPVOID,
+                wintypes.DWORD,
+            ]
+            self._get_memory_info.restype = wintypes.BOOL
+
+        def __call__(self) -> int:
+            counters = _ProcessMemoryCounters()
+            counters.cb = ctypes.sizeof(counters)
+            if not self._get_memory_info(
+                self._get_current_process(), ctypes.byref(counters), counters.cb
+            ):
+                raise OSError("GetProcessMemoryInfo failed")
+            return int(counters.WorkingSetSize)
+
+    _WINDOWS_RSS_READER: Callable[[], int] | None = _WindowsRssReader()
+else:
+    _WINDOWS_RSS_READER = None
+
+
 @dataclass(frozen=True)
 class RequestMeasurement:
     duration_ms: float
@@ -67,41 +114,8 @@ class PeakRssSampler:
 
 
 def resident_set_bytes() -> int:
-    if sys.platform == "win32":
-        import ctypes
-        from ctypes import wintypes
-
-        class ProcessMemoryCounters(ctypes.Structure):
-            _fields_ = [
-                ("cb", wintypes.DWORD),
-                ("PageFaultCount", wintypes.DWORD),
-                ("PeakWorkingSetSize", ctypes.c_size_t),
-                ("WorkingSetSize", ctypes.c_size_t),
-                ("QuotaPeakPagedPoolUsage", ctypes.c_size_t),
-                ("QuotaPagedPoolUsage", ctypes.c_size_t),
-                ("QuotaPeakNonPagedPoolUsage", ctypes.c_size_t),
-                ("QuotaNonPagedPoolUsage", ctypes.c_size_t),
-                ("PagefileUsage", ctypes.c_size_t),
-                ("PeakPagefileUsage", ctypes.c_size_t),
-            ]
-
-        get_current_process = ctypes.windll.kernel32.GetCurrentProcess
-        get_current_process.restype = wintypes.HANDLE
-        get_memory_info = ctypes.windll.psapi.GetProcessMemoryInfo
-        get_memory_info.argtypes = [
-            wintypes.HANDLE,
-            wintypes.LPVOID,
-            wintypes.DWORD,
-        ]
-        get_memory_info.restype = wintypes.BOOL
-
-        counters = ProcessMemoryCounters()
-        counters.cb = ctypes.sizeof(counters)
-        if not get_memory_info(
-            get_current_process(), ctypes.byref(counters), counters.cb
-        ):
-            raise OSError("GetProcessMemoryInfo failed")
-        return int(counters.WorkingSetSize)
+    if _WINDOWS_RSS_READER is not None:
+        return _WINDOWS_RSS_READER()
 
     status = Path("/proc/self/statm")
     if status.exists():
@@ -144,12 +158,49 @@ def validate_analysis(payload: dict[str, object], content: str, expected_hash: s
     blocks = payload["blocks"]
     if not isinstance(blocks, list) or not blocks:
         raise AssertionError("analysis returned no blocks")
-    for block in blocks:
+    cursor = 0
+    reconstructed: list[str] = []
+    for block_index, block in enumerate(blocks):
+        block_start = block["startOffset"]
+        block_end = block["endOffset"]
+        if not 0 <= block_start < block_end <= len(code_points):
+            raise AssertionError(
+                f"block bounds invalid at index {block_index}: "
+                f"[{block_start}, {block_end})"
+            )
+        if block_start != cursor:
+            raise AssertionError(
+                f"block coverage mismatch at index {block_index}: "
+                f"expected {cursor}, got {block_start}"
+            )
+
+        token_cursor = block_start
         for token in block["tokens"]:
             start = token["startOffset"]
             end = token["endOffset"]
+            if not block_start <= start < end <= block_end:
+                raise AssertionError(
+                    f"token bounds invalid in block {block_index}: [{start}, {end})"
+                )
+            if start < token_cursor:
+                raise AssertionError(
+                    f"token order overlap in block {block_index}: "
+                    f"previous end {token_cursor}, next start {start}"
+                )
+            reconstructed.extend(code_points[token_cursor:start])
             if "".join(code_points[start:end]) != token["surface"]:
                 raise AssertionError(f"token surface mismatch at [{start}, {end})")
+            reconstructed.append(token["surface"])
+            token_cursor = end
+        reconstructed.extend(code_points[token_cursor:block_end])
+        cursor = block_end
+
+    if cursor != len(code_points):
+        raise AssertionError(
+            f"block coverage mismatch at document end: expected {len(code_points)}, got {cursor}"
+        )
+    if "".join(reconstructed) != content:
+        raise AssertionError("analysis reconstruction does not equal canonical content")
 
 
 def run_once(code_points: int) -> dict[str, object]:
@@ -182,6 +233,7 @@ def run_once(code_points: int) -> dict[str, object]:
             cached_response.raise_for_status()
             if cached.response_bytes != cold.response_bytes:
                 raise AssertionError("cold and cached transport payload sizes differ")
+            validate_analysis(cached_response.json(), content, corpus.sha256)
             del cached_response
 
     return {

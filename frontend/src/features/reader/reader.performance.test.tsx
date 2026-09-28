@@ -1,22 +1,54 @@
 import { fireEvent, render } from '@testing-library/react';
+import { createHash } from 'node:crypto';
 import { useState } from 'react';
 import { describe, expect, it } from 'vitest';
 import type { Analysis, AnalyzedToken } from '../../shared/api/client';
 import { DocumentText } from './DocumentText';
 
 const CORPUS_SIZES = [10_000, 50_000, 100_000, 250_000] as const;
+type CorpusSize = (typeof CORPUS_SIZES)[number];
+const PERFORMANCE_RUNS = 3;
 const SEED = '昨日、日本語の長い文章を読みました。語彙と文脈を確認します。𠮷野家でお茶🍵を飲み、次の段落へ進みます。\n';
 const VOCABULARY_KEY = '["昨日","きのう"]';
+const CORPUS_SHA256: Record<CorpusSize, string> = {
+  10_000: 'ec761d9726a707bb282e42a9fe26c87c2a2932b86aef60afeb58952e58cf70a5',
+  50_000: '461f24f414ebdad896d96694a5830fa36c89193e6419fab4fabb25b853f2b8a7',
+  100_000: 'cc78befca7c605dc3aeecb106357dfa9dc63d61631e06185db940f86cf600568',
+  250_000: 'e655081d0c72d6cdeab498f784a540d0e9db4230daff0266e5023ba4451039c3',
+};
 
 interface Fixture {
   content: string;
   analysis: Analysis;
 }
 
-function makeFixture(codePoints: number): Fixture {
+interface ReaderPerformanceMeasurement {
+  codePoints: number;
+  blocks: number;
+  tokens: number;
+  runs: number;
+  renderMedianMs: number;
+  renderSamplesMs: number[];
+  toggleMedianMs: number;
+  toggleSamplesMs: number[];
+}
+
+function verifiedCorpusHash(codePoints: CorpusSize, content: string): string {
+  const actual = createHash('sha256').update(content, 'utf8').digest('hex');
+  const expected = CORPUS_SHA256[codePoints];
+  if (actual !== expected) {
+    throw new Error(
+      `Corpus SHA-256 mismatch for ${codePoints} code points: expected ${expected}, got ${actual}`,
+    );
+  }
+  return actual;
+}
+
+function makeFixture(codePoints: CorpusSize): Fixture {
   const content = Array.from(SEED.repeat(Math.ceil(codePoints / Array.from(SEED).length)))
     .slice(0, codePoints)
     .join('');
+  const contentHash = verifiedCorpusHash(codePoints, content);
   const codePointContent = Array.from(content);
   const blocks: Analysis['blocks'] = [];
   let blockStart = 0;
@@ -57,7 +89,7 @@ function makeFixture(codePoints: number): Fixture {
     analysis: {
       documentId: '00000000-0000-0000-0000-000000000014',
       documentRevision: 1,
-      contentHash: `performance-${codePoints}`,
+      contentHash,
       metadata: {
         analyzerName: 'performance-fixture',
         analyzerVersion: '1',
@@ -98,8 +130,14 @@ function SelectionHarness({ fixture }: { fixture: Fixture }) {
 }
 
 describe('large-document reader performance', () => {
+  it('binds the frontend fixture to the documented corpus SHA-256', () => {
+    expect(makeFixture(10_000).analysis.contentHash).toBe(
+      'ec761d9726a707bb282e42a9fe26c87c2a2932b86aef60afeb58952e58cf70a5',
+    );
+  });
+
   it('measures semantic render and set-key toggle across progressive corpora', () => {
-    const measurements: Array<Record<string, number>> = [];
+    const measurements: ReaderPerformanceMeasurement[] = [];
 
     for (const codePoints of CORPUS_SIZES) {
       const fixture = makeFixture(codePoints);
@@ -108,7 +146,7 @@ describe('large-document reader performance', () => {
       let lastTokenCount = 0;
       let lastBlockCount = 0;
 
-      for (let run = 0; run < 1; run += 1) {
+      for (let run = 0; run < PERFORMANCE_RUNS; run += 1) {
         const renderStarted = performance.now();
         const view = render(<SelectionHarness fixture={fixture} />);
         renderSamples.push(performance.now() - renderStarted);
@@ -142,15 +180,20 @@ describe('large-document reader performance', () => {
         view.unmount();
       }
 
+      const roundedRenderSamples = renderSamples.map((sample) => Number(sample.toFixed(3)));
+      const roundedToggleSamples = toggleSamples.map((sample) => Number(sample.toFixed(3)));
       measurements.push({
         codePoints,
         blocks: lastBlockCount,
         tokens: lastTokenCount,
+        runs: PERFORMANCE_RUNS,
         renderMedianMs: Number(median(renderSamples).toFixed(3)),
+        renderSamplesMs: roundedRenderSamples,
         toggleMedianMs: Number(median(toggleSamples).toFixed(3)),
+        toggleSamplesMs: roundedToggleSamples,
       });
     }
 
     process.stdout.write(`READER_PERFORMANCE ${JSON.stringify(measurements)}\n`);
-  }, 240_000);
+  }, 360_000);
 });
