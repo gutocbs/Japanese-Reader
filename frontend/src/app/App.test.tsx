@@ -555,7 +555,7 @@ describe('reader routes', () => {
     expect(api.analyze).toHaveBeenCalledTimes(1);
 
     fireEvent.contextMenu(token);
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Sempre mostrar furigana' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Mostrar furigana' }));
     await waitFor(() => expect(setVocabularyDisplayPreference).toHaveBeenCalledWith(document.id, {
       key: { lemma: '国境', reading: 'こっきょう' },
       visibility: 'show',

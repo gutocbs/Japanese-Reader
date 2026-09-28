@@ -13,6 +13,7 @@ interface TokenProps {
   selected?: boolean;
   onToggleVocabulary?: (key: string) => void;
   furiganaVisible?: boolean;
+  furiganaVisibility?: FuriganaVisibility;
   onSetFuriganaVisibility?: (key: string, visibility: FuriganaVisibility) => void;
   documentRevision?: number;
   onSaveReadingOverride?: (override: SetReadingOverride) => Promise<void>;
@@ -24,6 +25,7 @@ export function Token({
   selected = false,
   onToggleVocabulary,
   furiganaVisible = true,
+  furiganaVisibility = 'inherit',
   onSetFuriganaVisibility,
   documentRevision,
   onSaveReadingOverride,
@@ -128,6 +130,8 @@ export function Token({
               ? (visibility) => onSetFuriganaVisibility(token.vocabularyKey!, visibility)
               : undefined
           }
+          furiganaVisible={furiganaVisible}
+          furiganaVisibility={furiganaVisibility}
           onEditReading={supportsReadingOverride ? () => {
             setIsContextMenuOpen(false);
             setIsReadingDialogOpen(true);

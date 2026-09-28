@@ -100,8 +100,8 @@ describe('Token', () => {
     const token = screen.getByRole('button', { name: '昨日（きのう）' });
     fireEvent.contextMenu(token);
     expect(screen.getByRole('menu')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Sempre mostrar furigana' }));
-    expect(onSetFuriganaVisibility).toHaveBeenCalledWith('["昨日","きのう"]', 'show');
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Ocultar furigana' }));
+    expect(onSetFuriganaVisibility).toHaveBeenCalledWith('["昨日","きのう"]', 'hide');
 
     fireEvent.keyDown(token, { key: 'ContextMenu' });
     expect(screen.getByRole('menu')).toBeInTheDocument();
@@ -155,9 +155,8 @@ describe('Token', () => {
   });
 
   it.each([
-    ['Sempre mostrar furigana', 'show'],
     ['Ocultar furigana', 'hide'],
-    ['Seguir configuração geral', 'inherit'],
+    ['Mostrar furigana', 'show'],
   ] as const)('does not toggle vocabulary when selecting %s', (label, visibility) => {
     const onToggleVocabulary = vi.fn();
     const onSetFuriganaVisibility = vi.fn();
@@ -166,6 +165,7 @@ describe('Token', () => {
         token={lexicalToken}
         onToggleVocabulary={onToggleVocabulary}
         onSetFuriganaVisibility={onSetFuriganaVisibility}
+        furiganaVisible={visibility === 'hide'}
       />,
     );
 
@@ -190,11 +190,11 @@ describe('Token', () => {
     const token = screen.getByRole('button', { name: '昨日（きのう）' });
     token.focus();
     fireEvent.keyDown(token, { key: 'F10', shiftKey: true });
-    const firstItem = screen.getByRole('menuitem', { name: 'Sempre mostrar furigana' });
+    const firstItem = screen.getByRole('menuitem', { name: 'Ocultar furigana' });
     expect(firstItem).toHaveFocus();
 
     fireEvent.keyDown(firstItem, { key: 'Enter' });
-    expect(onSetFuriganaVisibility).toHaveBeenCalledWith('["昨日","きのう"]', 'show');
+    expect(onSetFuriganaVisibility).toHaveBeenCalledWith('["昨日","きのう"]', 'hide');
     expect(onToggleVocabulary).not.toHaveBeenCalled();
     expect(token).toHaveFocus();
   });

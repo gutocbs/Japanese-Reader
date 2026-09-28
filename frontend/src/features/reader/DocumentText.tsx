@@ -50,6 +50,9 @@ export function DocumentText({
 
     block.tokens.forEach((token, tokenIndex) => {
       appendGap(token.startOffset, `before-token:${blockIndex}:${tokenIndex}`);
+      const furiganaVisibility = token.vocabularyKey === null
+        ? 'inherit'
+        : furiganaVisibilityByKey.get(token.vocabularyKey) ?? 'inherit';
       rendered.push(
         <Token
           key={`token:${blockIndex}:${tokenIndex}:${token.startOffset}`}
@@ -57,11 +60,10 @@ export function DocumentText({
           selected={token.vocabularyKey !== null && selectedKeys.has(token.vocabularyKey)}
           onToggleVocabulary={onToggleVocabulary}
           furiganaVisible={resolveFuriganaVisibility(
-            token.vocabularyKey === null
-              ? 'inherit'
-              : furiganaVisibilityByKey.get(token.vocabularyKey) ?? 'inherit',
+            furiganaVisibility,
             showFurigana,
           )}
+          furiganaVisibility={furiganaVisibility}
           onSetFuriganaVisibility={onSetFuriganaVisibility}
           documentRevision={analysis.documentRevision}
           onSaveReadingOverride={onSaveReadingOverride}

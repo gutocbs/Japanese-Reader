@@ -4,23 +4,24 @@ import type { FuriganaVisibility } from './preferences';
 interface TokenContextMenuProps {
   onClose: () => void;
   onSetVisibility?: (visibility: FuriganaVisibility) => void;
+  furiganaVisible?: boolean;
+  furiganaVisibility?: FuriganaVisibility;
   onEditReading?: () => void;
   onRemoveReading?: () => void;
 }
 
-const actions: readonly { label: string; visibility: FuriganaVisibility }[] = [
-  { label: 'Sempre mostrar furigana', visibility: 'show' },
-  { label: 'Ocultar furigana', visibility: 'hide' },
-  { label: 'Seguir configuração geral', visibility: 'inherit' },
-];
-
 export function TokenContextMenu({
   onClose,
   onSetVisibility,
+  furiganaVisible = true,
+  furiganaVisibility = 'inherit',
   onEditReading,
   onRemoveReading,
 }: TokenContextMenuProps) {
   const firstItemRef = useRef<HTMLButtonElement>(null);
+  const toggleAction = furiganaVisible
+    ? { label: 'Ocultar furigana', visibility: 'hide' as const }
+    : { label: 'Mostrar furigana', visibility: 'show' as const };
   const selectVisibility = (visibility: FuriganaVisibility) => {
     onSetVisibility?.(visibility);
     onClose();
@@ -57,26 +58,43 @@ export function TokenContextMenu({
           Remover correção
         </button>
       )}
-      {onSetVisibility && actions.map((action) => (
+      {onSetVisibility && (
         <button
-          key={action.visibility}
-          ref={!onEditReading && action.visibility === 'show' ? firstItemRef : undefined}
+          ref={!onEditReading ? firstItemRef : undefined}
           type="button"
           role="menuitem"
           onClick={(event) => {
             event.stopPropagation();
-            selectVisibility(action.visibility);
+            selectVisibility(toggleAction.visibility);
           }}
           onKeyDown={(event) => {
             if (event.key !== 'Enter' && event.key !== ' ') return;
             event.preventDefault();
             event.stopPropagation();
-            selectVisibility(action.visibility);
+            selectVisibility(toggleAction.visibility);
           }}
         >
-          {action.label}
+          {toggleAction.label}
         </button>
-      ))}
+      )}
+      {onSetVisibility && furiganaVisibility !== 'inherit' && (
+        <button
+          type="button"
+          role="menuitem"
+          onClick={(event) => {
+            event.stopPropagation();
+            selectVisibility('inherit');
+          }}
+          onKeyDown={(event) => {
+            if (event.key !== 'Enter' && event.key !== ' ') return;
+            event.preventDefault();
+            event.stopPropagation();
+            selectVisibility('inherit');
+          }}
+        >
+          Seguir configuração geral
+        </button>
+      )}
     </span>
   );
 }

@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { useState } from 'react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { Analysis } from '../../shared/api/client';
 import { DocumentText } from './DocumentText';
 
@@ -103,6 +103,38 @@ describe('DocumentText', () => {
     expect(ruby?.tagName).toBe('RUBY');
     expect(ruby?.childNodes[0]?.textContent).toBe('昨日');
     expect(ruby?.querySelectorAll('rt')).toHaveLength(1);
+  });
+
+  it('offers one furigana action and exposes inheritance only for a word override', () => {
+    const onSetFuriganaVisibility = vi.fn();
+    const firstKey = analysis.blocks[0].tokens[0].vocabularyKey!;
+    const { rerender } = render(
+      <DocumentText
+        content={'𠮷 食べた。 \n昨日!'}
+        analysis={analysis}
+        showFurigana={false}
+        onSetFuriganaVisibility={onSetFuriganaVisibility}
+      />,
+    );
+
+    fireEvent.contextMenu(screen.getByRole('button', { name: '食べた（たべた）' }));
+    expect(screen.queryByRole('menuitem', { name: 'Seguir configuração geral' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Mostrar furigana' }));
+    expect(onSetFuriganaVisibility).toHaveBeenCalledWith(firstKey, 'show');
+
+    rerender(
+      <DocumentText
+        content={'𠮷 食べた。 \n昨日!'}
+        analysis={analysis}
+        showFurigana={false}
+        furiganaVisibilityByKey={new Map([[firstKey, 'hide']])}
+        onSetFuriganaVisibility={onSetFuriganaVisibility}
+      />,
+    );
+    fireEvent.contextMenu(screen.getByRole('button', { name: '食べた（たべた）' }));
+    expect(screen.getByRole('menuitem', { name: 'Seguir configuração geral' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Seguir configuração geral' }));
+    expect(onSetFuriganaVisibility).toHaveBeenLastCalledWith(firstKey, 'inherit');
   });
 
   it('toggles every occurrence with the same key but keeps a different reading separate', () => {
