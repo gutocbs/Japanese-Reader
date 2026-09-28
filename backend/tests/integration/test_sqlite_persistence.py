@@ -1,5 +1,7 @@
 import asyncio
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from threading import Barrier
 from uuid import UUID
 
 from httpx import ASGITransport, AsyncClient
@@ -7,6 +9,7 @@ from httpx import ASGITransport, AsyncClient
 from backend.app.documents.models import CreateDocument, UpdateDocument
 from backend.app.documents.service import DocumentService
 from backend.app.main import create_app
+from backend.app.persistence.sqlite import migrations as sqlite_migrations
 from backend.app.persistence.sqlite.connection import SqliteDatabase
 from backend.app.persistence.sqlite.repositories import (
     SqliteAnalysisRepository,
@@ -122,3 +125,41 @@ def test_database_configuration_uses_environment_and_versioned_migrations(tmp_pa
         "reading_overrides",
         "schema_migrations",
     } <= tables
+
+
+def test_concurrent_database_initialization_applies_each_migration_once(
+    tmp_path, monkeypatch
+):
+    path = tmp_path / "concurrent-startup.db"
+    workers = 4
+    start = Barrier(workers)
+    discovery = Barrier(workers)
+    real_directory = sqlite_migrations.MIGRATIONS_DIRECTORY
+
+    class SynchronizedMigrationDirectory:
+        def glob(self, pattern):
+            files = tuple(real_directory.glob(pattern))
+            discovery.wait(timeout=5)
+            return files
+
+    monkeypatch.setattr(
+        sqlite_migrations,
+        "MIGRATIONS_DIRECTORY",
+        SynchronizedMigrationDirectory(),
+    )
+
+    def initialize():
+        start.wait(timeout=5)
+        database = SqliteDatabase(path)
+        with database.unit_of_work() as connection:
+            return [
+                row[0]
+                for row in connection.execute(
+                    "SELECT version FROM schema_migrations ORDER BY version"
+                )
+            ]
+
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        versions = list(executor.map(lambda _: initialize(), range(workers)))
+
+    assert versions == [[1]] * workers

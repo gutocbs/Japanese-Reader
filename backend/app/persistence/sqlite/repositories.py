@@ -299,7 +299,9 @@ class SqliteAnalysisRepository:
             ).fetchone()
         if row is None or row["payload_version"] != ANALYSIS_PAYLOAD_VERSION:
             return None
-        return _decode_analysis(row["analysis_json"])
+
+        analysis = _decode_analysis(row["analysis_json"])
+        return analysis if analysis.cache_key == key else None
 
     def save(self, analysis: DocumentAnalysis) -> None:
         key = analysis.cache_key
