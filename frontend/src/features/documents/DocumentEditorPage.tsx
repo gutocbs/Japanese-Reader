@@ -5,6 +5,7 @@ import {
   type Document,
 } from '../../shared/api/client';
 import { useDocumentClient, useRouter } from '../../app/providers';
+import { joinSimpleJapaneseLineBreaks } from '../../shared/text/joinSimpleJapaneseLineBreaks';
 import { ContentEditConfirmationDialog } from './ContentEditConfirmationDialog';
 import { documentKeys } from './queries';
 
@@ -150,6 +151,14 @@ export function DocumentEditorPage({ documentId }: DocumentEditorPageProps) {
     });
   };
 
+  const isLineBreakNormalizationEnabled = import.meta.env.VITE_ENABLE_LINE_BREAK_NORMALIZATION !== 'false';
+
+  const normalizeLineBreaks = () => {
+    const nextContent = joinSimpleJapaneseLineBreaks(content);
+    setContent(nextContent);
+    preserveDraft(title, nextContent);
+  };
+
   if (isLoading) {
     return <p className="page-state" role="status">Carregando documento…</p>;
   }
@@ -218,6 +227,17 @@ export function DocumentEditorPage({ documentId }: DocumentEditorPageProps) {
 
         {content.trim().length === 0 && (
           <p className="field-hint">Digite algum texto japonês para analisar.</p>
+        )}
+
+        {isLineBreakNormalizationEnabled && (
+          <button
+            className="button button--secondary"
+            type="button"
+            onClick={normalizeLineBreaks}
+            disabled={isPending}
+          >
+            Unir quebras de linha
+          </button>
         )}
 
         {error !== null && (

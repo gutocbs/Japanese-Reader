@@ -97,6 +97,7 @@ function client(overrides: Partial<DocumentClient> = {}): DocumentClient {
 }
 
 beforeEach(() => {
+  vi.unstubAllEnvs();
   window.history.replaceState(null, '', '/');
   localStorage.clear();
   window.matchMedia = vi.fn().mockReturnValue({ matches: false });
@@ -126,6 +127,27 @@ it('uses the system dark preference until the reader has a saved choice', () => 
 });
 
 describe('reader routes', () => {
+  it('keeps line-break normalization unavailable when its feature flag explicitly disables it', () => {
+    vi.stubEnv('VITE_ENABLE_LINE_BREAK_NORMALIZATION', 'false');
+    render(<App client={client()} initialPath="/documents/new" />);
+
+    expect(screen.queryByRole('button', { name: 'Unir quebras de linha' }))
+      .not.toBeInTheDocument();
+  });
+
+  it('lets the default-enabled line-break normalization action update the draft without saving', () => {
+    const api = client();
+    render(<App client={api} initialPath="/documents/new" />);
+
+    const contentField = screen.getByLabelText('Texto japonês');
+    fireEvent.change(contentField, { target: { value: 'なので\nツナです' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Unir quebras de linha' }));
+
+    expect(contentField).toHaveValue('なのでツナです');
+    expect(api.create).not.toHaveBeenCalled();
+    expect(api.update).not.toHaveBeenCalled();
+  });
+
   it('offers a clear route back to the library when the document is missing', async () => {
     const api = client({
       get: vi.fn().mockRejectedValue(new ApiError(404, {
