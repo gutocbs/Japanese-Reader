@@ -11,6 +11,7 @@
   --color-primary-hover: #174633;
   --color-reader-token-hover: rgb(243 243 247 / 14%);
   --color-reader-token-selected: rgb(243 243 247 / 14%);
+  --color-reader-divider: rgb(23 37 30 / 22%);
   --color-on-primary: #ffffff;
   --color-focus: #0f6b4a;
   --color-error: #842d2d;
@@ -50,6 +51,7 @@
   --color-primary-hover: #ffffff;
   --color-reader-token-hover: rgb(243 243 247 / 14%);
   --color-reader-token-selected: rgb(243 243 247 / 14%);
+  --color-reader-divider: rgb(243 243 247 / 18%);
   --color-on-primary: #1f2022;
   --color-focus: #ffffff;
   --color-error: #ffb8b8;

@@ -96,9 +96,13 @@ a {
 }
 
 .editor-page,
-.reader-page,
 .library-page {
   border-left: 0.25rem solid var(--color-primary);
+  padding-left: var(--space-8);
+}
+
+.reader-page {
+  border-left: 1px solid var(--color-reader-divider);
   padding-left: var(--space-8);
 }
 
@@ -309,7 +313,7 @@ a {
 .reader-rail {
   position: fixed;
   top: calc(4rem + var(--space-12));
-  left: max(var(--space-4), calc((100vw - var(--content-width)) / 2));
+  left: max(var(--space-4), calc((100vw - var(--reader-text-width)) / 2 - var(--space-16)));
   z-index: 2;
   width: 3rem;
   padding: var(--space-2);
@@ -356,7 +360,7 @@ a {
 
 .reader-rail__divider {
   width: 1.25rem;
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid var(--color-reader-divider);
   margin-block: var(--space-1);
 }
 
