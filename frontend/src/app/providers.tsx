@@ -4,6 +4,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useState,
 } from 'react';
@@ -53,7 +54,7 @@ export function AppProviders({ children, client = documentClient, initialPath }:
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     document.documentElement.dataset.theme = theme;
   }, [theme]);
 
