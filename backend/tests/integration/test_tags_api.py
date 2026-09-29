@@ -21,3 +21,22 @@ def test_tag_api_rejects_non_palette_colors_and_blank_renames():
         assert client.post("/api/tags", json={"name": "Bad", "color": "#ffffff"}).status_code == 422
         client.post("/api/tags", json={"name": "Good", "color": "#0F766E"})
         assert client.put("/api/tags/Good", json={"name": " "}).status_code == 422
+
+
+def test_duplicate_tag_rename_returns_conflict_for_memory_repository():
+    from backend.app.documents.service import DocumentService
+    from backend.app.persistence.memory.documents import InMemoryDocumentRepository
+    from backend.app.main import app
+    previous = app.state.document_service
+    app.state.document_service = DocumentService(InMemoryDocumentRepository())
+    try:
+        from httpx import ASGITransport, AsyncClient
+        import asyncio
+        async def exercise():
+            async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+                await client.post("/api/tags", json={"name": "One", "color": "#0F766E"})
+                await client.post("/api/tags", json={"name": "Two", "color": "#1D4ED8"})
+                assert (await client.put("/api/tags/One", json={"name": "Two"})).status_code == 409
+        asyncio.run(exercise())
+    finally:
+        app.state.document_service = previous

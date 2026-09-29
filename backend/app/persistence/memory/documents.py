@@ -71,7 +71,8 @@ class InMemoryDocumentRepository:
         with self._lock:
             old_key, new_key = name.casefold(), replacement.casefold()
             tag = self._tags.get(old_key)
-            if tag is None or (new_key != old_key and new_key in self._tags): return False
+            if tag is None: return False
+            if new_key != old_key and new_key in self._tags: raise ValueError("Tag already exists")
             renamed = DocumentTag(replacement, tag.color)
             self._tags.pop(old_key); self._tags[new_key] = renamed
             self._documents = {identifier: replace(document, tags=tuple(renamed if item.name.casefold() == old_key else item for item in document.tags)) for identifier, document in self._documents.items()}
