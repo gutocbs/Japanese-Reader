@@ -33,6 +33,20 @@ def test_unique_kana_anchors_preserve_surface_and_assign_reading(surface, readin
     assert "".join(segment.text for segment in segments) == surface
 
 
+@pytest.mark.parametrize("surface, reading, expected", [
+    ("迷惑（めいわく）", "めいわく", [("迷惑", "めいわく"), ("（めいわく）", None)]),
+    ("日本語（にほんご）", "にほんご", [("日本語", "にほんご"), ("（にほんご）", None)]),
+])
+def test_balanced_parenthetical_annotations_remain_plain_after_safe_alignment(
+    surface, reading, expected,
+):
+    alignment = FuriganaAligner().align_with_diagnostics(surface, reading)
+
+    assert [(segment.text, segment.reading) for segment in alignment.segments] == expected
+    assert "".join(segment.text for segment in alignment.segments) == surface
+    assert alignment.used_fallback is False
+
+
 @pytest.mark.parametrize("surface, reading", [
     ("昨日", "きのう"),
     ("漢あ字", "かああじ"),  # Two possible interior anchor positions.
@@ -42,6 +56,9 @@ def test_unique_kana_anchors_preserve_surface_and_assign_reading(surface, readin
     ("食べた", "くった"),  # Irregular override does not match okurigana.
     ("漢A字", "かんえーじ"),  # Non-kana material cannot be used as an anchor.
     ("猫\r\n犬", "ねこいぬ"),
+    ("迷惑（めいわく", "めいわく"),  # Unbalanced parenthetical annotation.
+    ("食（た）べる", "くった"),  # Annotation-free surface does not align.
+    ("漢（かん）あ字", "かああじ"),  # Annotation-free alignment is ambiguous.
 ])
 def test_uncertain_alignment_keeps_whole_unit_ruby(surface, reading):
     segments = FuriganaAligner().align(surface, reading)

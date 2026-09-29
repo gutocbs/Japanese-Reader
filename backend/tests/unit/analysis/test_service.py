@@ -65,6 +65,35 @@ def test_analysis_preserves_absolute_code_point_offsets_and_original_gaps(analyz
     assert punctuation.vocabulary_key is None
 
 
+def test_analysis_keeps_parenthetical_reading_plain_without_changing_token_contract(analyzer):
+    content = "日本語（にほんご） 日本語"
+    documents = InMemoryDocumentRepository()
+    document = documents.create(CreateDocument("title", content))
+
+    result = service_for(documents, analyzer).analyze(document.id)
+    annotated, plain = result.blocks[0].tokens[0], result.blocks[0].tokens[2]
+
+    assert (
+        annotated.surface,
+        annotated.start_offset,
+        annotated.end_offset,
+        annotated.lemma,
+        annotated.reading,
+        annotated.dictionary_reading,
+        annotated.vocabulary_key,
+    ) == (
+        "日本語（にほんご）", 0, 9, "日本語", "にほんご", "にほんご",
+        '["日本語","にほんご"]',
+    )
+    assert annotated.vocabulary_key == plain.vocabulary_key
+    assert [(segment.text, segment.reading) for segment in annotated.furigana_segments] == [
+        ("日本語", "にほんご"),
+        ("（にほんご）", None),
+    ]
+    assert "".join(segment.text for segment in annotated.furigana_segments) == content[:9]
+    assert not any(diagnostic.start_offset == 0 for diagnostic in result.diagnostics)
+
+
 @pytest.mark.parametrize("content, boundaries", [
     ("猫\r\n\r\n犬\t ", [(0, 3), (3, 5), (5, 8)]),
     ("\n猫\n", [(0, 1), (1, 3)]),
