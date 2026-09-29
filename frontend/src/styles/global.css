@@ -495,7 +495,7 @@ a {
 }
 
 .document-text {
-  max-width: var(--reading-width);
+  max-width: var(--reader-text-width);
   font-family: var(--font-reader);
   font-size: clamp(1.25rem, 2.3vw, 1.55rem);
   line-height: 2.35;

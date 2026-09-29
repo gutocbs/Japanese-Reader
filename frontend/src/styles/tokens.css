@@ -34,6 +34,7 @@
   --radius-medium: 0.5rem;
   --content-width: 64rem;
   --reading-width: 46rem;
+  --reader-text-width: 54rem;
 }
 
 :root[data-theme='dark'] {

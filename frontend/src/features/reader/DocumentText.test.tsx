@@ -1,8 +1,21 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { useState } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { Analysis } from '../../shared/api/client';
 import { DocumentText } from './DocumentText';
+
+const tokensCss = readFileSync(resolve(process.cwd(), 'src/styles/tokens.css'), 'utf8');
+const globalCss = readFileSync(resolve(process.cwd(), 'src/styles/global.css'), 'utf8');
+const readerStyles = document.createElement('style');
+
+beforeAll(() => {
+  readerStyles.textContent = `${tokensCss}\n${globalCss.replace("@import './tokens.css';", '')}`;
+  document.head.append(readerStyles);
+});
+
+afterAll(() => readerStyles.remove());
 
 const analysis: Analysis = {
   documentId: '00000000-0000-0000-0000-000000000001',
@@ -79,6 +92,18 @@ const analysis: Analysis = {
 };
 
 describe('DocumentText', () => {
+  it('uses the wider but bounded reader text measure', () => {
+    const textRule = Array.from(document.styleSheets)
+      .flatMap((sheet) => Array.from(sheet.cssRules))
+      .find((rule): rule is CSSStyleRule => (
+        rule instanceof CSSStyleRule && rule.selectorText === '.document-text'
+      ));
+
+    expect(getComputedStyle(document.documentElement)
+      .getPropertyValue('--reader-text-width').trim()).toBe('54rem');
+    expect(textRule?.style.maxWidth).toBe('var(--reader-text-width)');
+  });
+
   it('keeps canonical text selectable in semantic HTML and preserves every gap', () => {
     const content = '𠮷 食べた。 \n昨日!';
     const { container } = render(<DocumentText content={content} analysis={analysis} />);
