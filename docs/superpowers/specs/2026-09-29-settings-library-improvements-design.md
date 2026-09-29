@@ -26,6 +26,12 @@ Replace the metadata label `Última leitura em` with `Adicionado em`, using the 
 
 Add a client-side search field above the document list. It filters by title, is case-insensitive, updates immediately, exposes an accessible label, and has a clear action. Empty-state messaging distinguishes an empty library from no search matches. No backend contract changes are required for this first version.
 
+## Library organization extensions
+
+Add client-side ordering controls for title, creation date, update date, and last-read date, with explicit ascending/descending direction where applicable. Preserve a stable tie-breaker so the list does not jump unpredictably.
+
+Add a document-local favorites preference keyed by document id and persisted in versioned localStorage until SQLite-backed persistence is introduced. The favorite action must be available from each card with an accessible label and visible state. Add filters for favorites and creation date; filters compose with search and ordering and do not change API contracts.
+
 ## Boundaries and compatibility
 
 - No SQLite or API contract changes.
