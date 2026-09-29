@@ -279,6 +279,12 @@ describe('document library flows', () => {
       .toEqual([titledDocument.title, secondDocument.title, firstDocument.title]);
   });
 
+  it('announces the document count in the library header', async () => {
+    render(<App client={client({ list: vi.fn().mockResolvedValue([firstDocument, secondDocument]) })} initialPath="/" />);
+
+    expect(await screen.findByText('2 documentos')).toBeInTheDocument();
+  });
+
   it('filters the library to favorite documents only', async () => {
     render(<App client={client({ list: vi.fn().mockResolvedValue([firstDocument, secondDocument]) })} initialPath="/" />);
 

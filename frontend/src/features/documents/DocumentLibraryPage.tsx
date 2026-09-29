@@ -24,6 +24,15 @@ function FilterIcon() {
   );
 }
 
+function SearchIcon() {
+  return (
+    <svg aria-hidden="true" data-lucide="search" fill="none" height="18" stroke="currentColor" strokeLinecap="round" strokeWidth="2" viewBox="0 0 24 24" width="18">
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20 20-3.5-3.5" />
+    </svg>
+  );
+}
+
 function DocumentActionIcon({ name }: { name: DocumentActionIconName }) {
   const paths = {
     'file-symlink': (
@@ -224,22 +233,28 @@ export function DocumentLibraryPage() {
   return (
     <section className="library-page" aria-labelledby="library-title">
       <header className="library-heading">
-        <div>
+        <div className="library-heading__copy">
           <p className="eyebrow">Leitura local</p>
           <h1 id="library-title">Biblioteca</h1>
-          <p>Continue de onde parou ou prepare um novo texto japonês.</p>
+          <p className="library-heading__summary">
+            <span>{documents.length === 1 ? '1 documento' : `${documents.length} documentos`}</span>
+            <span aria-hidden="true">·</span>
+            Continue de onde parou ou prepare um novo texto japonês.
+          </p>
         </div>
-        <a
-          className="button button--primary button-link"
-          href="/documents/new"
-          onClick={(event) => {
-            event.preventDefault();
-            navigate('/documents/new');
-          }}
-        >
-          Novo documento
-        </a>
-        <a className="text-link" href="/tags" onClick={(event) => { event.preventDefault(); navigate('/tags'); }}>Etiquetas</a>
+        <div className="library-heading__actions">
+          <a className="text-link" href="/tags" onClick={(event) => { event.preventDefault(); navigate('/tags'); }}>Etiquetas</a>
+          <a
+            className="button button--primary button-link"
+            href="/documents/new"
+            onClick={(event) => {
+              event.preventDefault();
+              navigate('/documents/new');
+            }}
+          >
+            Novo documento
+          </a>
+        </div>
       </header>
 
       {documents.length === 0 ? (
@@ -484,113 +499,119 @@ function LibrarySearch({
 
   return (
     <div className="library-controls">
-      <div className="library-search">
-        <label className="library-search__label" htmlFor="document-search">Pesquisar documentos</label>
-        <div className="library-search__controls">
-          <input
-            id="document-search"
-            type="search"
-            value={search}
-            onChange={(event) => onSearchChange(event.target.value)}
-          />
-          <button
-            className="button button--quiet"
-            type="button"
-            disabled={search.length === 0}
-            onClick={() => onSearchChange('')}
-          >
-            Limpar pesquisa
-          </button>
+      <div className="library-controls__main">
+        <div className="library-search">
+          <label className="library-search__label" htmlFor="document-search">Pesquisar documentos</label>
+          <div className="library-search__field">
+            <SearchIcon />
+            <input
+              id="document-search"
+              type="search"
+              placeholder="Título ou etiqueta"
+              value={search}
+              onChange={(event) => onSearchChange(event.target.value)}
+            />
+            <button
+              className="library-search__clear"
+              type="button"
+              disabled={search.length === 0}
+              aria-label="Limpar pesquisa"
+              title="Limpar pesquisa"
+              onClick={() => onSearchChange('')}
+            >
+              <span aria-hidden="true">×</span>
+            </button>
+          </div>
         </div>
-      </div>
-      <div className="library-filter-menu">
-        <button
-          ref={filterButtonRef}
-          className={`library-filter-trigger${hasActivePopupFilters ? ' library-filter-trigger--active' : ''}`}
-          type="button"
-          aria-controls="library-filter-panel"
-          aria-expanded={filtersOpen}
-          aria-label={hasActivePopupFilters ? 'Filtros ativos' : 'Abrir filtros'}
-          aria-pressed={hasActivePopupFilters}
-          title={hasActivePopupFilters ? 'Filtros ativos' : 'Abrir filtros'}
-          onClick={() => onFiltersOpenChange(!filtersOpen)}
-          onKeyDown={(event) => {
-            if (filtersOpen && event.key === 'Escape') {
-              event.preventDefault();
-              closeFilters();
-            }
-          }}
-        >
-          <FilterIcon />
-          <span aria-hidden="true">Filtros</span>
-        </button>
-        {filtersOpen && (
-          <fieldset
-            id="library-filter-panel"
-            className="library-filters"
-            aria-label="Filtros da biblioteca"
+        <div className="library-ordering">
+          <label htmlFor="document-order-field">Ordenar por</label>
+          <select
+            id="document-order-field"
+            value={orderField}
+            onChange={(event) => onOrderFieldChange(event.target.value as DocumentOrderField)}
+          >
+            <option value="lastReadAt">Última leitura</option>
+            <option value="title">Título</option>
+            <option value="createdAt">Data de criação</option>
+            <option value="updatedAt">Data de atualização</option>
+          </select>
+          <label className="sr-only" htmlFor="document-order-direction">Direção da ordenação</label>
+          <select
+            id="document-order-direction"
+            value={orderDirection}
+            onChange={(event) => onOrderDirectionChange(event.target.value as DocumentOrderDirection)}
+          >
+            <option value="asc">Crescente</option>
+            <option value="desc">Decrescente</option>
+          </select>
+        </div>
+        <div className="library-filter-menu">
+          <button
+            ref={filterButtonRef}
+            className={`library-filter-trigger${hasActivePopupFilters ? ' library-filter-trigger--active' : ''}`}
+            type="button"
+            aria-controls="library-filter-panel"
+            aria-expanded={filtersOpen}
+            aria-label={hasActivePopupFilters ? 'Filtros ativos' : 'Abrir filtros'}
+            aria-pressed={hasActivePopupFilters}
+            title={hasActivePopupFilters ? 'Filtros ativos' : 'Abrir filtros'}
+            onClick={() => onFiltersOpenChange(!filtersOpen)}
             onKeyDown={(event) => {
-              if (event.key === 'Escape') {
+              if (filtersOpen && event.key === 'Escape') {
                 event.preventDefault();
                 closeFilters();
               }
             }}
           >
-            <legend>Filtros da biblioteca</legend>
-            <label>
-              <input
-                type="checkbox"
-                checked={favoritesOnly}
-                onChange={(event) => onFavoritesOnlyChange(event.target.checked)}
-              />
-              Somente favoritos
-            </label>
-            <label htmlFor="document-created-after">Data de criação a partir de</label>
-            <input
-              id="document-created-after"
-              type="date"
-              value={createdAfter}
-              onChange={(event) => onCreatedAfterChange(event.target.value)}
-            />
-            <label htmlFor="document-created-before">Data de criação até</label>
-            <input
-              id="document-created-before"
-              type="date"
-              value={createdBefore}
-              onChange={(event) => onCreatedBeforeChange(event.target.value)}
-            />
-            <button
-              className="button button--quiet"
-              type="button"
-              disabled={!hasActiveFilters}
-              onClick={onClearFilters}
+            <FilterIcon />
+            <span aria-hidden="true">Filtros</span>
+          </button>
+          {filtersOpen && (
+            <fieldset
+              id="library-filter-panel"
+              className="library-filters"
+              aria-label="Filtros da biblioteca"
+              onKeyDown={(event) => {
+                if (event.key === 'Escape') {
+                  event.preventDefault();
+                  closeFilters();
+                }
+              }}
             >
-              Limpar filtros
-            </button>
-          </fieldset>
-        )}
-      </div>
-      <div className="library-ordering">
-        <label htmlFor="document-order-field">Ordenar por</label>
-        <select
-          id="document-order-field"
-          value={orderField}
-          onChange={(event) => onOrderFieldChange(event.target.value as DocumentOrderField)}
-        >
-          <option value="lastReadAt">Última leitura</option>
-          <option value="title">Título</option>
-          <option value="createdAt">Data de criação</option>
-          <option value="updatedAt">Data de atualização</option>
-        </select>
-        <label htmlFor="document-order-direction">Direção da ordenação</label>
-        <select
-          id="document-order-direction"
-          value={orderDirection}
-          onChange={(event) => onOrderDirectionChange(event.target.value as DocumentOrderDirection)}
-        >
-          <option value="asc">Crescente</option>
-          <option value="desc">Decrescente</option>
-        </select>
+              <legend>Filtros da biblioteca</legend>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={favoritesOnly}
+                  onChange={(event) => onFavoritesOnlyChange(event.target.checked)}
+                />
+                Somente favoritos
+              </label>
+              <label htmlFor="document-created-after">Data de criação a partir de</label>
+              <input
+                id="document-created-after"
+                type="date"
+                value={createdAfter}
+                onChange={(event) => onCreatedAfterChange(event.target.value)}
+              />
+              <label htmlFor="document-created-before">Data de criação até</label>
+              <input
+                id="document-created-before"
+                type="date"
+                value={createdBefore}
+                onChange={(event) => onCreatedBeforeChange(event.target.value)}
+              />
+              <button
+                className="button button--quiet"
+                type="button"
+                disabled={!hasActiveFilters}
+                onClick={onClearFilters}
+              >
+                Limpar filtros
+              </button>
+            </fieldset>
+          )}
+        </div>
       </div>
     </div>
   );
