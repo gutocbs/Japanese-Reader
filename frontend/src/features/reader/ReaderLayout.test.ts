@@ -19,4 +19,10 @@ describe('reader rail layout', () => {
     expect(stylesheet).toMatch(/\.reader-rail__font-size \{[\s\S]*display: grid;[\s\S]*place-items: center;[\s\S]*width: 2\.25rem;[\s\S]*height: 2\.25rem;[\s\S]*box-sizing: border-box;[\s\S]*line-height: 1;/);
     expect(stylesheet).toMatch(/\.reader-rail__divider \{[\s\S]*display: block;[\s\S]*box-sizing: border-box;[\s\S]*margin-inline: auto;/);
   });
+
+  it('gives the rail enough inner width to center its 2.25rem controls', () => {
+    expect(stylesheet).toMatch(/\.reader-layout \{[\s\S]*grid-template-columns: 3\.5rem minmax\(0, var\(--reader-text-width\)\) 3\.5rem;/);
+    expect(stylesheet).toMatch(/\.reader-layout \{[\s\S]*width: min\(100%, calc\(var\(--reader-text-width\) \+ 9rem\)\);/);
+    expect(stylesheet).toMatch(/\.reader-rail \{[\s\S]*width: 3\.5rem;[\s\S]*padding: var\(--space-2\);/);
+  });
 });

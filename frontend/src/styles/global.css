@@ -103,9 +103,9 @@ a {
 
 .reader-layout {
   display: grid;
-  grid-template-columns: 3rem minmax(0, var(--reader-text-width)) 3rem;
+  grid-template-columns: 3.5rem minmax(0, var(--reader-text-width)) 3.5rem;
   column-gap: var(--space-4);
-  width: min(100%, calc(var(--reader-text-width) + var(--space-16) + var(--space-16)));
+  width: min(100%, calc(var(--reader-text-width) + 9rem));
   margin-inline: auto;
 }
 
@@ -325,7 +325,7 @@ a {
   align-self: start;
   grid-column: 1;
   z-index: 2;
-  width: 3rem;
+  width: 3.5rem;
   padding: var(--space-2);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-small);
