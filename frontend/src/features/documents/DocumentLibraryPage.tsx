@@ -109,6 +109,9 @@ export function DocumentLibraryPage() {
   const [orderField, setOrderField] = useState<DocumentOrderField>('lastReadAt');
   const [orderDirection, setOrderDirection] = useState<DocumentOrderDirection>('desc');
   const [favoriteDocumentIds, setFavoriteDocumentIds] = useState(() => loadFavoriteDocumentIds());
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
+  const [createdAfter, setCreatedAfter] = useState('');
+  const [createdBefore, setCreatedBefore] = useState('');
   const deleteTriggerRef = useRef<HTMLButtonElement | null>(null);
 
   const documentsQuery = useQuery({
@@ -121,9 +124,22 @@ export function DocumentLibraryPage() {
   );
   const matchingDocuments = useMemo(() => {
     const normalizedSearch = search.trim().toLocaleLowerCase();
-    if (normalizedSearch.length === 0) return documents;
-    return documents.filter((document) => document.title.toLocaleLowerCase().includes(normalizedSearch));
-  }, [documents, search]);
+    return documents.filter((document) => {
+      const creationDate = document.createdAt.slice(0, 10);
+      return (normalizedSearch.length === 0 || document.title.toLocaleLowerCase().includes(normalizedSearch))
+        && (!favoritesOnly || favoriteDocumentIds.has(document.id))
+        && (createdAfter.length === 0 || creationDate >= createdAfter)
+        && (createdBefore.length === 0 || creationDate <= createdBefore);
+    });
+  }, [createdAfter, createdBefore, documents, favoriteDocumentIds, favoritesOnly, search]);
+  const hasActiveFilters = search.length > 0 || favoritesOnly || createdAfter.length > 0 || createdBefore.length > 0;
+
+  const clearFilters = () => {
+    setSearch('');
+    setFavoritesOnly(false);
+    setCreatedAfter('');
+    setCreatedBefore('');
+  };
 
   const renameMutation = useMutation({
     mutationFn: ({ documentId, title }: { documentId: string; title: string }) => (
@@ -225,10 +241,18 @@ export function DocumentLibraryPage() {
             orderDirection={orderDirection}
             onOrderFieldChange={setOrderField}
             onOrderDirectionChange={setOrderDirection}
+            favoritesOnly={favoritesOnly}
+            onFavoritesOnlyChange={setFavoritesOnly}
+            createdAfter={createdAfter}
+            onCreatedAfterChange={setCreatedAfter}
+            createdBefore={createdBefore}
+            onCreatedBeforeChange={setCreatedBefore}
+            hasActiveFilters={hasActiveFilters}
+            onClearFilters={clearFilters}
           />
           <div className="library-empty">
             <h2>Nenhum documento encontrado.</h2>
-            <p>Tente outro título ou limpe a pesquisa.</p>
+            <p>Ajuste ou limpe os filtros para ver outros documentos.</p>
           </div>
         </>
       ) : (
@@ -240,6 +264,14 @@ export function DocumentLibraryPage() {
             orderDirection={orderDirection}
             onOrderFieldChange={setOrderField}
             onOrderDirectionChange={setOrderDirection}
+            favoritesOnly={favoritesOnly}
+            onFavoritesOnlyChange={setFavoritesOnly}
+            createdAfter={createdAfter}
+            onCreatedAfterChange={setCreatedAfter}
+            createdBefore={createdBefore}
+            onCreatedBeforeChange={setCreatedBefore}
+            hasActiveFilters={hasActiveFilters}
+            onClearFilters={clearFilters}
           />
           <ul className="document-list" aria-label="Documentos">
             {matchingDocuments.map((document) => (
@@ -381,6 +413,14 @@ function LibrarySearch({
   orderDirection,
   onOrderFieldChange,
   onOrderDirectionChange,
+  favoritesOnly,
+  onFavoritesOnlyChange,
+  createdAfter,
+  onCreatedAfterChange,
+  createdBefore,
+  onCreatedBeforeChange,
+  hasActiveFilters,
+  onClearFilters,
 }: {
   search: string;
   onSearchChange: (search: string) => void;
@@ -388,6 +428,14 @@ function LibrarySearch({
   orderDirection: DocumentOrderDirection;
   onOrderFieldChange: (field: DocumentOrderField) => void;
   onOrderDirectionChange: (direction: DocumentOrderDirection) => void;
+  favoritesOnly: boolean;
+  onFavoritesOnlyChange: (favoritesOnly: boolean) => void;
+  createdAfter: string;
+  onCreatedAfterChange: (createdAfter: string) => void;
+  createdBefore: string;
+  onCreatedBeforeChange: (createdBefore: string) => void;
+  hasActiveFilters: boolean;
+  onClearFilters: () => void;
 }) {
   return (
     <div className="library-controls">
@@ -410,6 +458,39 @@ function LibrarySearch({
           </button>
         </div>
       </div>
+      <fieldset className="library-filters">
+        <legend>Filtros</legend>
+        <label>
+          <input
+            type="checkbox"
+            checked={favoritesOnly}
+            onChange={(event) => onFavoritesOnlyChange(event.target.checked)}
+          />
+          Somente favoritos
+        </label>
+        <label htmlFor="document-created-after">Data de criação a partir de</label>
+        <input
+          id="document-created-after"
+          type="date"
+          value={createdAfter}
+          onChange={(event) => onCreatedAfterChange(event.target.value)}
+        />
+        <label htmlFor="document-created-before">Data de criação até</label>
+        <input
+          id="document-created-before"
+          type="date"
+          value={createdBefore}
+          onChange={(event) => onCreatedBeforeChange(event.target.value)}
+        />
+        <button
+          className="button button--quiet"
+          type="button"
+          disabled={!hasActiveFilters}
+          onClick={onClearFilters}
+        >
+          Limpar filtros
+        </button>
+      </fieldset>
       <div className="library-ordering">
         <label htmlFor="document-order-field">Ordenar por</label>
         <select

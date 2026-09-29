@@ -272,6 +272,60 @@ describe('document library flows', () => {
       .toEqual([titledDocument.title, secondDocument.title, firstDocument.title]);
   });
 
+  it('filters the library to favorite documents only', async () => {
+    render(<App client={client({ list: vi.fn().mockResolvedValue([firstDocument, secondDocument]) })} initialPath="/" />);
+
+    const firstRow = await screen.findByRole('listitem', { name: firstDocument.title });
+    fireEvent.click(within(firstRow).getByRole('button', { name: 'Adicionar aos favoritos' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Somente favoritos' }));
+
+    expect(screen.getByRole('listitem', { name: firstDocument.title })).toBeInTheDocument();
+    expect(screen.queryByRole('listitem', { name: secondDocument.title })).not.toBeInTheDocument();
+  });
+
+  it('filters documents within an inclusive creation-date range', async () => {
+    render(<App client={client({ list: vi.fn().mockResolvedValue(orderingDocuments) })} initialPath="/" />);
+
+    await screen.findByRole('list', { name: 'Documentos' });
+    fireEvent.change(screen.getByLabelText('Data de criação a partir de'), { target: { value: '2026-09-25' } });
+    fireEvent.change(screen.getByLabelText('Data de criação até'), { target: { value: '2026-09-25' } });
+
+    expect(libraryTitles()).toEqual(['Gama']);
+  });
+
+  it('composes title, favorite, and creation-date filters while preserving the selected ordering', async () => {
+    const documents = [
+      { ...firstDocument, title: 'Diário antigo', createdAt: '2026-09-24T12:00:00Z' },
+      { ...secondDocument, title: 'Diário recente', createdAt: '2026-09-25T12:00:00Z' },
+      { ...titledDocument, title: 'Outro texto', createdAt: '2026-09-25T12:00:00Z' },
+    ];
+    render(<App client={client({ list: vi.fn().mockResolvedValue(documents) })} initialPath="/" />);
+
+    const recentRow = await screen.findByRole('listitem', { name: 'Diário recente' });
+    fireEvent.click(within(recentRow).getByRole('button', { name: 'Adicionar aos favoritos' }));
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Pesquisar documentos' }), { target: { value: 'diário' } });
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Somente favoritos' }));
+    fireEvent.change(screen.getByLabelText('Data de criação a partir de'), { target: { value: '2026-09-25' } });
+
+    expect(libraryTitles()).toEqual(['Diário recente']);
+  });
+
+  it('clears all library filters and restores the ordered library', async () => {
+    render(<App client={client({ list: vi.fn().mockResolvedValue([firstDocument, titledDocument, secondDocument]) })} initialPath="/" />);
+
+    const firstRow = await screen.findByRole('listitem', { name: firstDocument.title });
+    fireEvent.click(within(firstRow).getByRole('button', { name: 'Adicionar aos favoritos' }));
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Pesquisar documentos' }), { target: { value: '雪' } });
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Somente favoritos' }));
+    fireEvent.change(screen.getByLabelText('Data de criação a partir de'), { target: { value: '2026-09-24' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Limpar filtros' }));
+
+    expect(screen.getByRole('searchbox', { name: 'Pesquisar documentos' })).toHaveValue('');
+    expect(screen.getByRole('checkbox', { name: 'Somente favoritos' })).not.toBeChecked();
+    expect(screen.getByLabelText('Data de criação a partir de')).toHaveValue('');
+    expect(libraryTitles()).toEqual([titledDocument.title, secondDocument.title, firstDocument.title]);
+  });
+
   it('shows a no-match state instead of the empty-library state', async () => {
     const api = client({ list: vi.fn().mockResolvedValue([firstDocument]) });
     render(<App client={api} initialPath="/" />);
@@ -283,6 +337,17 @@ describe('document library flows', () => {
     expect(screen.getByText('Nenhum documento encontrado.')).toBeInTheDocument();
     expect(screen.queryByText('Nenhum documento na biblioteca.')).not.toBeInTheDocument();
     expect(screen.queryByRole('list', { name: 'Documentos' })).not.toBeInTheDocument();
+  });
+
+  it('explains that filters can be cleared when they produce no matches', async () => {
+    render(<App client={client({ list: vi.fn().mockResolvedValue([firstDocument]) })} initialPath="/" />);
+
+    await screen.findByRole('list', { name: 'Documentos' });
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Somente favoritos' }));
+
+    expect(screen.getByText('Nenhum documento encontrado.')).toBeInTheDocument();
+    expect(screen.getByText('Ajuste ou limpe os filtros para ver outros documentos.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Limpar filtros' })).toBeInTheDocument();
   });
 
   it('navigates to creation and preserves the draft when returning through history', async () => {
