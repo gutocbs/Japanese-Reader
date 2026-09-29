@@ -32,6 +32,8 @@ Add client-side ordering controls for title, creation date, update date, and las
 
 Add a document-local favorites preference keyed by document id and persisted in versioned localStorage until SQLite-backed persistence is introduced. The favorite action must be available from each card with an accessible label and visible state. Add filters for favorites and creation date; filters compose with search and ordering and do not change API contracts.
 
+Improve the visual treatment of library filters with a subtle popup menu that follows the current icon-led design language. The popup should expose active state clearly, provide accessible labels and keyboard behavior, and avoid adding persistent visual noise to the library toolbar.
+
 ## Document metadata and tags
 
 Add a metadata view for each document. It exposes server-provided creation and last-modified dates as read-only information and allows the user to edit a persisted description.

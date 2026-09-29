@@ -189,13 +189,13 @@ Run this task only after Tasks 6–8 and 10–13 as the final cleanup checkpoint
 - [ ] Run focused tests, build, and `git diff --check`.
 - [ ] Commit `feat(tags): add management and document chips`.
 
-### Task 13: Library search and ordering visual polish
+### Task 13: Library search, ordering, and filter visual polish
 
 **Files:** library page/styles/tests.
 
-**Interfaces:** Refines search and ordering controls using the approved visual language. Search matches only title and tag names; ordering, favorite filters, and date filters remain composable.
+**Interfaces:** Refines search, ordering, and filter controls using the approved visual language. Filters are exposed through a subtle icon-led popup with accessible active state and keyboard behavior. Search matches only title and tag names; ordering, favorite filters, and date filters remain composable.
 
-- [ ] Add regression tests for title/tag search, content exclusion, control accessibility, and composed search/order/filter state.
-- [ ] Implement the visual polish without changing the desktop-first information architecture.
+- [ ] Add regression tests for title/tag search, content exclusion, control accessibility, composed search/order/filter state, popup open/close behavior, and active filter state.
+- [ ] Implement the visual polish without changing the desktop-first information architecture or adding persistent toolbar clutter.
 - [ ] Run focused tests, build, and `git diff --check`.
 - [ ] Commit `style(library): refine search and ordering controls`.
