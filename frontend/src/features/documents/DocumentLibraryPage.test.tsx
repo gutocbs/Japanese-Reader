@@ -38,6 +38,33 @@ const titledDocument: Document = {
   lastReadAt: '2026-09-28T12:00:00Z',
 };
 
+const orderingDocuments: Document[] = [
+  {
+    ...firstDocument,
+    id: '00000000-0000-0000-0000-000000000010',
+    title: 'Beta',
+    createdAt: '2026-09-26T12:00:00Z',
+    updatedAt: '2026-09-29T12:00:00Z',
+    lastReadAt: '2026-09-28T12:00:00Z',
+  },
+  {
+    ...firstDocument,
+    id: '00000000-0000-0000-0000-000000000020',
+    title: 'Alfa',
+    createdAt: '2026-09-24T12:00:00Z',
+    updatedAt: '2026-09-27T12:00:00Z',
+    lastReadAt: '2026-09-26T12:00:00Z',
+  },
+  {
+    ...firstDocument,
+    id: '00000000-0000-0000-0000-000000000030',
+    title: 'Gama',
+    createdAt: '2026-09-25T12:00:00Z',
+    updatedAt: '2026-09-28T12:00:00Z',
+    lastReadAt: null,
+  },
+];
+
 const analysis: Analysis = {
   documentId: firstDocument.id,
   documentRevision: 1,
@@ -85,6 +112,11 @@ function client(overrides: Partial<DocumentClient> = {}): DocumentClient {
   };
 }
 
+function libraryTitles() {
+  const list = screen.getByRole('list', { name: 'Documentos' });
+  return within(list).getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent);
+}
+
 beforeEach(() => {
   window.history.replaceState(null, '', '/');
 });
@@ -111,6 +143,64 @@ describe('document library flows', () => {
     const titles = within(list).getAllByRole('heading', { level: 2 })
       .map((heading) => heading.textContent);
     expect(titles).toEqual(['こころ', '雪国', '未読']);
+  });
+
+  it('orders documents by title in ascending and descending directions', async () => {
+    render(<App client={client({ list: vi.fn().mockResolvedValue(orderingDocuments) })} initialPath="/" />);
+
+    await screen.findByRole('list', { name: 'Documentos' });
+    fireEvent.change(screen.getByLabelText('Ordenar por'), { target: { value: 'title' } });
+    fireEvent.change(screen.getByLabelText('Direção da ordenação'), { target: { value: 'asc' } });
+    expect(libraryTitles()).toEqual(['Alfa', 'Beta', 'Gama']);
+
+    fireEvent.change(screen.getByLabelText('Direção da ordenação'), { target: { value: 'desc' } });
+    expect(libraryTitles()).toEqual(['Gama', 'Beta', 'Alfa']);
+  });
+
+  it('orders documents by creation date in ascending and descending directions', async () => {
+    render(<App client={client({ list: vi.fn().mockResolvedValue(orderingDocuments) })} initialPath="/" />);
+
+    await screen.findByRole('list', { name: 'Documentos' });
+    fireEvent.change(screen.getByLabelText('Ordenar por'), { target: { value: 'createdAt' } });
+    fireEvent.change(screen.getByLabelText('Direção da ordenação'), { target: { value: 'asc' } });
+    expect(libraryTitles()).toEqual(['Alfa', 'Gama', 'Beta']);
+
+    fireEvent.change(screen.getByLabelText('Direção da ordenação'), { target: { value: 'desc' } });
+    expect(libraryTitles()).toEqual(['Beta', 'Gama', 'Alfa']);
+  });
+
+  it('orders documents by update date in ascending and descending directions', async () => {
+    render(<App client={client({ list: vi.fn().mockResolvedValue(orderingDocuments) })} initialPath="/" />);
+
+    await screen.findByRole('list', { name: 'Documentos' });
+    fireEvent.change(screen.getByLabelText('Ordenar por'), { target: { value: 'updatedAt' } });
+    fireEvent.change(screen.getByLabelText('Direção da ordenação'), { target: { value: 'asc' } });
+    expect(libraryTitles()).toEqual(['Alfa', 'Gama', 'Beta']);
+
+    fireEvent.change(screen.getByLabelText('Direção da ordenação'), { target: { value: 'desc' } });
+    expect(libraryTitles()).toEqual(['Beta', 'Gama', 'Alfa']);
+  });
+
+  it('orders documents by last-read date in both directions and keeps unread documents last', async () => {
+    render(<App client={client({ list: vi.fn().mockResolvedValue(orderingDocuments) })} initialPath="/" />);
+
+    await screen.findByRole('list', { name: 'Documentos' });
+    fireEvent.change(screen.getByLabelText('Direção da ordenação'), { target: { value: 'asc' } });
+    expect(libraryTitles()).toEqual(['Alfa', 'Beta', 'Gama']);
+
+    fireEvent.change(screen.getByLabelText('Direção da ordenação'), { target: { value: 'desc' } });
+    expect(libraryTitles()).toEqual(['Beta', 'Alfa', 'Gama']);
+  });
+
+  it('uses document id as a deterministic tie-breaker for equal ordering values', async () => {
+    const tiedDocuments = [
+      { ...orderingDocuments[0], id: '00000000-0000-0000-0000-000000000040', title: 'Segundo' },
+      { ...orderingDocuments[0], id: '00000000-0000-0000-0000-000000000005', title: 'Primeiro' },
+    ];
+    render(<App client={client({ list: vi.fn().mockResolvedValue(tiedDocuments) })} initialPath="/" />);
+
+    await screen.findByRole('list', { name: 'Documentos' });
+    expect(libraryTitles()).toEqual(['Primeiro', 'Segundo']);
   });
 
   it('filters documents immediately by title without considering case', async () => {

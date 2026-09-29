@@ -6,6 +6,8 @@ import { DeleteDocumentDialog } from './DeleteDocumentDialog';
 import { documentKeys } from './queries';
 
 type DocumentActionIconName = 'file-symlink' | 'file-pen' | 'trash';
+type DocumentOrderField = 'title' | 'createdAt' | 'updatedAt' | 'lastReadAt';
+type DocumentOrderDirection = 'asc' | 'desc';
 
 function DocumentActionIcon({ name }: { name: DocumentActionIconName }) {
   const paths = {
@@ -52,12 +54,25 @@ function DocumentActionIcon({ name }: { name: DocumentActionIconName }) {
   );
 }
 
-function orderByLastRead(documents: Document[]) {
+function orderDocuments(
+  documents: Document[],
+  field: DocumentOrderField,
+  direction: DocumentOrderDirection,
+) {
   return [...documents].sort((left, right) => {
-    const leftTimestamp = left.lastReadAt === null ? Number.NEGATIVE_INFINITY : Date.parse(left.lastReadAt);
-    const rightTimestamp = right.lastReadAt === null ? Number.NEGATIVE_INFINITY : Date.parse(right.lastReadAt);
-    if (leftTimestamp !== rightTimestamp) return rightTimestamp - leftTimestamp;
-    return right.updatedAt.localeCompare(left.updatedAt);
+    if (field === 'lastReadAt' && (left.lastReadAt === null || right.lastReadAt === null)) {
+      if (left.lastReadAt === null && right.lastReadAt !== null) return 1;
+      if (left.lastReadAt !== null && right.lastReadAt === null) return -1;
+      return left.id.localeCompare(right.id);
+    }
+
+    const leftValue = field === 'title' ? left.title : Date.parse(left[field] ?? '');
+    const rightValue = field === 'title' ? right.title : Date.parse(right[field] ?? '');
+    const comparison = typeof leftValue === 'string'
+      ? leftValue.localeCompare(rightValue as string)
+      : leftValue - (rightValue as number);
+    if (comparison !== 0) return direction === 'asc' ? comparison : -comparison;
+    return left.id.localeCompare(right.id);
   });
 }
 
@@ -78,6 +93,8 @@ export function DocumentLibraryPage() {
   const [deleting, setDeleting] = useState<Document | null>(null);
   const [deleteError, setDeleteError] = useState(false);
   const [search, setSearch] = useState('');
+  const [orderField, setOrderField] = useState<DocumentOrderField>('lastReadAt');
+  const [orderDirection, setOrderDirection] = useState<DocumentOrderDirection>('desc');
   const deleteTriggerRef = useRef<HTMLButtonElement | null>(null);
 
   const documentsQuery = useQuery({
@@ -85,8 +102,8 @@ export function DocumentLibraryPage() {
     queryFn: () => client.list(),
   });
   const documents = useMemo(
-    () => orderByLastRead(documentsQuery.data ?? []),
-    [documentsQuery.data],
+    () => orderDocuments(documentsQuery.data ?? [], orderField, orderDirection),
+    [documentsQuery.data, orderField, orderDirection],
   );
   const matchingDocuments = useMemo(() => {
     const normalizedSearch = search.trim().toLocaleLowerCase();
@@ -179,7 +196,14 @@ export function DocumentLibraryPage() {
         </div>
       ) : matchingDocuments.length === 0 ? (
         <>
-          <LibrarySearch search={search} onSearchChange={setSearch} />
+          <LibrarySearch
+            search={search}
+            onSearchChange={setSearch}
+            orderField={orderField}
+            orderDirection={orderDirection}
+            onOrderFieldChange={setOrderField}
+            onOrderDirectionChange={setOrderDirection}
+          />
           <div className="library-empty">
             <h2>Nenhum documento encontrado.</h2>
             <p>Tente outro título ou limpe a pesquisa.</p>
@@ -187,7 +211,14 @@ export function DocumentLibraryPage() {
         </>
       ) : (
         <>
-          <LibrarySearch search={search} onSearchChange={setSearch} />
+          <LibrarySearch
+            search={search}
+            onSearchChange={setSearch}
+            orderField={orderField}
+            orderDirection={orderDirection}
+            onOrderFieldChange={setOrderField}
+            onOrderDirectionChange={setOrderDirection}
+          />
           <ul className="document-list" aria-label="Documentos">
             {matchingDocuments.map((document) => (
               <li key={document.id} className="document-row" aria-label={document.title || 'Sem título'}>
@@ -314,28 +345,60 @@ export function DocumentLibraryPage() {
 function LibrarySearch({
   search,
   onSearchChange,
+  orderField,
+  orderDirection,
+  onOrderFieldChange,
+  onOrderDirectionChange,
 }: {
   search: string;
   onSearchChange: (search: string) => void;
+  orderField: DocumentOrderField;
+  orderDirection: DocumentOrderDirection;
+  onOrderFieldChange: (field: DocumentOrderField) => void;
+  onOrderDirectionChange: (direction: DocumentOrderDirection) => void;
 }) {
   return (
-    <div className="library-search">
-      <label className="library-search__label" htmlFor="document-search">Pesquisar documentos</label>
-      <div className="library-search__controls">
-        <input
-          id="document-search"
-          type="search"
-          value={search}
-          onChange={(event) => onSearchChange(event.target.value)}
-        />
-        <button
-          className="button button--quiet"
-          type="button"
-          disabled={search.length === 0}
-          onClick={() => onSearchChange('')}
+    <div className="library-controls">
+      <div className="library-search">
+        <label className="library-search__label" htmlFor="document-search">Pesquisar documentos</label>
+        <div className="library-search__controls">
+          <input
+            id="document-search"
+            type="search"
+            value={search}
+            onChange={(event) => onSearchChange(event.target.value)}
+          />
+          <button
+            className="button button--quiet"
+            type="button"
+            disabled={search.length === 0}
+            onClick={() => onSearchChange('')}
+          >
+            Limpar pesquisa
+          </button>
+        </div>
+      </div>
+      <div className="library-ordering">
+        <label htmlFor="document-order-field">Ordenar por</label>
+        <select
+          id="document-order-field"
+          value={orderField}
+          onChange={(event) => onOrderFieldChange(event.target.value as DocumentOrderField)}
         >
-          Limpar pesquisa
-        </button>
+          <option value="lastReadAt">Última leitura</option>
+          <option value="title">Título</option>
+          <option value="createdAt">Data de criação</option>
+          <option value="updatedAt">Data de atualização</option>
+        </select>
+        <label htmlFor="document-order-direction">Direção da ordenação</label>
+        <select
+          id="document-order-direction"
+          value={orderDirection}
+          onChange={(event) => onOrderDirectionChange(event.target.value as DocumentOrderDirection)}
+        >
+          <option value="asc">Crescente</option>
+          <option value="desc">Decrescente</option>
+        </select>
       </div>
     </div>
   );
