@@ -8,6 +8,7 @@ import {
   useState,
 } from 'react';
 import { documentClient, type DocumentClient } from '../shared/api/client';
+import { loadTheme, saveTheme, type Theme } from './theme';
 
 interface RouterLocation {
   path: string;
@@ -20,6 +21,11 @@ interface RouterContextValue {
   replaceState: (state: unknown) => void;
 }
 
+interface ThemeContextValue {
+  theme: Theme;
+  setTheme: (theme: Theme) => void;
+}
+
 interface AppProvidersProps {
   children: ReactNode;
   client?: DocumentClient;
@@ -28,8 +34,10 @@ interface AppProvidersProps {
 
 const ApiContext = createContext<DocumentClient | null>(null);
 const RouterContext = createContext<RouterContextValue | null>(null);
+const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export function AppProviders({ children, client = documentClient, initialPath }: AppProvidersProps) {
+  const [theme, setThemeState] = useState<Theme>(loadTheme);
   const [location, setLocation] = useState<RouterLocation>(() => {
     if (initialPath !== undefined) {
       window.history.replaceState(null, '', initialPath);
@@ -43,6 +51,15 @@ export function AppProviders({ children, client = documentClient, initialPath }:
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+  }, [theme]);
+
+  const setTheme = useCallback((nextTheme: Theme) => {
+    saveTheme(nextTheme);
+    setThemeState(nextTheme);
   }, []);
 
   const navigate = useCallback((path: string, state?: unknown) => {
@@ -61,9 +78,11 @@ export function AppProviders({ children, client = documentClient, initialPath }:
   );
 
   return (
-    <ApiContext.Provider value={client}>
-      <RouterContext.Provider value={router}>{children}</RouterContext.Provider>
-    </ApiContext.Provider>
+    <ThemeContext.Provider value={{ theme, setTheme }}>
+      <ApiContext.Provider value={client}>
+        <RouterContext.Provider value={router}>{children}</RouterContext.Provider>
+      </ApiContext.Provider>
+    </ThemeContext.Provider>
   );
 }
 
@@ -77,4 +96,10 @@ export function useRouter() {
   const router = useContext(RouterContext);
   if (router === null) throw new Error('Router provider is missing');
   return router;
+}
+
+export function useTheme() {
+  const theme = useContext(ThemeContext);
+  if (theme === null) throw new Error('Theme provider is missing');
+  return theme;
 }

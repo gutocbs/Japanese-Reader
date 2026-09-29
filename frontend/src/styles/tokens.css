@@ -15,6 +15,8 @@
   --color-focus: #0f6b4a;
   --color-error: #842d2d;
   --color-error-surface: #fff3f1;
+  --color-overlay: rgb(23 37 30 / 42%);
+  --color-elevation-shadow: rgb(23 37 30 / 15%);
 
   --font-ui: "Aptos", "Segoe UI Variable", sans-serif;
   --font-reader: "Yu Mincho", "Hiragino Mincho ProN", "Noto Serif JP", serif;
@@ -32,4 +34,25 @@
   --radius-medium: 0.5rem;
   --content-width: 64rem;
   --reading-width: 46rem;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --color-page: #131c18;
+  --color-surface: #1b2822;
+  --color-surface-muted: #293830;
+  --color-text: #edf5ee;
+  --color-text-muted: #c0cec4;
+  --color-border: #718277;
+  --color-primary: #94d4aa;
+  --color-primary-hover: #b7e4c4;
+  --color-reader-token-hover: rgb(148 212 170 / 22%);
+  --color-reader-token-selected: rgb(148 212 170 / 32%);
+  --color-on-primary: #102319;
+  --color-focus: #c4f0d0;
+  --color-error: #ffb5ac;
+  --color-error-surface: #45231f;
+  --color-overlay: rgb(0 0 0 / 62%);
+  --color-elevation-shadow: rgb(0 0 0 / 36%);
 }

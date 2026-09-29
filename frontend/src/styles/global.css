@@ -17,12 +17,20 @@ body {
   margin: 0;
   min-width: 20rem;
   min-height: 100vh;
+  background: var(--color-page);
+  color: var(--color-text);
 }
 
 button,
 input,
 textarea {
   font: inherit;
+}
+
+input[type='checkbox'],
+input[type='radio'],
+input[type='range'] {
+  accent-color: var(--color-primary);
 }
 
 button,
@@ -55,13 +63,21 @@ a {
   background: var(--color-surface);
 }
 
+.app-header__content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  width: min(calc(100% - 3rem), var(--content-width));
+  min-height: 4rem;
+  margin: 0 auto;
+}
+
 .brand {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  width: min(calc(100% - 3rem), var(--content-width));
   min-height: 4rem;
-  margin: 0 auto;
   color: var(--color-text);
   font-weight: 650;
   text-decoration: none;
@@ -249,7 +265,7 @@ a {
   display: grid;
   place-items: center;
   overflow-y: auto;
-  background: rgb(23 37 30 / 42%);
+  background: var(--color-overlay);
   padding: var(--space-6);
 }
 
@@ -260,7 +276,7 @@ a {
   border-radius: var(--radius-medium);
   background: var(--color-surface);
   padding: var(--space-8);
-  box-shadow: 0 0.25rem 0.75rem rgb(23 37 30 / 15%);
+  box-shadow: 0 0.25rem 0.75rem var(--color-elevation-shadow);
 }
 
 .delete-dialog h2 {
@@ -287,6 +303,11 @@ a {
   position: relative;
 }
 
+.appearance-menu {
+  position: relative;
+  flex: none;
+}
+
 .reader-menu__panel {
   position: absolute;
   z-index: 2;
@@ -299,7 +320,35 @@ a {
   border-radius: var(--radius-small);
   background: var(--color-surface);
   padding: var(--space-4);
-  box-shadow: 0 0.25rem 0.75rem rgb(23 37 30 / 15%);
+  box-shadow: 0 0.25rem 0.75rem var(--color-elevation-shadow);
+}
+
+.appearance-menu__panel {
+  position: absolute;
+  z-index: 4;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  display: grid;
+  gap: var(--space-2);
+  min-width: 13rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-small);
+  background: var(--color-surface);
+  padding: var(--space-4);
+  box-shadow: 0 0.25rem 0.75rem var(--color-elevation-shadow);
+}
+
+.appearance-menu__label,
+.appearance-menu__choice {
+  color: var(--color-text);
+  font-weight: 650;
+}
+
+.appearance-menu__choice {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 2rem;
 }
 
 .reader-menu__field,
@@ -488,7 +537,7 @@ a {
   border-radius: var(--radius-small);
   background: var(--color-surface);
   padding: var(--space-1);
-  box-shadow: 0 0.25rem 0.75rem rgb(23 37 30 / 15%);
+  box-shadow: 0 0.25rem 0.75rem var(--color-elevation-shadow);
   font-family: var(--font-ui);
   font-size: 0.875rem;
   line-height: 1.35;
@@ -515,7 +564,7 @@ a {
   display: grid;
   place-items: center;
   overflow-y: auto;
-  background: rgb(23 37 30 / 42%);
+  background: var(--color-overlay);
   padding: var(--space-6);
   font-family: var(--font-ui);
 }
@@ -529,7 +578,7 @@ a {
   border-radius: var(--radius-medium);
   background: var(--color-surface);
   padding: var(--space-8);
-  box-shadow: 0 0.25rem 0.75rem rgb(23 37 30 / 15%);
+  box-shadow: 0 0.25rem 0.75rem var(--color-elevation-shadow);
 }
 
 .reading-override-dialog h2,
@@ -649,6 +698,10 @@ a {
 }
 
 @media (max-width: 40rem) {
+  .app-header__content {
+    width: min(calc(100% - 2rem), var(--content-width));
+  }
+
   .library-heading,
   .document-row,
   .reader-heading {

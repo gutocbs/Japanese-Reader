@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState } from 'react';
 import type { DocumentClient } from '../shared/api/client';
 import '../styles/global.css';
+import { AppearanceMenu } from './AppearanceMenu';
 import { AppProviders } from './providers';
 import { AppRouter } from './router';
 
@@ -23,10 +24,13 @@ export function App({ client, initialPath }: AppProps) {
       <AppProviders client={client} initialPath={initialPath}>
         <a className="skip-link" href="#main-content">Ir para o conteúdo</a>
         <header className="app-header">
-          <a className="brand" href="/" aria-label="Japanese Reader — biblioteca">
-            <span aria-hidden="true" className="brand-mark" />
-            Japanese Reader
-          </a>
+          <div className="app-header__content">
+            <a className="brand" href="/" aria-label="Japanese Reader — biblioteca">
+              <span aria-hidden="true" className="brand-mark" />
+              Japanese Reader
+            </a>
+            <AppearanceMenu />
+          </div>
         </header>
         <main id="main-content" className="app-main">
           <AppRouter />

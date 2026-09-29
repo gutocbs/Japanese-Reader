@@ -99,6 +99,30 @@ function client(overrides: Partial<DocumentClient> = {}): DocumentClient {
 beforeEach(() => {
   window.history.replaceState(null, '', '/');
   localStorage.clear();
+  window.matchMedia = vi.fn().mockReturnValue({ matches: false });
+});
+
+it('applies a saved manual theme instead of the system preference and persists a new choice', () => {
+  localStorage.setItem('japanese-reader:theme-preference', 'dark');
+
+  render(<App client={client()} initialPath="/documents/new" />);
+
+  expect(window.document.documentElement).toHaveAttribute('data-theme', 'dark');
+
+  fireEvent.click(screen.getByRole('button', { name: 'Aparência' }));
+  fireEvent.click(screen.getByRole('radio', { name: 'Tema claro' }));
+
+  expect(window.document.documentElement).toHaveAttribute('data-theme', 'light');
+  expect(localStorage.getItem('japanese-reader:theme-preference')).toBe('light');
+});
+
+it('uses the system dark preference until the reader has a saved choice', () => {
+  window.matchMedia = vi.fn().mockReturnValue({ matches: true });
+
+  render(<App client={client()} initialPath="/documents/new" />);
+
+  expect(window.document.documentElement).toHaveAttribute('data-theme', 'dark');
+  expect(localStorage.getItem('japanese-reader:theme-preference')).toBeNull();
 });
 
 describe('reader routes', () => {
