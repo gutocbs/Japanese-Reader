@@ -93,3 +93,16 @@
 - [ ] Run focused tests, full frontend tests where permissions allow, build, and `git diff --check`.
 - [ ] Commit `feat(library): add client-side document search`.
 
+### Task 5: Final test-suite alignment
+
+**Files:**
+- Modify: tests identified by the full frontend suite, especially `frontend/src/features/reader/ReaderLayout.test.ts`
+
+**Interfaces:**
+- Consumes the final UI contracts produced by Tasks 1–4.
+- Produces a clean, current frontend test suite without weakening behavioral assertions.
+
+- [ ] Run the full frontend suite and inventory every failure after Tasks 1–4.
+- [ ] Update stale expectations to the approved contracts and add missing regression coverage where the failure exposes a real behavior gap.
+- [ ] Run the full suite, build, and `git diff --check`.
+- [ ] Commit `test(frontend): align suite with final interfaces`.
