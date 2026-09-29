@@ -25,7 +25,7 @@ describe('ReaderMenu', () => {
     expect(onPreferencesChange).toHaveBeenLastCalledWith({ fontSizePx: 24, showFurigana: false });
   });
 
-  it('changes the furigana control label and icon state with its effective visibility', () => {
+  it('uses a soft accent only while furigana is enabled', () => {
     const onPreferencesChange = vi.fn();
     const { rerender } = render(
       <ReaderMenu
@@ -34,7 +34,10 @@ describe('ReaderMenu', () => {
       />,
     );
 
-    expect(screen.getByRole('button', { name: 'Ocultar furigana' })).toHaveAttribute('aria-pressed', 'true');
+    const visibleControl = screen.getByRole('button', { name: 'Ocultar furigana' });
+    expect(visibleControl).toHaveAttribute('aria-pressed', 'true');
+    expect(visibleControl).toHaveClass('reader-rail__furigana--active');
+    expect(visibleControl).toHaveTextContent('あ');
 
     rerender(
       <ReaderMenu
@@ -43,7 +46,10 @@ describe('ReaderMenu', () => {
       />,
     );
 
-    expect(screen.getByRole('button', { name: 'Mostrar furigana' })).toHaveAttribute('aria-pressed', 'false');
+    const hiddenControl = screen.getByRole('button', { name: 'Mostrar furigana' });
+    expect(hiddenControl).toHaveAttribute('aria-pressed', 'false');
+    expect(hiddenControl).not.toHaveClass('reader-rail__furigana--active');
+    expect(hiddenControl).toHaveTextContent('あ');
   });
 
   it('disables font size controls at the persisted range boundaries', () => {

@@ -46,7 +46,7 @@ export function ReaderMenu({ preferences, onPreferencesChange }: ReaderMenuProps
       </button>
       <span className="reader-rail__divider" aria-hidden="true" />
       <button
-        className="reader-rail__button reader-rail__furigana"
+        className={`reader-rail__button reader-rail__furigana${preferences.showFurigana ? ' reader-rail__furigana--active' : ''}`}
         type="button"
         aria-label={furiganaAction}
         title={furiganaAction}
@@ -56,7 +56,7 @@ export function ReaderMenu({ preferences, onPreferencesChange }: ReaderMenuProps
           showFurigana: !preferences.showFurigana,
         })}
       >
-        <span aria-hidden="true">{preferences.showFurigana ? 'あ' : 'あ̸'}</span>
+        <span aria-hidden="true">あ</span>
       </button>
     </div>
   );

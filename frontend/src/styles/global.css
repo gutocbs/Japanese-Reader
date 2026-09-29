@@ -384,6 +384,14 @@ a {
   margin-inline: auto;
 }
 
+.reader-rail__furigana {
+  color: var(--color-text-muted);
+}
+
+.reader-rail__furigana--active {
+  color: var(--color-reader-furigana-active);
+}
+
 .appearance-menu {
   position: relative;
   flex: none;
