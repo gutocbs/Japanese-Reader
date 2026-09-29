@@ -316,8 +316,8 @@ a {
   color: var(--color-error);
 }
 
-.document-row__action--active {
-  color: var(--color-primary);
+.document-row__action--favorite-active {
+  color: var(--color-favorite-active);
 }
 
 .rename-form input {

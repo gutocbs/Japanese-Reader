@@ -291,7 +291,7 @@ export function DocumentLibraryPage() {
               ) : (
                 <div className="document-row__actions">
                   <button
-                    className={`document-row__action${favoriteDocumentIds.has(document.id) ? ' document-row__action--active' : ''}`}
+                    className={`document-row__action${favoriteDocumentIds.has(document.id) ? ' document-row__action--favorite-active' : ''}`}
                     type="button"
                     aria-label={favoriteDocumentIds.has(document.id) ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
                     aria-pressed={favoriteDocumentIds.has(document.id)}

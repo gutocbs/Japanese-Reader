@@ -16,6 +16,7 @@
   --color-on-primary: #ffffff;
   --color-focus: #0f6b4a;
   --color-error: #842d2d;
+  --color-favorite-active: #8a681f;
   --color-error-surface: #fff3f1;
   --color-overlay: rgb(23 37 30 / 42%);
   --color-elevation-shadow: rgb(23 37 30 / 15%);
@@ -57,6 +58,7 @@
   --color-on-primary: #1f2022;
   --color-focus: #ffffff;
   --color-error: #ffb8b8;
+  --color-favorite-active: #e5c77d;
   --color-error-surface: #45282b;
   --color-overlay: rgb(0 0 0 / 62%);
   --color-elevation-shadow: rgb(0 0 0 / 36%);

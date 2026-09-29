@@ -347,6 +347,7 @@ describe('document library flows', () => {
     const addFavorite = within(row).getByRole('button', { name: 'Adicionar aos favoritos' });
     expect(addFavorite).toHaveAttribute('title', 'Adicionar aos favoritos');
     expect(addFavorite).toHaveAttribute('aria-pressed', 'false');
+    expect(addFavorite).not.toHaveClass('document-row__action--favorite-active');
     expect(addFavorite).toHaveTextContent('☆');
 
     fireEvent.click(addFavorite);
@@ -354,6 +355,7 @@ describe('document library flows', () => {
     const removeFavorite = within(row).getByRole('button', { name: 'Remover dos favoritos' });
     expect(removeFavorite).toHaveAttribute('title', 'Remover dos favoritos');
     expect(removeFavorite).toHaveAttribute('aria-pressed', 'true');
+    expect(removeFavorite).toHaveClass('document-row__action--favorite-active');
     expect(removeFavorite).toHaveTextContent('★');
     expect(localStorage.getItem('japanese-reader:document-favorites')).toBe(JSON.stringify({
       version: 1,
