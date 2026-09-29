@@ -399,13 +399,13 @@ describe('document library flows', () => {
     expect(filterButton).toHaveFocus();
   });
 
-  it('announces active library filters on the icon-led popup trigger', async () => {
+  it('announces the filter action and active state on the icon-led popup trigger', async () => {
     render(<App client={client({ list: vi.fn().mockResolvedValue([firstDocument]) })} initialPath="/" />);
 
     fireEvent.click(await screen.findByRole('button', { name: 'Abrir filtros' }));
     fireEvent.click(screen.getByRole('checkbox', { name: 'Somente favoritos' }));
 
-    expect(screen.getByRole('button', { name: 'Filtros ativos' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Abrir filtros; filtros ativos' })).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('navigates to creation and preserves the draft when returning through history', async () => {

@@ -33,6 +33,15 @@ function SearchIcon() {
   );
 }
 
+function CloseIcon() {
+  return (
+    <svg aria-hidden="true" data-lucide="x" fill="none" height="18" stroke="currentColor" strokeLinecap="round" strokeWidth="2" viewBox="0 0 24 24" width="18">
+      <path d="M18 6 6 18" />
+      <path d="m6 6 12 12" />
+    </svg>
+  );
+}
+
 function DocumentActionIcon({ name }: { name: DocumentActionIconName }) {
   const paths = {
     'file-symlink': (
@@ -519,7 +528,7 @@ function LibrarySearch({
               title="Limpar pesquisa"
               onClick={() => onSearchChange('')}
             >
-              <span aria-hidden="true">×</span>
+              <CloseIcon />
             </button>
           </div>
         </div>
@@ -552,9 +561,9 @@ function LibrarySearch({
             type="button"
             aria-controls="library-filter-panel"
             aria-expanded={filtersOpen}
-            aria-label={hasActivePopupFilters ? 'Filtros ativos' : 'Abrir filtros'}
+            aria-label={hasActivePopupFilters ? 'Abrir filtros; filtros ativos' : 'Abrir filtros'}
             aria-pressed={hasActivePopupFilters}
-            title={hasActivePopupFilters ? 'Filtros ativos' : 'Abrir filtros'}
+            title={hasActivePopupFilters ? 'Abrir filtros; filtros ativos' : 'Abrir filtros'}
             onClick={() => onFiltersOpenChange(!filtersOpen)}
             onKeyDown={(event) => {
               if (filtersOpen && event.key === 'Escape') {
