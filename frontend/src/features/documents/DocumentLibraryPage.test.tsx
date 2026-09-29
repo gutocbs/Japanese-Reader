@@ -7,6 +7,8 @@ const firstDocument: Document = {
   id: '00000000-0000-0000-0000-000000000001',
   title: '雪国',
   content: '国境の長いトンネルを抜けると雪国であった。',
+  description: null,
+  tags: [],
   revision: 1,
   createdAt: '2026-09-24T12:00:00Z',
   updatedAt: '2026-09-24T12:00:00Z',

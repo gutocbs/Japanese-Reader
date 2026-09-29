@@ -1,6 +1,8 @@
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timezone
 from pathlib import Path
+import sqlite3
 from threading import Barrier
 from uuid import UUID
 
@@ -54,6 +56,86 @@ def test_reopening_the_same_file_preserves_canonical_and_study_data(tmp_path):
     assert reopened_vocabulary.get_display_preference(document.id, key) is FuriganaVisibility.HIDE
     assert reopened_readings.get(override_key) == ReadingOverride(override_key, "よし")
     assert reopened_analyses.find_compatible(stored_analysis.cache_key) == stored_analysis
+
+
+def test_reopening_the_same_file_preserves_document_description_and_tags(tmp_path):
+    path = tmp_path / "metadata.db"
+    application = create_app(path)
+
+    async def save_metadata():
+        async with AsyncClient(
+            transport=ASGITransport(app=application), base_url="http://test"
+        ) as client:
+            created = (
+                await client.post(
+                    "/api/documents", json={"title": "原文", "content": "日本語"}
+                )
+            ).json()
+            response = await client.put(
+                f"/api/documents/{created['id']}",
+                json={
+                    "description": "Persisted notes",
+                    "tags": [{"name": "Grammar", "color": "#7C3AED"}],
+                },
+            )
+            return created["id"], response
+
+    document_id, response = asyncio.run(save_metadata())
+    assert response.status_code == 200
+
+    reopened = create_app(path)
+
+    async def read_metadata():
+        async with AsyncClient(
+            transport=ASGITransport(app=reopened), base_url="http://test"
+        ) as client:
+            return await client.get(f"/api/documents/{document_id}")
+
+    stored = asyncio.run(read_metadata())
+    assert stored.status_code == 200
+    assert stored.json()["description"] == "Persisted notes"
+    assert stored.json()["tags"] == [{"name": "Grammar", "color": "#7C3AED"}]
+
+
+def test_migration_reads_documents_created_before_metadata_fields(tmp_path):
+    path = tmp_path / "legacy.db"
+    migration = (
+        Path(__file__).parents[2]
+        / "app"
+        / "persistence"
+        / "sqlite"
+        / "migrations"
+        / "001_initial.sql"
+    )
+    document_id = "00000000-0000-0000-0000-000000000010"
+    timestamp = datetime(2026, 9, 26, tzinfo=timezone.utc).isoformat()
+    with sqlite3.connect(path) as connection:
+        connection.executescript(migration.read_text(encoding="utf-8"))
+        connection.execute(
+            "INSERT INTO schema_migrations(version, name) VALUES (?, ?)",
+            (1, migration.name),
+        )
+        connection.execute(
+            """
+            INSERT INTO documents(
+                id, title, content, revision, created_at, updated_at, last_read_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (document_id, "Legacy", "以前の本文", 1, timestamp, timestamp, None),
+        )
+
+    application = create_app(path)
+
+    async def read_legacy_document():
+        async with AsyncClient(
+            transport=ASGITransport(app=application), base_url="http://test"
+        ) as client:
+            return await client.get(f"/api/documents/{document_id}")
+
+    response = asyncio.run(read_legacy_document())
+    assert response.status_code == 200
+    assert response.json()["description"] is None
+    assert response.json()["tags"] == []
 
 
 def test_failed_post_update_cache_write_rolls_back_and_returns_problem(tmp_path):
@@ -110,7 +192,7 @@ def test_database_configuration_uses_environment_and_versioned_migrations(tmp_pa
             for row in connection.execute(
                 "SELECT version FROM schema_migrations ORDER BY version"
             )
-        ] == [1]
+        ] == [1, 2]
         tables = {
             row[0]
             for row in connection.execute(
@@ -162,4 +244,4 @@ def test_concurrent_database_initialization_applies_each_migration_once(
     with ThreadPoolExecutor(max_workers=workers) as executor:
         versions = list(executor.map(lambda _: initialize(), range(workers)))
 
-    assert versions == [[1]] * workers
+    assert versions == [[1, 2]] * workers

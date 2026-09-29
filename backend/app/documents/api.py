@@ -3,12 +3,12 @@ from typing import Annotated, Self
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Request, Response
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from pydantic.alias_generators import to_camel
 from pydantic.json_schema import SkipJsonSchema
 
 from backend.app.api.errors import PROBLEM_RESPONSES, ProblemDetails
-from backend.app.documents.models import CreateDocument, Document, UpdateDocument
+from backend.app.documents.models import UNSET, CreateDocument, Document, DocumentTag, UpdateDocument
 from backend.app.documents.service import DocumentService
 
 
@@ -19,6 +19,25 @@ class HttpModel(BaseModel):
 class CreateDocumentRequest(HttpModel):
     title: str
     content: str
+
+
+class DocumentTagModel(HttpModel):
+    name: str
+    color: str
+
+    @field_validator("name", "color")
+    @classmethod
+    def validate_not_blank(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("Document tag fields cannot be empty")
+        return value
+
+    @classmethod
+    def from_tag(cls, tag: DocumentTag) -> Self:
+        return cls(name=tag.name, color=tag.color)
+
+    def to_tag(self) -> DocumentTag:
+        return DocumentTag(name=self.name, color=self.color)
 
 
 class UpdateDocumentRequest(HttpModel):
@@ -40,22 +59,33 @@ class UpdateDocumentRequest(HttpModel):
     content: str | SkipJsonSchema[None] = Field(
         default=None, json_schema_extra=lambda schema: schema.pop("default", None)
     )
+    description: str | None = Field(
+        default=None, json_schema_extra=lambda schema: schema.pop("default", None)
+    )
+    tags: list[DocumentTagModel] | SkipJsonSchema[None] = Field(
+        default=None, json_schema_extra=lambda schema: schema.pop("default", None)
+    )
     confirmReadingOverrideRemoval: bool | SkipJsonSchema[None] = Field(  # noqa: N815
         default=None, json_schema_extra=lambda schema: schema.pop("default", None)
     )
 
     @model_validator(mode="after")
     def validate_update(self) -> Self:
-        update_fields = self.model_fields_set & {"title", "content"}
+        update_fields = self.model_fields_set & {"title", "content", "description", "tags"}
         if not update_fields:
             raise ValueError("Document update requires at least one field")
-        if any(getattr(self, field) is None for field in update_fields):
+        required_fields = update_fields & {"title", "content", "tags"}
+        if any(getattr(self, field) is None for field in required_fields):
             raise ValueError("Document update fields cannot be null")
         if (
             "confirmReadingOverrideRemoval" in self.model_fields_set
             and self.confirmReadingOverrideRemoval is None
         ):
             raise ValueError("Reading override confirmation cannot be null")
+        if "tags" in update_fields and self.tags is not None:
+            names = [tag.name.casefold() for tag in self.tags]
+            if len(names) != len(set(names)):
+                raise ValueError("Document tag names must be unique")
         return self
 
 
@@ -65,6 +95,8 @@ class DocumentResponse(HttpModel):
     id: UUID
     title: str
     content: str
+    description: str | None
+    tags: list[DocumentTagModel]
     revision: int
     created_at: datetime
     updated_at: datetime
@@ -74,6 +106,8 @@ class DocumentResponse(HttpModel):
     def from_document(cls, document: Document) -> Self:
         return cls(
             id=document.id, title=document.title, content=document.content,
+            description=document.description,
+            tags=[DocumentTagModel.from_tag(tag) for tag in document.tags],
             revision=document.revision, createdAt=document.created_at,
             updatedAt=document.updated_at, lastReadAt=document.last_read_at,
         )
@@ -122,9 +156,19 @@ def get_document(document_id: UUID, service: DocumentServiceDependency):
     },
 )
 def update_document(document_id: UUID, data: UpdateDocumentRequest, service: DocumentServiceDependency):
+    fields = data.model_fields_set
     result = service.update(
         document_id,
-        UpdateDocument(title=data.title, content=data.content),
+        UpdateDocument(
+            title=data.title,
+            content=data.content,
+            description=data.description if "description" in fields else UNSET,
+            tags=(
+                tuple(tag.to_tag() for tag in data.tags)
+                if "tags" in fields and data.tags is not None
+                else UNSET
+            ),
+        ),
         confirm_reading_override_removal=data.confirmReadingOverrideRemoval is True,
     )
     return DocumentResponse.from_document(result.document)

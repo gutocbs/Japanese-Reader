@@ -6,7 +6,7 @@ from threading import Lock, RLock
 from typing import Iterator
 from uuid import UUID, uuid4
 
-from backend.app.documents.models import CreateDocument, Document, UpdateDocument
+from backend.app.documents.models import UNSET, CreateDocument, Document, DocumentTag, UpdateDocument
 
 
 def utc_now() -> datetime:
@@ -23,6 +23,7 @@ class InMemoryDocumentRepository:
         self._clock = clock
         self._uuid_factory = uuid_factory
         self._documents: dict[UUID, Document] = {}
+        self._tags: dict[str, DocumentTag] = {}
         self._lock = Lock()
         self._revision_locks: dict[UUID, RLock] = {}
 
@@ -67,10 +68,20 @@ class InMemoryDocumentRepository:
             if document is None:
                 return None
             content = document.content if data.content is None else data.content
+            if data.tags is UNSET:
+                tags = document.tags
+            else:
+                tags = tuple(
+                    self._tags.setdefault(tag.name.casefold(), tag) for tag in data.tags
+                )
             updated = replace(
                 document,
                 title=document.title if data.title is None else data.title,
                 content=content,
+                description=(
+                    document.description if data.description is UNSET else data.description
+                ),
+                tags=tags,
                 revision=document.revision + (content != document.content),
                 updated_at=self._now(),
             )

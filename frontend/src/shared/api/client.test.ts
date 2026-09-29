@@ -1,10 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 import { ApiError, createDocumentClient } from './client';
+import type { Document, DocumentTag } from './client';
 
 const document = {
   id: '00000000-0000-0000-0000-000000000001', title: '原文', content: '𠮷野家\n日本語  text',
-  revision: 1, createdAt: '2026-09-26T00:00:00Z', updatedAt: '2026-09-26T00:00:00Z', lastReadAt: null,
-};
+  description: null, tags: [], revision: 1, createdAt: '2026-09-26T00:00:00Z',
+  updatedAt: '2026-09-26T00:00:00Z', lastReadAt: null,
+} satisfies Document;
 
 describe('document client', () => {
   it('transports the typed CRUD contract and exact content', async () => {
@@ -29,6 +31,23 @@ describe('document client', () => {
     expect(JSON.parse(createInit.body as string)).toEqual({ title: '原文', content: document.content });
     expect(new Headers(createInit.headers).get('Content-Type')).toBe('application/json');
     expect(JSON.parse(fetcher.mock.calls[3][1]!.body as string)).toEqual({ title: 'new' });
+  });
+
+  it('transports persisted metadata without accepting server-owned timestamps', async () => {
+    const tags: DocumentTag[] = [{ name: 'Grammar', color: '#7C3AED' }];
+    const metadata = {
+      description: 'JLPT reading notes',
+      tags,
+    };
+    const updated = { ...document, ...metadata };
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(JSON.stringify(updated)),
+    );
+
+    const result = await createDocumentClient(fetcher).update(document.id, metadata);
+
+    expect(result).toEqual(updated);
+    expect(JSON.parse(fetcher.mock.calls[0][1]!.body as string)).toEqual(metadata);
   });
 
   it('requests analysis for the encoded document resource', async () => {

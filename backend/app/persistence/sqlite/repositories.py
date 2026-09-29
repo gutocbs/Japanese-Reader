@@ -15,7 +15,7 @@ from backend.app.analysis.models import (
     AnalyzerMetadata,
     DocumentAnalysis,
 )
-from backend.app.documents.models import CreateDocument, Document, UpdateDocument
+from backend.app.documents.models import UNSET, CreateDocument, Document, DocumentTag, UpdateDocument
 from backend.app.persistence.sqlite.connection import SqliteDatabase
 from backend.app.readings.models import ReadingOverride, ReadingOverrideKey
 from backend.app.vocabulary.models import (
@@ -44,7 +44,7 @@ def _parse_datetime(value: str | None) -> datetime | None:
     return datetime.fromisoformat(value).astimezone(timezone.utc)
 
 
-def _document(row) -> Document:
+def _document(row, tags: tuple[DocumentTag, ...] = ()) -> Document:
     return Document(
         id=UUID(row["id"]),
         title=row["title"],
@@ -53,7 +53,23 @@ def _document(row) -> Document:
         created_at=_parse_datetime(row["created_at"]),
         updated_at=_parse_datetime(row["updated_at"]),
         last_read_at=_parse_datetime(row["last_read_at"]),
+        description=row["description"],
+        tags=tags,
     )
+
+
+def _document_tags(connection, document_id: str) -> tuple[DocumentTag, ...]:
+    rows = connection.execute(
+        """
+        SELECT tags.name, tags.color
+        FROM document_tags
+        JOIN tags ON tags.name = document_tags.tag_name
+        WHERE document_tags.document_id = ?
+        ORDER BY document_tags.position
+        """,
+        (document_id,),
+    ).fetchall()
+    return tuple(DocumentTag(name=row["name"], color=row["color"]) for row in rows)
 
 
 class SqliteDocumentRepository:
@@ -100,12 +116,18 @@ class SqliteDocumentRepository:
             row = connection.execute(
                 "SELECT * FROM documents WHERE id = ?", (str(document_id),)
             ).fetchone()
-        return None if row is None else _document(row)
+            if row is None:
+                return None
+            tags = _document_tags(connection, row["id"])
+        return _document(row, tags)
 
     def list(self) -> tuple[Document, ...]:
         with self._database.unit_of_work() as connection:
             rows = connection.execute("SELECT * FROM documents ORDER BY rowid").fetchall()
-        return tuple(_document(row) for row in rows)
+            documents = tuple(
+                _document(row, _document_tags(connection, row["id"])) for row in rows
+            )
+        return documents
 
     @contextmanager
     def revision_guard(self, document_id: UUID) -> Iterator[None]:
@@ -125,21 +147,40 @@ class SqliteDocumentRepository:
             connection.execute(
                 """
                 UPDATE documents
-                SET title = ?, content = ?, revision = ?, updated_at = ?
+                SET title = ?, content = ?, description = ?, revision = ?, updated_at = ?
                 WHERE id = ?
                 """,
                 (
                     current["title"] if data.title is None else data.title,
                     content,
+                    current["description"] if data.description is UNSET else data.description,
                     current["revision"] + (content != current["content"]),
                     _utc(self._clock()).isoformat(),
                     str(document_id),
                 ),
             )
+            if data.tags is not UNSET:
+                connection.execute(
+                    "DELETE FROM document_tags WHERE document_id = ?", (str(document_id),)
+                )
+                for position, tag in enumerate(data.tags):
+                    connection.execute(
+                        "INSERT INTO tags(name, color) VALUES (?, ?) "
+                        "ON CONFLICT(name) DO NOTHING",
+                        (tag.name, tag.color),
+                    )
+                    connection.execute(
+                        """
+                        INSERT INTO document_tags(document_id, tag_name, position)
+                        VALUES (?, ?, ?)
+                        """,
+                        (str(document_id), tag.name, position),
+                    )
             updated = connection.execute(
                 "SELECT * FROM documents WHERE id = ?", (str(document_id),)
             ).fetchone()
-        return _document(updated)
+            tags = _document_tags(connection, str(document_id))
+        return _document(updated, tags)
 
     def mark_read(self, document_id: UUID, read_at: datetime) -> Document | None:
         with self._database.unit_of_work(write=True) as connection:
@@ -152,7 +193,8 @@ class SqliteDocumentRepository:
             row = connection.execute(
                 "SELECT * FROM documents WHERE id = ?", (str(document_id),)
             ).fetchone()
-        return _document(row)
+            tags = _document_tags(connection, str(document_id))
+        return _document(row, tags)
 
     def delete(self, document_id: UUID) -> bool:
         with self._database.unit_of_work(write=True) as connection:

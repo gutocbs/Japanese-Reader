@@ -4,7 +4,7 @@ from uuid import UUID
 
 import pytest
 
-from backend.app.documents.models import CreateDocument, UpdateDocument
+from backend.app.documents.models import CreateDocument, DocumentTag, UpdateDocument
 from backend.app.documents.repository import DocumentRepository
 
 CONTENT = "𠮷野家\n日本語  text"
@@ -29,6 +29,8 @@ class DocumentRepositoryContract:
         assert document.created_at.tzinfo is timezone.utc
         assert document.updated_at.tzinfo is timezone.utc
         assert document.last_read_at is None
+        assert document.description is None
+        assert document.tags == ()
 
     def test_get_and_list_return_created_documents(self, repository):
         assert repository.list() == ()
@@ -58,6 +60,26 @@ class DocumentRepositoryContract:
         assert updated.content == CONTENT
         assert updated.revision == 1
         assert updated.updated_at == UPDATED_AT
+
+    def test_metadata_update_preserves_content_revision_and_tag_values(self, repository):
+        original = repository.create(CreateDocument(title="First", content=CONTENT))
+        tags = (
+            DocumentTag(name="Grammar", color="#7C3AED"),
+            DocumentTag(name="News", color="#0F766E"),
+        )
+
+        updated = repository.update(
+            original.id,
+            UpdateDocument(description="JLPT reading notes", tags=tags),
+        )
+
+        assert updated.description == "JLPT reading notes"
+        assert updated.tags == tags
+        assert updated.content == original.content
+        assert updated.revision == original.revision
+        assert updated.created_at == original.created_at
+        assert updated.updated_at == UPDATED_AT
+        assert repository.get(original.id) == updated
 
     def test_identical_content_does_not_advance_revision(self, repository):
         original = repository.create(CreateDocument(title="First", content=CONTENT))
@@ -124,3 +146,18 @@ class DocumentRepositoryContract:
             UpdateDocument()
         with pytest.raises(ValueError, match="at least one field"):
             UpdateDocument(title=None, content=None)
+
+    def test_tag_values_cannot_be_blank(self, repository):
+        with pytest.raises(ValueError, match="name cannot be empty"):
+            DocumentTag(name=" ", color="#7C3AED")
+        with pytest.raises(ValueError, match="color cannot be empty"):
+            DocumentTag(name="Grammar", color=" ")
+
+    def test_update_rejects_duplicate_tag_names_case_insensitively(self, repository):
+        with pytest.raises(ValueError, match="names must be unique"):
+            UpdateDocument(
+                tags=(
+                    DocumentTag(name="Grammar", color="#7C3AED"),
+                    DocumentTag(name="grammar", color="#0F766E"),
+                )
+            )

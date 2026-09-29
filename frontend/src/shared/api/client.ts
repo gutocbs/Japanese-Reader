@@ -1,6 +1,7 @@
 import type { components, operations } from './generated';
 
 export type Document = components['schemas']['DocumentResponse'];
+export type DocumentTag = components['schemas']['DocumentTagModel'];
 export type CreateDocument = components['schemas']['CreateDocumentRequest'];
 export type UpdateDocument = components['schemas']['UpdateDocumentRequest'];
 export type Analysis = components['schemas']['DocumentAnalysisResponse'];

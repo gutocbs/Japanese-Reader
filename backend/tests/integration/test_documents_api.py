@@ -27,8 +27,13 @@ def test_crud_preserves_exact_unicode_and_camel_case(client):
             response = await client.post("/api/documents", json={"title": "原文", "content": content})
             assert response.status_code == 201
             document = response.json()
-            assert set(document) == {"id", "title", "content", "revision", "createdAt", "updatedAt", "lastReadAt"}
+            assert set(document) == {
+                "id", "title", "content", "description", "tags", "revision",
+                "createdAt", "updatedAt", "lastReadAt",
+            }
             assert document["content"] == content
+            assert document["description"] is None
+            assert document["tags"] == []
             assert document["revision"] == 1
             assert document["lastReadAt"] is None
             UUID(document["id"])
@@ -48,6 +53,48 @@ def test_crud_preserves_exact_unicode_and_camel_case(client):
             assert deleted.status_code == 204
             assert deleted.content == b""
             assert (await client.get("/api/documents")).json() == []
+    asyncio.run(exercise())
+
+
+def test_metadata_update_persists_tag_names_and_colors_without_changing_content_revision(client):
+    async def exercise():
+        async with client:
+            created = (
+                await client.post(
+                    "/api/documents", json={"title": "原文", "content": "日本語"}
+                )
+            ).json()
+            path = f"/api/documents/{created['id']}"
+            response = await client.put(
+                path,
+                json={
+                    "description": "JLPT reading notes",
+                    "tags": [
+                        {"name": "Grammar", "color": "#7C3AED"},
+                        {"name": "News", "color": "#0F766E"},
+                    ],
+                },
+            )
+
+            assert response.status_code == 200
+            updated = response.json()
+            assert updated["description"] == "JLPT reading notes"
+            assert updated["tags"] == [
+                {"name": "Grammar", "color": "#7C3AED"},
+                {"name": "News", "color": "#0F766E"},
+            ]
+            assert updated["revision"] == created["revision"]
+            assert updated["content"] == created["content"]
+            assert updated["createdAt"] == created["createdAt"]
+            assert updated["updatedAt"] != created["updatedAt"]
+            assert (await client.get(path)).json() == updated
+
+            cleared = await client.put(path, json={"description": None, "tags": []})
+            assert cleared.status_code == 200
+            assert cleared.json()["description"] is None
+            assert cleared.json()["tags"] == []
+            assert cleared.json()["revision"] == created["revision"]
+
     asyncio.run(exercise())
 
 
@@ -99,6 +146,17 @@ def test_list_orders_last_read_descending_with_unread_last(client):
         {"content": None},
         {"confirmReadingOverrideRemoval": True},
         {"title": "new", "confirmReadingOverrideRemoval": None},
+        {"tags": None},
+        {"tags": [{"name": "", "color": "#7C3AED"}]},
+        {"tags": [{"name": "Grammar", "color": " "}]},
+        {
+            "tags": [
+                {"name": "Grammar", "color": "#7C3AED"},
+                {"name": "grammar", "color": "#0F766E"},
+            ]
+        },
+        {"createdAt": "2026-09-29T00:00:00Z"},
+        {"updatedAt": "2026-09-29T00:00:00Z"},
         {"unknown": "value"},
     ],
 )
@@ -125,6 +183,14 @@ def test_openapi_matches_update_and_problem_payloads():
     for field in ("title", "content"):
         assert update["properties"][field]["type"] == "string"
         assert "default" not in update["properties"][field]
+    assert update["properties"]["description"]["anyOf"] == [
+        {"type": "string"}, {"type": "null"}
+    ]
+    assert update["properties"]["tags"]["items"] == {
+        "$ref": "#/components/schemas/DocumentTagModel"
+    }
+    assert "default" not in update["properties"]["description"]
+    assert "default" not in update["properties"]["tags"]
     assert update["properties"]["confirmReadingOverrideRemoval"]["type"] == "boolean"
     assert "default" not in update["properties"]["confirmReadingOverrideRemoval"]
     for operation in ("get", "put", "delete"):
@@ -134,3 +200,5 @@ def test_openapi_matches_update_and_problem_payloads():
     assert set(
         schema["paths"]["/api/documents/{document_id}"]["put"]["responses"]["409"]["content"]
     ) == {"application/problem+json"}
+    response = schema["components"]["schemas"]["DocumentResponse"]
+    assert {"description", "tags", "createdAt", "updatedAt"} <= set(response["required"])
