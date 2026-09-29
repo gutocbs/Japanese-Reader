@@ -99,7 +99,7 @@ export function ReviewList({ entries, onRemove }: ReviewListProps) {
                 aria-label={`Remover ${entry.lemma}（${entry.reading ?? 'sem leitura'}）`}
                 onClick={() => onRemove(entry.key)}
               >
-                Remover {entry.lemma}
+                Remover
               </button>
             </li>
           ))}

@@ -64,8 +64,8 @@ describe('ReviewList', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Copiar lista' }));
 
     expect(screen.getAllByRole('listitem').map((item) => item.textContent)).toEqual([
-      '犬いぬRemover 犬',
-      '猫ねこRemover 猫',
+      '犬いぬRemover',
+      '猫ねこRemover',
     ]);
     expect(serializeVocabularyEntries(entries)).toBe('犬\tいぬ\n猫\tねこ');
     expect(writeText).toHaveBeenCalledWith('犬\tいぬ\n猫\tねこ');
