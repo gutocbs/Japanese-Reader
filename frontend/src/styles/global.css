@@ -236,6 +236,34 @@ a {
   min-height: 2.75rem;
 }
 
+.document-row__action {
+  display: inline-grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  box-sizing: border-box;
+  border: 1px solid transparent;
+  border-radius: var(--radius-small);
+  background: transparent;
+  color: var(--color-text);
+  padding: 0;
+  font-size: 1.2rem;
+  font-weight: 650;
+  line-height: 1;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.document-row__action:hover:not(:disabled),
+.document-row__action:focus-visible {
+  background: var(--color-surface-muted);
+}
+
+.document-row__action--destructive {
+  color: var(--color-error);
+}
+
 .rename-form input {
   min-height: 2.75rem;
   border: 1px solid var(--color-border);

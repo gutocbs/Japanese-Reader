@@ -14,12 +14,11 @@ function orderByLastRead(documents: Document[]) {
   });
 }
 
-function readLabel(lastReadAt: string | null) {
-  if (lastReadAt === null) return 'Ainda não aberto';
-  return `Última leitura em ${new Intl.DateTimeFormat('pt-BR', {
+function createdLabel(createdAt: string) {
+  return `Adicionado em ${new Intl.DateTimeFormat('pt-BR', {
     dateStyle: 'medium',
     timeStyle: 'short',
-  }).format(new Date(lastReadAt))}`;
+  }).format(new Date(createdAt))}`;
 }
 
 export function DocumentLibraryPage() {
@@ -142,7 +141,7 @@ export function DocumentLibraryPage() {
                     {document.title || 'Sem título'}
                   </a>
                 </h2>
-                <p>{readLabel(document.lastReadAt)}</p>
+                <p>{createdLabel(document.createdAt)}</p>
               </div>
 
               {renaming?.id === document.id ? (
@@ -176,38 +175,50 @@ export function DocumentLibraryPage() {
               ) : (
                 <div className="document-row__actions">
                   <a
-                    className="text-link"
+                    className="document-row__action"
                     href={`/documents/${encodeURIComponent(document.id)}/read`}
+                    aria-label="Abrir documento"
+                    title="Abrir documento"
                     onClick={(event) => {
                       event.preventDefault();
                       navigate(`/documents/${encodeURIComponent(document.id)}/read`);
                     }}
                   >
-                    Abrir
+                    <span aria-hidden="true">↗</span>
                   </a>
                   <a
-                    className="text-link"
+                    className="document-row__action"
                     href={`/documents/${encodeURIComponent(document.id)}/edit`}
+                    aria-label="Editar documento"
+                    title="Editar documento"
                     onClick={(event) => {
                       event.preventDefault();
                       navigate(`/documents/${encodeURIComponent(document.id)}/edit`);
                     }}
                   >
-                    Editar
+                    <span aria-hidden="true">✎</span>
                   </a>
-                  <button className="button button--quiet" type="button" onClick={() => beginRename(document)}>
-                    Renomear
+                  <button
+                    className="document-row__action"
+                    type="button"
+                    aria-label="Renomear documento"
+                    title="Renomear documento"
+                    onClick={() => beginRename(document)}
+                  >
+                    <span aria-hidden="true">Aa</span>
                   </button>
                   <button
-                    className="button button--quiet button--destructive-text"
+                    className="document-row__action document-row__action--destructive"
                     type="button"
+                    aria-label="Excluir documento"
+                    title="Excluir documento"
                     onClick={(event) => {
                       deleteTriggerRef.current = event.currentTarget;
                       setDeleting(document);
                       setDeleteError(false);
                     }}
                   >
-                    Excluir
+                    <span aria-hidden="true">×</span>
                   </button>
                 </div>
               )}

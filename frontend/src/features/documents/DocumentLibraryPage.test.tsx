@@ -120,19 +120,33 @@ describe('document library flows', () => {
     expect(screen.getByLabelText('Texto japonês')).toHaveValue('下書きの本文');
   });
 
-  it('opens a document from its title while keeping the explicit reader and edit actions available', async () => {
+  it('keeps the title link and exposes compact named actions with creation metadata', async () => {
     const api = client({ list: vi.fn().mockResolvedValue([firstDocument]) });
     render(<App client={api} initialPath="/" />);
     const row = await screen.findByRole('listitem', { name: '雪国' });
 
     const titleLink = within(row).getByRole('link', { name: '雪国' });
     expect(titleLink).toHaveAttribute('href', `/documents/${firstDocument.id}/read`);
-    expect(within(row).getByRole('link', { name: 'Abrir' })).toHaveAttribute(
+    expect(within(row).getByText(`Adicionado em ${new Intl.DateTimeFormat('pt-BR', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    }).format(new Date(firstDocument.createdAt))}`)).toBeInTheDocument();
+    expect(within(row).queryByText(/Última leitura em/)).not.toBeInTheDocument();
+
+    const openAction = within(row).getByRole('link', { name: 'Abrir documento' });
+    const editAction = within(row).getByRole('link', { name: 'Editar documento' });
+    const renameAction = within(row).getByRole('button', { name: 'Renomear documento' });
+    const deleteAction = within(row).getByRole('button', { name: 'Excluir documento' });
+    expect(openAction).toHaveAttribute(
       'href', `/documents/${firstDocument.id}/read`,
     );
-    expect(within(row).getByRole('link', { name: 'Editar' })).toHaveAttribute(
+    expect(editAction).toHaveAttribute(
       'href', `/documents/${firstDocument.id}/edit`,
     );
+    expect(openAction).toHaveAttribute('title', 'Abrir documento');
+    expect(editAction).toHaveAttribute('title', 'Editar documento');
+    expect(renameAction).toHaveAttribute('title', 'Renomear documento');
+    expect(deleteAction).toHaveAttribute('title', 'Excluir documento');
     fireEvent.click(titleLink);
 
     expect(await screen.findByRole('heading', { name: '雪国', level: 1 })).toBeInTheDocument();
@@ -148,7 +162,7 @@ describe('document library flows', () => {
     const api = client({ list: vi.fn().mockResolvedValue([firstDocument]), update });
     render(<App client={api} initialPath="/" />);
     const row = await screen.findByRole('listitem', { name: '雪国' });
-    fireEvent.click(within(row).getByRole('button', { name: 'Renomear' }));
+    fireEvent.click(within(row).getByRole('button', { name: 'Renomear documento' }));
     fireEvent.change(screen.getByLabelText('Novo título de 雪国'), {
       target: { value: renamed.title },
     });
@@ -156,7 +170,7 @@ describe('document library flows', () => {
 
     expect(await screen.findByRole('listitem', { name: renamed.title })).toBeInTheDocument();
     expect(update).toHaveBeenCalledWith(firstDocument.id, { title: renamed.title });
-    expect(screen.getByRole('link', { name: 'Editar' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Editar documento' })).toHaveAttribute(
       'href', `/documents/${firstDocument.id}/edit`,
     );
   });
@@ -170,7 +184,7 @@ describe('document library flows', () => {
     });
     render(<App client={api} initialPath="/" />);
     const row = await screen.findByRole('listitem', { name: '雪国' });
-    const deleteButton = within(row).getByRole('button', { name: 'Excluir' });
+    const deleteButton = within(row).getByRole('button', { name: 'Excluir documento' });
     fireEvent.click(deleteButton);
     const dialog = screen.getByRole('dialog', { name: 'Excluir documento' });
     const cancelButton = within(dialog).getByRole('button', { name: 'Cancelar' });
@@ -210,7 +224,7 @@ describe('document library flows', () => {
     });
     render(<App client={api} initialPath="/" />);
     const row = await screen.findByRole('listitem', { name: '雪国' });
-    fireEvent.click(within(row).getByRole('button', { name: 'Excluir' }));
+    fireEvent.click(within(row).getByRole('button', { name: 'Excluir documento' }));
     fireEvent.click(screen.getByRole('button', { name: 'Excluir definitivamente' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
