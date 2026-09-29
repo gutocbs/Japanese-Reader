@@ -23,6 +23,7 @@ export function DocumentMetadataPage({ documentId }: DocumentMetadataPageProps) 
   const [document, setDocument] = useState<Document | null>(null);
   const [description, setDescription] = useState('');
   const [tags, setTags] = useState<DocumentTag[]>([]);
+  const [catalog, setCatalog] = useState<DocumentTag[]>([]);
   const [newTagName, setNewTagName] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -34,10 +35,11 @@ export function DocumentMetadataPage({ documentId }: DocumentMetadataPageProps) 
     setIsLoading(true);
     setLoadError(false);
     try {
-      const loaded = await client.get(documentId);
+      const [loaded, loadedCatalog] = await Promise.all([client.get(documentId), client.listTags?.() ?? Promise.resolve([])]);
       setDocument(loaded);
       setDescription(loaded.description ?? '');
       setTags(loaded.tags);
+      setCatalog(loadedCatalog);
       queryClient.setQueryData(documentKeys.detail(documentId), loaded);
     } catch {
       setLoadError(true);
@@ -81,7 +83,7 @@ export function DocumentMetadataPage({ documentId }: DocumentMetadataPageProps) 
       return;
     }
     setTags((current) => {
-      const tag = canonicalTag([], name);
+      const tag = canonicalTag(catalog, name);
       return [...current, tag];
     });
     setNewTagName('');

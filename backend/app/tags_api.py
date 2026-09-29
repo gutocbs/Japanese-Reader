@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from backend.app.documents.api import DocumentServiceDependency, DocumentTagModel
 
@@ -7,6 +7,12 @@ router = APIRouter(prefix="/tags", tags=["tags"])
 
 class RenameTagRequest(BaseModel):
     name: str
+
+    @field_validator("name")
+    @classmethod
+    def non_blank(cls, value: str) -> str:
+        if not value.strip(): raise ValueError("Tag name cannot be empty")
+        return value.strip()
 
 @router.get("", response_model=list[DocumentTagModel])
 def list_tags(service: DocumentServiceDependency):
