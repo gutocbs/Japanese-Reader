@@ -164,7 +164,11 @@ class SqliteDocumentRepository:
 
 def _analysis_options_json(options: AnalysisOptions) -> str:
     return json.dumps(
-        {"splitMode": options.split_mode}, ensure_ascii=False, separators=(",", ":"),
+        {
+            "furiganaAlgorithmVersion": options.furigana_algorithm_version,
+            "splitMode": options.split_mode,
+        },
+        ensure_ascii=False, separators=(",", ":"),
         sort_keys=True,
     )
 
@@ -181,7 +185,10 @@ def _analysis_payload(analysis: DocumentAnalysis) -> str:
             "dictionaryVersion": analysis.metadata.dictionary_version,
             "splitMode": analysis.metadata.split_mode,
         },
-        "analysisOptions": {"splitMode": analysis.analysis_options.split_mode},
+        "analysisOptions": {
+            "furiganaAlgorithmVersion": analysis.analysis_options.furigana_algorithm_version,
+            "splitMode": analysis.analysis_options.split_mode,
+        },
         "blocks": [
             {
                 "startOffset": block.start_offset,
@@ -236,7 +243,10 @@ def _decode_analysis(payload: str) -> DocumentAnalysis:
             dictionary_version=metadata["dictionaryVersion"],
             split_mode=metadata["splitMode"],
         ),
-        analysis_options=AnalysisOptions(split_mode=options["splitMode"]),
+        analysis_options=AnalysisOptions(
+            split_mode=options["splitMode"],
+            furigana_algorithm_version=options.get("furiganaAlgorithmVersion", 1),
+        ),
         blocks=tuple(
             AnalysisBlock(
                 start_offset=block["startOffset"],

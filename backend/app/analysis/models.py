@@ -5,6 +5,9 @@ from uuid import UUID
 from backend.app.analysis.furigana import FuriganaSegment
 
 
+FURIGANA_ALGORITHM_VERSION = 2
+
+
 @dataclass(frozen=True)
 class RawToken:
     """Morphology derived from an unchanged slice of the original Python string."""
@@ -31,6 +34,7 @@ class AnalyzerMetadata:
 @dataclass(frozen=True)
 class AnalysisOptions:
     split_mode: str
+    furigana_algorithm_version: int = FURIGANA_ALGORITHM_VERSION
 
 
 @dataclass(frozen=True)
