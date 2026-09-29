@@ -77,6 +77,7 @@ export function DocumentLibraryPage() {
   const [renameError, setRenameError] = useState(false);
   const [deleting, setDeleting] = useState<Document | null>(null);
   const [deleteError, setDeleteError] = useState(false);
+  const [search, setSearch] = useState('');
   const deleteTriggerRef = useRef<HTMLButtonElement | null>(null);
 
   const documentsQuery = useQuery({
@@ -87,6 +88,11 @@ export function DocumentLibraryPage() {
     () => orderByLastRead(documentsQuery.data ?? []),
     [documentsQuery.data],
   );
+  const matchingDocuments = useMemo(() => {
+    const normalizedSearch = search.trim().toLocaleLowerCase();
+    if (normalizedSearch.length === 0) return documents;
+    return documents.filter((document) => document.title.toLocaleLowerCase().includes(normalizedSearch));
+  }, [documents, search]);
 
   const renameMutation = useMutation({
     mutationFn: ({ documentId, title }: { documentId: string; title: string }) => (
@@ -171,10 +177,20 @@ export function DocumentLibraryPage() {
           <h2>Nenhum documento na biblioteca.</h2>
           <p>Crie o primeiro documento para começar a leitura.</p>
         </div>
+      ) : matchingDocuments.length === 0 ? (
+        <>
+          <LibrarySearch search={search} onSearchChange={setSearch} />
+          <div className="library-empty">
+            <h2>Nenhum documento encontrado.</h2>
+            <p>Tente outro título ou limpe a pesquisa.</p>
+          </div>
+        </>
       ) : (
-        <ul className="document-list" aria-label="Documentos">
-          {documents.map((document) => (
-            <li key={document.id} className="document-row" aria-label={document.title || 'Sem título'}>
+        <>
+          <LibrarySearch search={search} onSearchChange={setSearch} />
+          <ul className="document-list" aria-label="Documentos">
+            {matchingDocuments.map((document) => (
+              <li key={document.id} className="document-row" aria-label={document.title || 'Sem título'}>
               <div className="document-row__summary">
                 <h2>
                   <a
@@ -269,9 +285,10 @@ export function DocumentLibraryPage() {
                   </button>
                 </div>
               )}
-            </li>
-          ))}
-        </ul>
+              </li>
+            ))}
+          </ul>
+        </>
       )}
 
       {deleting !== null && (
@@ -291,5 +308,35 @@ export function DocumentLibraryPage() {
         />
       )}
     </section>
+  );
+}
+
+function LibrarySearch({
+  search,
+  onSearchChange,
+}: {
+  search: string;
+  onSearchChange: (search: string) => void;
+}) {
+  return (
+    <div className="library-search">
+      <label className="library-search__label" htmlFor="document-search">Pesquisar documentos</label>
+      <div className="library-search__controls">
+        <input
+          id="document-search"
+          type="search"
+          value={search}
+          onChange={(event) => onSearchChange(event.target.value)}
+        />
+        <button
+          className="button button--quiet"
+          type="button"
+          disabled={search.length === 0}
+          onClick={() => onSearchChange('')}
+        >
+          Limpar pesquisa
+        </button>
+      </div>
+    </div>
   );
 }

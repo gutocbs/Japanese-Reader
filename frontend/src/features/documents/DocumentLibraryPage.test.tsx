@@ -31,6 +31,13 @@ const unreadDocument: Document = {
   lastReadAt: null,
 };
 
+const titledDocument: Document = {
+  ...firstDocument,
+  id: '00000000-0000-0000-0000-000000000004',
+  title: 'O SOL também nasce',
+  lastReadAt: '2026-09-28T12:00:00Z',
+};
+
 const analysis: Analysis = {
   documentId: firstDocument.id,
   documentRevision: 1,
@@ -104,6 +111,45 @@ describe('document library flows', () => {
     const titles = within(list).getAllByRole('heading', { level: 2 })
       .map((heading) => heading.textContent);
     expect(titles).toEqual(['こころ', '雪国', '未読']);
+  });
+
+  it('filters documents immediately by title without considering case', async () => {
+    const api = client({ list: vi.fn().mockResolvedValue([firstDocument, titledDocument, secondDocument]) });
+    render(<App client={api} initialPath="/" />);
+
+    const search = await screen.findByRole('searchbox', { name: 'Pesquisar documentos' });
+    fireEvent.change(search, { target: { value: 'sol' } });
+
+    expect(screen.getByRole('listitem', { name: titledDocument.title })).toBeInTheDocument();
+    expect(screen.queryByRole('listitem', { name: firstDocument.title })).not.toBeInTheDocument();
+    expect(screen.queryByRole('listitem', { name: secondDocument.title })).not.toBeInTheDocument();
+  });
+
+  it('clears the document search and restores the ordered library', async () => {
+    const api = client({ list: vi.fn().mockResolvedValue([firstDocument, titledDocument, secondDocument]) });
+    render(<App client={api} initialPath="/" />);
+
+    const search = await screen.findByRole('searchbox', { name: 'Pesquisar documentos' });
+    fireEvent.change(search, { target: { value: 'sol' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Limpar pesquisa' }));
+
+    expect(search).toHaveValue('');
+    const list = screen.getByRole('list', { name: 'Documentos' });
+    expect(within(list).getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent))
+      .toEqual([titledDocument.title, secondDocument.title, firstDocument.title]);
+  });
+
+  it('shows a no-match state instead of the empty-library state', async () => {
+    const api = client({ list: vi.fn().mockResolvedValue([firstDocument]) });
+    render(<App client={api} initialPath="/" />);
+
+    fireEvent.change(await screen.findByRole('searchbox', { name: 'Pesquisar documentos' }), {
+      target: { value: 'inexistente' },
+    });
+
+    expect(screen.getByText('Nenhum documento encontrado.')).toBeInTheDocument();
+    expect(screen.queryByText('Nenhum documento na biblioteca.')).not.toBeInTheDocument();
+    expect(screen.queryByRole('list', { name: 'Documentos' })).not.toBeInTheDocument();
   });
 
   it('navigates to creation and preserves the draft when returning through history', async () => {
