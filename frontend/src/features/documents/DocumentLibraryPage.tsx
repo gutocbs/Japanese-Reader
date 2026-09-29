@@ -72,6 +72,10 @@ function orderDocuments(
       ? leftValue.localeCompare(rightValue as string)
       : leftValue - (rightValue as number);
     if (comparison !== 0) return direction === 'asc' ? comparison : -comparison;
+    if (field === 'lastReadAt' && direction === 'desc') {
+      const updatedComparison = Date.parse(right.updatedAt) - Date.parse(left.updatedAt);
+      if (updatedComparison !== 0) return updatedComparison;
+    }
     return left.id.localeCompare(right.id);
   });
 }

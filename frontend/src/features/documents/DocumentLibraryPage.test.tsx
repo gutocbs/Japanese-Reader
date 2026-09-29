@@ -192,6 +192,27 @@ describe('document library flows', () => {
     expect(libraryTitles()).toEqual(['Beta', 'Alfa', 'Gama']);
   });
 
+  it('preserves updated-date descending as the default last-read tie-breaker', async () => {
+    const equallyReadDocuments = [
+      {
+        ...orderingDocuments[0],
+        id: '00000000-0000-0000-0000-000000000005',
+        title: 'Atualizado antes',
+        updatedAt: '2026-09-28T12:00:00Z',
+      },
+      {
+        ...orderingDocuments[0],
+        id: '00000000-0000-0000-0000-000000000040',
+        title: 'Atualizado depois',
+        updatedAt: '2026-09-29T12:00:00Z',
+      },
+    ];
+    render(<App client={client({ list: vi.fn().mockResolvedValue(equallyReadDocuments) })} initialPath="/" />);
+
+    await screen.findByRole('list', { name: 'Documentos' });
+    expect(libraryTitles()).toEqual(['Atualizado depois', 'Atualizado antes']);
+  });
+
   it('uses document id as a deterministic tie-breaker for equal ordering values', async () => {
     const tiedDocuments = [
       { ...orderingDocuments[0], id: '00000000-0000-0000-0000-000000000040', title: 'Segundo' },
