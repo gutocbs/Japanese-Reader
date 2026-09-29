@@ -102,13 +102,17 @@ a {
 }
 
 .reader-layout {
-  position: relative;
-  width: min(100%, var(--reader-text-width));
+  display: grid;
+  grid-template-columns: 3rem minmax(0, var(--reader-text-width)) 3rem;
+  column-gap: var(--space-4);
+  width: min(100%, calc(var(--reader-text-width) + var(--space-16) + var(--space-16)));
   margin-inline: auto;
 }
 
 .reader-page {
+  grid-column: 2;
   border-left: 1px solid var(--color-reader-divider);
+  padding-left: var(--space-8);
 }
 
 .page-heading,
@@ -316,9 +320,10 @@ a {
 }
 
 .reader-rail {
-  position: absolute;
-  top: calc(4rem + var(--space-12));
-  right: calc(100% + var(--space-4));
+  position: sticky;
+  top: var(--space-12);
+  align-self: start;
+  grid-column: 1;
   z-index: 2;
   width: 3rem;
   padding: var(--space-2);
@@ -333,6 +338,7 @@ a {
   place-items: center;
   width: 2.25rem;
   height: 2.25rem;
+  box-sizing: border-box;
   border: 1px solid transparent;
   border-radius: var(--radius-small);
   background: transparent;
@@ -341,6 +347,7 @@ a {
   font-size: 1.2rem;
   font-weight: 650;
   line-height: 1;
+  text-align: center;
   text-decoration: none;
   cursor: pointer;
 }
@@ -360,10 +367,12 @@ a {
   place-items: center;
   width: 2.25rem;
   height: 2.25rem;
+  box-sizing: border-box;
   color: var(--color-text-muted);
   font-size: 0.6875rem;
   font-variant-numeric: tabular-nums;
   text-align: center;
+  line-height: 1;
 }
 
 .reader-rail__divider {
