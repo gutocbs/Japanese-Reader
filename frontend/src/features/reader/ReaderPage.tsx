@@ -289,63 +289,65 @@ export function ReaderPage({ documentId }: ReaderPageProps) {
   }
 
   return (
-    <article className="reader-page" aria-labelledby="reader-title">
-      <header className="reader-heading">
-        <h1 id="reader-title">{snapshot.document.title || 'Sem título'}</h1>
-      </header>
+    <div className="reader-layout">
       <aside className="reader-rail" aria-label="Ações do leitor">
-          <a
-            className="reader-rail__button"
-            href="/"
-            aria-label="Voltar à biblioteca"
-            title="Voltar à biblioteca"
-            onClick={(event) => {
-              event.preventDefault();
-              navigate('/');
-            }}
-          >
-            <span aria-hidden="true">←</span>
-          </a>
-          <a
-            className="reader-rail__button"
-            href={`/documents/${encodeURIComponent(documentId)}/edit`}
-            aria-label="Editar documento"
-            title="Editar documento"
-            onClick={(event) => {
-              event.preventDefault();
-              navigate(`/documents/${encodeURIComponent(documentId)}/edit`);
-            }}
-          >
-            <span aria-hidden="true">✎</span>
-          </a>
-          <ReaderMenu
-            preferences={readerPreferences}
-            onPreferencesChange={updateReaderPreferences}
-          />
+        <a
+          className="reader-rail__button"
+          href="/"
+          aria-label="Voltar à biblioteca"
+          title="Voltar à biblioteca"
+          onClick={(event) => {
+            event.preventDefault();
+            navigate('/');
+          }}
+        >
+          <span aria-hidden="true">←</span>
+        </a>
+        <a
+          className="reader-rail__button"
+          href={`/documents/${encodeURIComponent(documentId)}/edit`}
+          aria-label="Editar documento"
+          title="Editar documento"
+          onClick={(event) => {
+            event.preventDefault();
+            navigate(`/documents/${encodeURIComponent(documentId)}/edit`);
+          }}
+        >
+          <span aria-hidden="true">✎</span>
+        </a>
+        <ReaderMenu
+          preferences={readerPreferences}
+          onPreferencesChange={updateReaderPreferences}
+        />
       </aside>
-      <DocumentText
-        content={snapshot.document.content}
-        analysis={snapshot.analysis}
-        selectedKeys={selectedKeys}
-        onToggleVocabulary={areSelectionsHydrated ? toggleVocabulary : undefined}
-        showFurigana={readerPreferences.showFurigana}
-        fontSizePx={readerPreferences.fontSizePx}
-        furiganaVisibilityByKey={displayPreferences}
-        onSetFuriganaVisibility={
-          areDisplayPreferencesHydrated ? setFuriganaVisibility : undefined
-        }
-        onSaveReadingOverride={saveReadingOverride}
-        onRemoveReadingOverride={removeReadingOverride}
-      />
-      {persistenceError && (
-        <p className="reader-persistence-status" role="status" aria-live="polite" aria-atomic="true">
-          {persistenceError}
-        </p>
-      )}
-      <ReviewList
-        entries={orderedVocabularyEntries(snapshot.analysis, selectedKeys)}
-        onRemove={areSelectionsHydrated ? toggleVocabulary : () => undefined}
-      />
-    </article>
+      <article className="reader-page" aria-labelledby="reader-title">
+        <header className="reader-heading">
+          <h1 id="reader-title">{snapshot.document.title || 'Sem título'}</h1>
+        </header>
+        <DocumentText
+          content={snapshot.document.content}
+          analysis={snapshot.analysis}
+          selectedKeys={selectedKeys}
+          onToggleVocabulary={areSelectionsHydrated ? toggleVocabulary : undefined}
+          showFurigana={readerPreferences.showFurigana}
+          fontSizePx={readerPreferences.fontSizePx}
+          furiganaVisibilityByKey={displayPreferences}
+          onSetFuriganaVisibility={
+            areDisplayPreferencesHydrated ? setFuriganaVisibility : undefined
+          }
+          onSaveReadingOverride={saveReadingOverride}
+          onRemoveReadingOverride={removeReadingOverride}
+        />
+        {persistenceError && (
+          <p className="reader-persistence-status" role="status" aria-live="polite" aria-atomic="true">
+            {persistenceError}
+          </p>
+        )}
+        <ReviewList
+          entries={orderedVocabularyEntries(snapshot.analysis, selectedKeys)}
+          onRemove={areSelectionsHydrated ? toggleVocabulary : () => undefined}
+        />
+      </article>
+    </div>
   );
 }

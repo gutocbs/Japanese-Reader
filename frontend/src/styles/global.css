@@ -101,9 +101,14 @@ a {
   padding-left: var(--space-8);
 }
 
+.reader-layout {
+  position: relative;
+  width: min(100%, var(--reader-text-width));
+  margin-inline: auto;
+}
+
 .reader-page {
   border-left: 1px solid var(--color-reader-divider);
-  padding-left: var(--space-8);
 }
 
 .page-heading,
@@ -311,9 +316,9 @@ a {
 }
 
 .reader-rail {
-  position: fixed;
+  position: absolute;
   top: calc(4rem + var(--space-12));
-  left: max(var(--space-4), calc((100vw - var(--reader-text-width)) / 2 - var(--space-16)));
+  right: calc(100% + var(--space-4));
   z-index: 2;
   width: 3rem;
   padding: var(--space-2);
@@ -327,7 +332,7 @@ a {
   display: inline-grid;
   place-items: center;
   width: 2.25rem;
-  min-height: 2.25rem;
+  height: 2.25rem;
   border: 1px solid transparent;
   border-radius: var(--radius-small);
   background: transparent;
@@ -351,7 +356,10 @@ a {
 }
 
 .reader-rail__font-size {
-  min-width: 2.25rem;
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
   color: var(--color-text-muted);
   font-size: 0.6875rem;
   font-variant-numeric: tabular-nums;
@@ -359,9 +367,12 @@ a {
 }
 
 .reader-rail__divider {
+  display: block;
+  box-sizing: border-box;
   width: 1.25rem;
   border-top: 1px solid var(--color-reader-divider);
   margin-block: var(--space-1);
+  margin-inline: auto;
 }
 
 .appearance-menu {
