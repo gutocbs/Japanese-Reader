@@ -63,12 +63,17 @@ export function createDocumentClient(fetcher: typeof fetch = globalThis.fetch) {
   const vocabularyPath = (id: string) => `${documentPath(id)}/vocabulary-selections`;
   const displayPreferencesPath = (id: string) => `${documentPath(id)}/vocabulary-display-preferences`;
   const readingOverridesPath = (id: string) => `${documentPath(id)}/reading-overrides`;
+  const tagPath = (name: string) => `/api/tags/${encodeURIComponent(name)}`;
   return {
     list: () => request<Document[]>('/api/documents', 'GET'),
     create: (data: CreateDocument) => request<Document>('/api/documents', 'POST', data),
     get: (id: string) => request<Document>(documentPath(id), 'GET'),
     update: (id: string, data: UpdateDocument) => request<Document>(documentPath(id), 'PUT', data),
     delete: (id: string) => request<void>(documentPath(id), 'DELETE'),
+    listTags: () => request<DocumentTag[]>('/api/tags', 'GET'),
+    createTag: (tag: DocumentTag) => request<DocumentTag>('/api/tags', 'POST', tag),
+    renameTag: (name: string, nextName: string) => request<void>(tagPath(name), 'PUT', { name: nextName }),
+    deleteTag: (name: string) => request<void>(tagPath(name), 'DELETE'),
     analyze: (id: string) => request<Analysis>(`${documentPath(id)}/analysis`, 'POST'),
     listVocabularySelections: async (id: string) => (
       await request<{ selections: VocabularySelection[] }>(vocabularyPath(id), 'GET')
@@ -91,5 +96,7 @@ export function createDocumentClient(fetcher: typeof fetch = globalThis.fetch) {
   };
 }
 
-export type DocumentClient = ReturnType<typeof createDocumentClient>;
+type TagClientMethods = 'listTags' | 'createTag' | 'renameTag' | 'deleteTag';
+export type DocumentClient = Omit<ReturnType<typeof createDocumentClient>, TagClientMethods>
+  & Partial<Pick<ReturnType<typeof createDocumentClient>, TagClientMethods>>;
 export const documentClient = createDocumentClient();

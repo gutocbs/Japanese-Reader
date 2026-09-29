@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useDocumentClient, useRouter } from '../../app/providers';
 import type { Document, DocumentTag } from '../../shared/api/client';
 import { documentKeys } from './queries';
-import { canonicalTag, loadCatalogTags, mergeCatalogTags } from './tags';
+import { canonicalTag } from './tags';
 
 interface DocumentMetadataPageProps {
   documentId: string;
@@ -38,7 +38,6 @@ export function DocumentMetadataPage({ documentId }: DocumentMetadataPageProps) 
       setDocument(loaded);
       setDescription(loaded.description ?? '');
       setTags(loaded.tags);
-      mergeCatalogTags(loadCatalogTags(), loaded.tags);
       queryClient.setQueryData(documentKeys.detail(documentId), loaded);
     } catch {
       setLoadError(true);
@@ -82,8 +81,7 @@ export function DocumentMetadataPage({ documentId }: DocumentMetadataPageProps) 
       return;
     }
     setTags((current) => {
-      const tag = canonicalTag(loadCatalogTags(), name);
-      mergeCatalogTags(loadCatalogTags(), [tag]);
+      const tag = canonicalTag([], name);
       return [...current, tag];
     });
     setNewTagName('');

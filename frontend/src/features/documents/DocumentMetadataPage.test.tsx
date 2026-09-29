@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { Analysis, Document, DocumentClient } from '../../shared/api/client';
 import { App } from '../../app/App';
+import { tagColorForName } from './tags';
 
 const document: Document = {
   id: '00000000-0000-0000-0000-000000000001',
@@ -63,7 +64,7 @@ describe('document metadata route', () => {
 
     await waitFor(() => expect(update).toHaveBeenCalledWith(document.id, {
       description: 'Notas revistas',
-      tags: [{ name: 'Clássico', color: '#7C3AED' }, { name: 'N1', color: '#7C3AED' }],
+      tags: [{ name: 'Clássico', color: '#7C3AED' }, { name: 'N1', color: tagColorForName('N1') }],
     }));
     expect(await screen.findByText('Metadados salvos.')).toBeInTheDocument();
   });

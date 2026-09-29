@@ -129,6 +129,38 @@ class SqliteDocumentRepository:
             )
         return documents
 
+    def list_tags(self) -> tuple[DocumentTag, ...]:
+        with self._database.unit_of_work() as connection:
+            rows = connection.execute("SELECT name, color FROM tags ORDER BY name COLLATE NOCASE").fetchall()
+        return tuple(DocumentTag(name=row["name"], color=row["color"]) for row in rows)
+
+    def create_tag(self, tag: DocumentTag) -> DocumentTag:
+        with self._database.unit_of_work(write=True) as connection:
+            try: connection.execute("INSERT INTO tags(name, color) VALUES (?, ?)", (tag.name, tag.color))
+            except Exception as error: raise ValueError("Tag already exists") from error
+        return tag
+
+    def rename_tag(self, name: str, replacement: str) -> bool:
+        with self._database.unit_of_work(write=True) as connection:
+            row = connection.execute("SELECT color FROM tags WHERE name = ?", (name,)).fetchone()
+            if row is None: return False
+            if name.casefold() == replacement.casefold():
+                connection.execute("UPDATE tags SET name = ? WHERE name = ?", (replacement, name))
+                return True
+            if name.casefold() != replacement.casefold() and connection.execute("SELECT 1 FROM tags WHERE name = ?", (replacement,)).fetchone(): raise ValueError("Tag already exists")
+            connection.execute("INSERT INTO tags(name, color) VALUES (?, ?)", (replacement, row["color"]))
+            connection.execute("UPDATE document_tags SET tag_name = ? WHERE tag_name = ?", (replacement, name))
+            connection.execute("DELETE FROM tags WHERE name = ?", (name,))
+        return True
+
+    def delete_tag(self, name: str) -> bool:
+        with self._database.unit_of_work(write=True) as connection:
+            row = connection.execute("SELECT 1 FROM tags WHERE name = ?", (name,)).fetchone()
+            if row is None: return False
+            connection.execute("DELETE FROM document_tags WHERE tag_name = ?", (name,))
+            connection.execute("DELETE FROM tags WHERE name = ?", (name,))
+        return True
+
     @contextmanager
     def revision_guard(self, document_id: UUID) -> Iterator[None]:
         with self._revision_locks_guard:

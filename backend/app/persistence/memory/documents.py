@@ -55,6 +55,35 @@ class InMemoryDocumentRepository:
         with self._lock:
             return tuple(self._documents.values())
 
+    def list_tags(self) -> tuple[DocumentTag, ...]:
+        with self._lock:
+            return tuple(self._tags.values())
+
+    def create_tag(self, tag: DocumentTag) -> DocumentTag:
+        with self._lock:
+            key = tag.name.casefold()
+            if key in self._tags:
+                raise ValueError("Tag already exists")
+            self._tags[key] = tag
+            return tag
+
+    def rename_tag(self, name: str, replacement: str) -> bool:
+        with self._lock:
+            old_key, new_key = name.casefold(), replacement.casefold()
+            tag = self._tags.get(old_key)
+            if tag is None or (new_key != old_key and new_key in self._tags): return False
+            renamed = DocumentTag(replacement, tag.color)
+            self._tags.pop(old_key); self._tags[new_key] = renamed
+            self._documents = {identifier: replace(document, tags=tuple(renamed if item.name.casefold() == old_key else item for item in document.tags)) for identifier, document in self._documents.items()}
+            return True
+
+    def delete_tag(self, name: str) -> bool:
+        with self._lock:
+            key = name.casefold()
+            if self._tags.pop(key, None) is None: return False
+            self._documents = {identifier: replace(document, tags=tuple(item for item in document.tags if item.name.casefold() != key)) for identifier, document in self._documents.items()}
+            return True
+
     @contextmanager
     def revision_guard(self, document_id: UUID) -> Iterator[None]:
         with self._lock:

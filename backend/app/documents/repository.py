@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Protocol
 from uuid import UUID
 
-from backend.app.documents.models import CreateDocument, Document, UpdateDocument
+from backend.app.documents.models import CreateDocument, Document, DocumentTag, UpdateDocument
 
 
 class DocumentRepository(Protocol):
@@ -14,6 +14,14 @@ class DocumentRepository(Protocol):
     def get(self, document_id: UUID) -> Document | None: ...
 
     def list(self) -> tuple[Document, ...]: ...
+
+    def list_tags(self) -> tuple[DocumentTag, ...]: ...
+
+    def create_tag(self, tag: DocumentTag) -> DocumentTag: ...
+
+    def rename_tag(self, name: str, replacement: str) -> bool: ...
+
+    def delete_tag(self, name: str) -> bool: ...
 
     def revision_guard(self, document_id: UUID) -> AbstractContextManager[None]: ...
 

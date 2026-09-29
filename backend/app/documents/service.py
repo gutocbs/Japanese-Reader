@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from uuid import UUID
 
-from backend.app.documents.models import CreateDocument, Document, UpdateDocument
+from backend.app.documents.models import CreateDocument, Document, DocumentTag, UpdateDocument
 from backend.app.documents.repository import DocumentRepository
 from backend.app.analysis.repository import AnalysisRepository
 from backend.app.readings.repository import ReadingOverrideRepository
@@ -58,6 +58,11 @@ class DocumentService:
 
     def list(self) -> tuple[Document, ...]:
         return self._repository.list()
+
+    def list_tags(self) -> tuple[DocumentTag, ...]: return self._repository.list_tags()
+    def create_tag(self, tag: DocumentTag) -> DocumentTag: return self._repository.create_tag(tag)
+    def rename_tag(self, name: str, replacement: str) -> bool: return self._repository.rename_tag(name, replacement)
+    def delete_tag(self, name: str) -> bool: return self._repository.delete_tag(name)
 
     def update(
         self,

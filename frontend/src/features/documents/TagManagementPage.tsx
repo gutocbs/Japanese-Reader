@@ -1,20 +1,17 @@
-import { type CSSProperties, useEffect, useState } from 'react';
+import { type CSSProperties, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useDocumentClient, useRouter } from '../../app/providers';
-import type { Document, DocumentTag } from '../../shared/api/client';
+import type { DocumentTag } from '../../shared/api/client';
 import { documentKeys } from './queries';
-import { addCatalogTag, loadCatalogTags, mergeCatalogTags, removeCatalogTag, renameCatalogTag, saveCatalogTags } from './tags';
-
-function hasTag(document: Document, tag: DocumentTag) {
-  return document.tags.some((item) => item.name.localeCompare(tag.name, undefined, { sensitivity: 'accent' }) === 0);
-}
+import { tagColorForName } from './tags';
 
 export function TagManagementPage() {
   const client = useDocumentClient();
   const { navigate } = useRouter();
   const queryClient = useQueryClient();
   const documentsQuery = useQuery({ queryKey: documentKeys.list(), queryFn: () => client.list() });
-  const [tags, setTags] = useState<DocumentTag[]>(() => loadCatalogTags());
+  const tagsQuery = useQuery({ queryKey: ['tags'], queryFn: () => client.listTags?.() ?? Promise.resolve([]) });
+  const tags = tagsQuery.data ?? [];
   const [newName, setNewName] = useState('');
   const [renaming, setRenaming] = useState<DocumentTag | null>(null);
   const [renameName, setRenameName] = useState('');
@@ -22,26 +19,14 @@ export function TagManagementPage() {
   const [error, setError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
-  useEffect(() => {
-    if (documentsQuery.data !== undefined) {
-      setTags((current) => mergeCatalogTags(current, documentsQuery.data.flatMap((document) => document.tags)));
-    }
-  }, [documentsQuery.data]);
-
-  const updateAffectedDocuments = async (tag: DocumentTag, transform: (tags: DocumentTag[]) => DocumentTag[]) => {
-    const affected = (documentsQuery.data ?? []).filter((document) => hasTag(document, tag));
-    const updated = await Promise.all(affected.map(async (document) => client.update(document.id, { tags: transform(document.tags) })));
-    queryClient.setQueryData<Document[]>(documentKeys.list(), (current = []) => current.map((document) => (
-      updated.find((item) => item.id === document.id) ?? document
-    )));
-    for (const document of updated) queryClient.setQueryData(documentKeys.detail(document.id), document);
-  };
-
-  const createTag = () => {
+  const refresh = async () => { await Promise.all([queryClient.invalidateQueries({ queryKey: ['tags'] }), queryClient.invalidateQueries({ queryKey: documentKeys.list() })]); };
+  const createTag = async () => {
     try {
-      setTags((current) => addCatalogTag(current, newName));
+      if (client.createTag === undefined) throw new Error('Tag API unavailable');
+      await client.createTag({ name: newName.trim(), color: tagColorForName(newName) });
       setNewName('');
       setError('');
+      await refresh();
     } catch (caught) {
       setError(caught instanceof Error ? 'Essa etiqueta já existe.' : 'Não foi possível criar a etiqueta.');
     }
@@ -50,19 +35,14 @@ export function TagManagementPage() {
   const saveRename = async () => {
     if (renaming === null || isSaving) return;
     try {
-      const nextTags = renameCatalogTag(tags, renaming.name, renameName);
       setIsSaving(true);
-      await updateAffectedDocuments(renaming, (current) => current.map((tag) => (
-        tag.name.localeCompare(renaming.name, undefined, { sensitivity: 'accent' }) === 0
-          ? { ...tag, name: renameName.trim() }
-          : tag
-      )));
-      setTags(nextTags);
+      if (client.renameTag === undefined) throw new Error('Tag API unavailable');
+      await client.renameTag(renaming.name, renameName.trim());
+      await refresh();
       setRenaming(null);
       setError('');
     } catch (caught) {
-      saveCatalogTags(tags);
-      setError(caught instanceof Error && caught.message === 'Tag already exists' ? 'Essa etiqueta já existe.' : 'Não foi possível salvar a etiqueta.');
+      setError('Não foi possível salvar a etiqueta.');
     } finally {
       setIsSaving(false);
     }
@@ -72,29 +52,27 @@ export function TagManagementPage() {
     if (removing === null || isSaving) return;
     try {
       setIsSaving(true);
-      await updateAffectedDocuments(removing, (current) => current.filter((tag) => (
-        tag.name.localeCompare(removing.name, undefined, { sensitivity: 'accent' }) !== 0
-      )));
-      setTags((current) => removeCatalogTag(current, removing.name));
+      if (client.deleteTag === undefined) throw new Error('Tag API unavailable');
+      await client.deleteTag(removing.name);
+      await refresh();
       setRemoving(null);
       setError('');
     } catch {
-      saveCatalogTags(tags);
       setError('Não foi possível remover a etiqueta.');
     } finally {
       setIsSaving(false);
     }
   };
 
-  if (documentsQuery.isPending) return <p className="page-state" role="status">Carregando etiquetas…</p>;
-  if (documentsQuery.isError) return <section className="page-state" role="alert"><h1>Etiquetas indisponíveis</h1><button className="button button--primary" type="button" onClick={() => void documentsQuery.refetch()}>Tentar novamente</button></section>;
+  if (documentsQuery.isPending || tagsQuery.isPending) return <p className="page-state" role="status">Carregando etiquetas…</p>;
+  if (documentsQuery.isError || tagsQuery.isError) return <section className="page-state" role="alert"><h1>Etiquetas indisponíveis</h1><button className="button button--primary" type="button" onClick={() => void tagsQuery.refetch()}>Tentar novamente</button></section>;
 
   return (
     <section className="editor-page tag-management-page" aria-labelledby="tags-title">
       <header className="page-heading"><p className="eyebrow">Biblioteca</p><h1 id="tags-title">Etiquetas</h1><p>Crie, renomeie e remova etiquetas compartilhadas pelos seus documentos.</p></header>
       <div className="metadata-tag-form">
         <label><span className="sr-only">Nova etiqueta</span><input aria-label="Nova etiqueta" value={newName} disabled={isSaving} onChange={(event) => setNewName(event.target.value)} /></label>
-        <button className="button button--secondary" type="button" disabled={newName.trim().length === 0 || isSaving} onClick={createTag}>Criar etiqueta</button>
+        <button className="button button--secondary" type="button" disabled={newName.trim().length === 0 || isSaving} onClick={() => void createTag()}>Criar etiqueta</button>
       </div>
       {error && <p className="field-error" role="alert">{error}</p>}
       <ul className="tag-management-list" aria-label="Etiquetas cadastradas">

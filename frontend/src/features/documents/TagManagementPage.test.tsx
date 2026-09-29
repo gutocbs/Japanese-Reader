@@ -14,6 +14,8 @@ function client(overrides: Partial<DocumentClient> = {}): DocumentClient {
     list: vi.fn().mockResolvedValue([document]), create: vi.fn().mockResolvedValue(document),
     get: vi.fn().mockResolvedValue(document), update: vi.fn().mockResolvedValue(document),
     delete: vi.fn().mockResolvedValue(undefined), analyze: vi.fn().mockResolvedValue({} as Analysis),
+    listTags: vi.fn().mockResolvedValue(document.tags), createTag: vi.fn().mockResolvedValue({ name: 'Gramática', color: '#0F766E' }),
+    renameTag: vi.fn().mockResolvedValue(undefined), deleteTag: vi.fn().mockResolvedValue(undefined),
     listVocabularySelections: vi.fn().mockResolvedValue([]), replaceVocabularySelections: vi.fn().mockResolvedValue(undefined),
     listVocabularyDisplayPreferences: vi.fn().mockResolvedValue([]), setVocabularyDisplayPreference: vi.fn().mockResolvedValue(undefined),
     setReadingOverride: vi.fn(), deleteReadingOverride: vi.fn(), ...overrides,
@@ -23,25 +25,25 @@ function client(overrides: Partial<DocumentClient> = {}): DocumentClient {
 describe('tag management route', () => {
   it('creates unique controlled tags, renames assigned tags, and confirms removal', async () => {
     localStorage.clear();
-    const update = vi.fn().mockImplementation(async (_id, data) => ({ ...document, ...data }));
-    render(<App client={client({ update })} initialPath="/tags" />);
+    const createTag = vi.fn().mockResolvedValue({ name: 'Gramática', color: '#0F766E' });
+    const renameTag = vi.fn().mockResolvedValue(undefined);
+    const deleteTag = vi.fn().mockResolvedValue(undefined);
+    render(<App client={client({ createTag, renameTag, deleteTag })} initialPath="/tags" />);
 
     expect(await screen.findByRole('heading', { name: 'Etiquetas' })).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Nova etiqueta'), { target: { value: 'Gramática' } });
     fireEvent.click(screen.getByRole('button', { name: 'Criar etiqueta' }));
-    expect(screen.getByText('Gramática')).toBeInTheDocument();
+    await waitFor(() => expect(createTag).toHaveBeenCalledWith({ name: 'Gramática', color: expect.any(String) }));
 
     fireEvent.click(screen.getByRole('button', { name: 'Renomear etiqueta Clássico' }));
     fireEvent.change(screen.getByLabelText('Novo nome para Clássico'), { target: { value: 'Literatura' } });
     fireEvent.click(screen.getByRole('button', { name: 'Salvar etiqueta' }));
-    await waitFor(() => expect(update).toHaveBeenCalledWith(document.id, {
-      tags: [{ name: 'Literatura', color: '#7C3AED' }],
-    }));
+    await waitFor(() => expect(renameTag).toHaveBeenCalledWith('Clássico', 'Literatura'));
 
-    fireEvent.click(screen.getByRole('button', { name: 'Remover etiqueta Literatura' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Remover etiqueta Clássico' }));
     expect(screen.getByRole('dialog', { name: 'Remover etiqueta' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Remover etiqueta definitivamente' }));
-    await waitFor(() => expect(update).toHaveBeenLastCalledWith(document.id, { tags: [] }));
+    await waitFor(() => expect(deleteTag).toHaveBeenCalledWith('Clássico'));
   });
 
   it('renders persistent colored tag chips below document titles in the library', async () => {
