@@ -248,16 +248,21 @@ describe('document library flows', () => {
     expect(libraryTitles()).toEqual(['Primeiro', 'Segundo']);
   });
 
-  it('filters documents immediately by title without considering case', async () => {
-    const api = client({ list: vi.fn().mockResolvedValue([firstDocument, titledDocument, secondDocument]) });
+  it('filters documents by title or tag name without considering case, never by content', async () => {
+    const taggedDocument = { ...secondDocument, tags: [{ name: 'Clássico', color: '#657d75' }] };
+    const contentOnlyMatch = { ...firstDocument, title: 'Sem coincidência', content: 'Um texto sobre clássico.' };
+    const api = client({ list: vi.fn().mockResolvedValue([taggedDocument, contentOnlyMatch, titledDocument]) });
     render(<App client={api} initialPath="/" />);
 
     const search = await screen.findByRole('searchbox', { name: 'Pesquisar documentos' });
-    fireEvent.change(search, { target: { value: 'sol' } });
-
+    fireEvent.change(search, { target: { value: 'SOL' } });
     expect(screen.getByRole('listitem', { name: titledDocument.title })).toBeInTheDocument();
-    expect(screen.queryByRole('listitem', { name: firstDocument.title })).not.toBeInTheDocument();
-    expect(screen.queryByRole('listitem', { name: secondDocument.title })).not.toBeInTheDocument();
+
+    fireEvent.change(search, { target: { value: 'clÁssico' } });
+
+    expect(screen.getByRole('listitem', { name: taggedDocument.title })).toBeInTheDocument();
+    expect(screen.queryByRole('listitem', { name: contentOnlyMatch.title })).not.toBeInTheDocument();
+    expect(screen.queryByRole('listitem', { name: titledDocument.title })).not.toBeInTheDocument();
   });
 
   it('clears the document search and restores the ordered library', async () => {
@@ -279,6 +284,7 @@ describe('document library flows', () => {
 
     const firstRow = await screen.findByRole('listitem', { name: firstDocument.title });
     fireEvent.click(within(firstRow).getByRole('button', { name: 'Adicionar aos favoritos' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir filtros' }));
     fireEvent.click(screen.getByRole('checkbox', { name: 'Somente favoritos' }));
 
     expect(screen.getByRole('listitem', { name: firstDocument.title })).toBeInTheDocument();
@@ -289,6 +295,7 @@ describe('document library flows', () => {
     render(<App client={client({ list: vi.fn().mockResolvedValue(orderingDocuments) })} initialPath="/" />);
 
     await screen.findByRole('list', { name: 'Documentos' });
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir filtros' }));
     fireEvent.change(screen.getByLabelText('Data de criação a partir de'), { target: { value: '2026-09-25' } });
     fireEvent.change(screen.getByLabelText('Data de criação até'), { target: { value: '2026-09-25' } });
 
@@ -306,6 +313,7 @@ describe('document library flows', () => {
     const recentRow = await screen.findByRole('listitem', { name: 'Diário recente' });
     fireEvent.click(within(recentRow).getByRole('button', { name: 'Adicionar aos favoritos' }));
     fireEvent.change(screen.getByRole('searchbox', { name: 'Pesquisar documentos' }), { target: { value: 'diário' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir filtros' }));
     fireEvent.click(screen.getByRole('checkbox', { name: 'Somente favoritos' }));
     fireEvent.change(screen.getByLabelText('Data de criação a partir de'), { target: { value: '2026-09-25' } });
 
@@ -318,6 +326,7 @@ describe('document library flows', () => {
     const firstRow = await screen.findByRole('listitem', { name: firstDocument.title });
     fireEvent.click(within(firstRow).getByRole('button', { name: 'Adicionar aos favoritos' }));
     fireEvent.change(screen.getByRole('searchbox', { name: 'Pesquisar documentos' }), { target: { value: '雪' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir filtros' }));
     fireEvent.click(screen.getByRole('checkbox', { name: 'Somente favoritos' }));
     fireEvent.change(screen.getByLabelText('Data de criação a partir de'), { target: { value: '2026-09-24' } });
     fireEvent.click(screen.getByRole('button', { name: 'Limpar filtros' }));
@@ -345,11 +354,37 @@ describe('document library flows', () => {
     render(<App client={client({ list: vi.fn().mockResolvedValue([firstDocument]) })} initialPath="/" />);
 
     await screen.findByRole('list', { name: 'Documentos' });
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir filtros' }));
     fireEvent.click(screen.getByRole('checkbox', { name: 'Somente favoritos' }));
 
     expect(screen.getByText('Nenhum documento encontrado.')).toBeInTheDocument();
     expect(screen.getByText('Ajuste ou limpe os filtros para ver outros documentos.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Limpar filtros' })).toBeInTheDocument();
+  });
+
+  it('keeps the compact filter popup closed until requested and closes it with Escape', async () => {
+    render(<App client={client({ list: vi.fn().mockResolvedValue([firstDocument]) })} initialPath="/" />);
+
+    const filterButton = await screen.findByRole('button', { name: 'Abrir filtros' });
+    expect(filterButton).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('group', { name: 'Filtros da biblioteca' })).not.toBeInTheDocument();
+
+    fireEvent.click(filterButton);
+    const popup = screen.getByRole('group', { name: 'Filtros da biblioteca' });
+    expect(filterButton).toHaveAttribute('aria-expanded', 'true');
+    fireEvent.keyDown(popup, { key: 'Escape' });
+
+    expect(screen.queryByRole('group', { name: 'Filtros da biblioteca' })).not.toBeInTheDocument();
+    expect(filterButton).toHaveFocus();
+  });
+
+  it('announces active library filters on the icon-led popup trigger', async () => {
+    render(<App client={client({ list: vi.fn().mockResolvedValue([firstDocument]) })} initialPath="/" />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Abrir filtros' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Somente favoritos' }));
+
+    expect(screen.getByRole('button', { name: 'Filtros ativos' })).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('navigates to creation and preserves the draft when returning through history', async () => {

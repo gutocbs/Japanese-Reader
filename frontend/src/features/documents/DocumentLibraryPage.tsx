@@ -14,6 +14,16 @@ type DocumentActionIconName = 'file-symlink' | 'file-pen' | 'trash';
 type DocumentOrderField = 'title' | 'createdAt' | 'updatedAt' | 'lastReadAt';
 type DocumentOrderDirection = 'asc' | 'desc';
 
+function FilterIcon() {
+  return (
+    <svg aria-hidden="true" fill="none" height="18" stroke="currentColor" strokeLinecap="round" strokeWidth="2" viewBox="0 0 24 24" width="18">
+      <path d="M4 6h16" />
+      <path d="M7 12h10" />
+      <path d="M10 18h4" />
+    </svg>
+  );
+}
+
 function DocumentActionIcon({ name }: { name: DocumentActionIconName }) {
   const paths = {
     'file-symlink': (
@@ -112,6 +122,7 @@ export function DocumentLibraryPage() {
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [createdAfter, setCreatedAfter] = useState('');
   const [createdBefore, setCreatedBefore] = useState('');
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const deleteTriggerRef = useRef<HTMLButtonElement | null>(null);
 
   const documentsQuery = useQuery({
@@ -126,7 +137,10 @@ export function DocumentLibraryPage() {
     const normalizedSearch = search.trim().toLocaleLowerCase();
     return documents.filter((document) => {
       const creationDate = document.createdAt.slice(0, 10);
-      return (normalizedSearch.length === 0 || document.title.toLocaleLowerCase().includes(normalizedSearch))
+      const matchesSearch = normalizedSearch.length === 0
+        || document.title.toLocaleLowerCase().includes(normalizedSearch)
+        || document.tags.some((tag) => tag.name.toLocaleLowerCase().includes(normalizedSearch));
+      return matchesSearch
         && (!favoritesOnly || favoriteDocumentIds.has(document.id))
         && (createdAfter.length === 0 || creationDate >= createdAfter)
         && (createdBefore.length === 0 || creationDate <= createdBefore);
@@ -250,6 +264,8 @@ export function DocumentLibraryPage() {
             onCreatedBeforeChange={setCreatedBefore}
             hasActiveFilters={hasActiveFilters}
             onClearFilters={clearFilters}
+            filtersOpen={filtersOpen}
+            onFiltersOpenChange={setFiltersOpen}
           />
           <div className="library-empty">
             <h2>Nenhum documento encontrado.</h2>
@@ -273,6 +289,8 @@ export function DocumentLibraryPage() {
             onCreatedBeforeChange={setCreatedBefore}
             hasActiveFilters={hasActiveFilters}
             onClearFilters={clearFilters}
+            filtersOpen={filtersOpen}
+            onFiltersOpenChange={setFiltersOpen}
           />
           <ul className="document-list" aria-label="Documentos">
             {matchingDocuments.map((document) => (
@@ -437,6 +455,8 @@ function LibrarySearch({
   onCreatedBeforeChange,
   hasActiveFilters,
   onClearFilters,
+  filtersOpen,
+  onFiltersOpenChange,
 }: {
   search: string;
   onSearchChange: (search: string) => void;
@@ -452,7 +472,16 @@ function LibrarySearch({
   onCreatedBeforeChange: (createdBefore: string) => void;
   hasActiveFilters: boolean;
   onClearFilters: () => void;
+  filtersOpen: boolean;
+  onFiltersOpenChange: (isOpen: boolean) => void;
 }) {
+  const filterButtonRef = useRef<HTMLButtonElement | null>(null);
+  const hasActivePopupFilters = favoritesOnly || createdAfter.length > 0 || createdBefore.length > 0;
+  const closeFilters = () => {
+    onFiltersOpenChange(false);
+    filterButtonRef.current?.focus();
+  };
+
   return (
     <div className="library-controls">
       <div className="library-search">
@@ -474,39 +503,67 @@ function LibrarySearch({
           </button>
         </div>
       </div>
-      <fieldset className="library-filters">
-        <legend>Filtros</legend>
-        <label>
-          <input
-            type="checkbox"
-            checked={favoritesOnly}
-            onChange={(event) => onFavoritesOnlyChange(event.target.checked)}
-          />
-          Somente favoritos
-        </label>
-        <label htmlFor="document-created-after">Data de criação a partir de</label>
-        <input
-          id="document-created-after"
-          type="date"
-          value={createdAfter}
-          onChange={(event) => onCreatedAfterChange(event.target.value)}
-        />
-        <label htmlFor="document-created-before">Data de criação até</label>
-        <input
-          id="document-created-before"
-          type="date"
-          value={createdBefore}
-          onChange={(event) => onCreatedBeforeChange(event.target.value)}
-        />
+      <div className="library-filter-menu">
         <button
-          className="button button--quiet"
+          ref={filterButtonRef}
+          className={`library-filter-trigger${hasActivePopupFilters ? ' library-filter-trigger--active' : ''}`}
           type="button"
-          disabled={!hasActiveFilters}
-          onClick={onClearFilters}
+          aria-controls="library-filter-panel"
+          aria-expanded={filtersOpen}
+          aria-label={hasActivePopupFilters ? 'Filtros ativos' : 'Abrir filtros'}
+          aria-pressed={hasActivePopupFilters}
+          title={hasActivePopupFilters ? 'Filtros ativos' : 'Abrir filtros'}
+          onClick={() => onFiltersOpenChange(!filtersOpen)}
         >
-          Limpar filtros
+          <FilterIcon />
+          <span aria-hidden="true">Filtros</span>
         </button>
-      </fieldset>
+        {filtersOpen && (
+          <fieldset
+            id="library-filter-panel"
+            className="library-filters"
+            aria-label="Filtros da biblioteca"
+            onKeyDown={(event) => {
+              if (event.key === 'Escape') {
+                event.preventDefault();
+                closeFilters();
+              }
+            }}
+          >
+            <legend>Filtros da biblioteca</legend>
+            <label>
+              <input
+                type="checkbox"
+                checked={favoritesOnly}
+                onChange={(event) => onFavoritesOnlyChange(event.target.checked)}
+              />
+              Somente favoritos
+            </label>
+            <label htmlFor="document-created-after">Data de criação a partir de</label>
+            <input
+              id="document-created-after"
+              type="date"
+              value={createdAfter}
+              onChange={(event) => onCreatedAfterChange(event.target.value)}
+            />
+            <label htmlFor="document-created-before">Data de criação até</label>
+            <input
+              id="document-created-before"
+              type="date"
+              value={createdBefore}
+              onChange={(event) => onCreatedBeforeChange(event.target.value)}
+            />
+            <button
+              className="button button--quiet"
+              type="button"
+              disabled={!hasActiveFilters}
+              onClick={onClearFilters}
+            >
+              Limpar filtros
+            </button>
+          </fieldset>
+        )}
+      </div>
       <div className="library-ordering">
         <label htmlFor="document-order-field">Ordenar por</label>
         <select
