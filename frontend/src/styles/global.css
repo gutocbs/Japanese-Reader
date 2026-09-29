@@ -364,6 +364,27 @@ a {
   align-items: center;
 }
 
+.reader-menu__font-size-control {
+  display: grid;
+  grid-template-columns: minmax(2.75rem, auto) 1fr minmax(2.75rem, auto);
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.reader-menu__font-size-button {
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  padding: var(--space-2);
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.reader-menu__font-size-value {
+  min-width: 4.5rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
 .page-heading h1,
 .reader-heading h1,
 .page-state h1 {
@@ -496,9 +517,11 @@ a {
 
 .document-text {
   max-width: var(--reader-text-width);
+  margin: 0 auto;
   font-family: var(--font-reader);
   font-size: clamp(1.25rem, 2.3vw, 1.55rem);
   line-height: 2.35;
+  text-align: start;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   user-select: text;

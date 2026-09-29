@@ -12,6 +12,14 @@ interface ReaderMenuProps {
 export function ReaderMenu({ preferences, onPreferencesChange }: ReaderMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const panelId = 'reader-preferences-panel';
+  const decreaseFontSize = () => onPreferencesChange({
+    ...preferences,
+    fontSizePx: preferences.fontSizePx - READER_FONT_SIZE_RANGE.step,
+  });
+  const increaseFontSize = () => onPreferencesChange({
+    ...preferences,
+    fontSizePx: preferences.fontSizePx + READER_FONT_SIZE_RANGE.step,
+  });
 
   return (
     <div className="reader-menu">
@@ -26,21 +34,32 @@ export function ReaderMenu({ preferences, onPreferencesChange }: ReaderMenuProps
       </button>
       {isOpen && (
         <section id={panelId} className="reader-menu__panel" aria-label="Preferências de leitura">
-          <label className="reader-menu__field" htmlFor="reader-font-size">
-            <span>Tamanho da fonte japonesa</span>
-            <input
-              id="reader-font-size"
-              type="range"
-              min={READER_FONT_SIZE_RANGE.min}
-              max={READER_FONT_SIZE_RANGE.max}
-              step={READER_FONT_SIZE_RANGE.step}
-              value={preferences.fontSizePx}
-              onChange={(event) => onPreferencesChange({
-                ...preferences,
-                fontSizePx: Number(event.target.value),
-              })}
-            />
-          </label>
+          <div className="reader-menu__field">
+            <span id="reader-font-size-label">Tamanho da fonte japonesa</span>
+            <div className="reader-menu__font-size-control" role="group" aria-labelledby="reader-font-size-label">
+              <button
+                className="button button--secondary reader-menu__font-size-button"
+                type="button"
+                aria-label="Diminuir tamanho da fonte japonesa"
+                disabled={preferences.fontSizePx <= READER_FONT_SIZE_RANGE.min}
+                onClick={decreaseFontSize}
+              >
+                −
+              </button>
+              <output className="reader-menu__font-size-value" aria-live="polite">
+                {preferences.fontSizePx} px
+              </output>
+              <button
+                className="button button--secondary reader-menu__font-size-button"
+                type="button"
+                aria-label="Aumentar tamanho da fonte japonesa"
+                disabled={preferences.fontSizePx >= READER_FONT_SIZE_RANGE.max}
+                onClick={increaseFontSize}
+              >
+                ＋
+              </button>
+            </div>
+          </div>
           <label className="reader-menu__toggle">
             <input
               type="checkbox"

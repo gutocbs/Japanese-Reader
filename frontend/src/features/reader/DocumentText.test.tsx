@@ -92,6 +92,21 @@ const analysis: Analysis = {
 };
 
 describe('DocumentText', () => {
+  it('uses the approved dark-theme contrast tokens and reading typeface', () => {
+    const darkThemeRule = Array.from(document.styleSheets)
+      .flatMap((sheet) => Array.from(sheet.cssRules))
+      .find((rule): rule is CSSStyleRule => (
+        rule instanceof CSSStyleRule && rule.selectorText === ":root[data-theme='dark']"
+      ));
+
+    expect(darkThemeRule?.style.getPropertyValue('--color-page').trim()).toBe('#1f2022');
+    expect(darkThemeRule?.style.getPropertyValue('--color-text').trim()).toBe('#f3f3f7');
+    expect(getComputedStyle(document.documentElement)
+      .getPropertyValue('--font-reader').trim()
+      .replace(/\s*,\s*/g, ','))
+      .toBe('"ヒラギノ角ゴ Pro W3","Hiragino Kaku Gothic Pro","Yu Gothic",Osaka,メイリオ,Meiryo,"ＭＳ Ｐゴシック","MS PGothic",sans-serif');
+  });
+
   it('uses the wider but bounded reader text measure', () => {
     const textRule = Array.from(document.styleSheets)
       .flatMap((sheet) => Array.from(sheet.cssRules))
@@ -102,6 +117,18 @@ describe('DocumentText', () => {
     expect(getComputedStyle(document.documentElement)
       .getPropertyValue('--reader-text-width').trim()).toBe('54rem');
     expect(textRule?.style.maxWidth).toBe('var(--reader-text-width)');
+  });
+
+  it('centers the reader column while keeping its text start-aligned', () => {
+    const textRule = Array.from(document.styleSheets)
+      .flatMap((sheet) => Array.from(sheet.cssRules))
+      .find((rule): rule is CSSStyleRule => (
+        rule instanceof CSSStyleRule && rule.selectorText === '.document-text'
+      ));
+
+    expect(textRule?.style.marginLeft).toBe('auto');
+    expect(textRule?.style.marginRight).toBe('auto');
+    expect(textRule?.style.textAlign).toBe('start');
   });
 
   it('keeps canonical text selectable in semantic HTML and preserves every gap', () => {

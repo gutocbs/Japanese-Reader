@@ -573,7 +573,9 @@ describe('reader routes', () => {
     expect(screen.getByTestId('document-text')).toHaveStyle({ fontSize: '24px' });
 
     fireEvent.click(screen.getByRole('button', { name: 'Preferências de leitura' }));
-    fireEvent.change(screen.getByLabelText('Tamanho da fonte japonesa'), { target: { value: '28' } });
+    for (let increment = 0; increment < 4; increment += 1) {
+      fireEvent.click(screen.getByRole('button', { name: 'Aumentar tamanho da fonte japonesa' }));
+    }
     expect(screen.getByTestId('document-text')).toHaveStyle({ fontSize: '28px' });
     fireEvent.click(screen.getByRole('checkbox', { name: 'Exibir furigana' }));
     expect(api.analyze).toHaveBeenCalledTimes(1);
