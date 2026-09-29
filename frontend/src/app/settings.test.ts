@@ -80,4 +80,22 @@ describe('app settings', () => {
     expect(DEFAULT_APP_SETTINGS.lineBreakNormalizationEnabled).toBe(false);
     expect(loadAppSettings().lineBreakNormalizationEnabled).toBe(false);
   });
+
+  it('lets an explicit environment opt-out override persisted normalization settings', async () => {
+    vi.stubEnv('VITE_ENABLE_LINE_BREAK_NORMALIZATION', 'false');
+    vi.resetModules();
+    localStorage.setItem('japanese-reader:app-settings', JSON.stringify({
+      version: 1,
+      theme: 'dark',
+      defaultReaderFontSizePx: 28,
+      lineBreakNormalizationEnabled: true,
+    }));
+    const { loadAppSettings } = await settingsModule();
+
+    expect(loadAppSettings()).toEqual({
+      theme: 'dark',
+      defaultReaderFontSizePx: 28,
+      lineBreakNormalizationEnabled: false,
+    });
+  });
 });

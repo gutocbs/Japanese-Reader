@@ -46,7 +46,8 @@ export function loadAppSettings(): AppSettings {
     return {
       theme: record.theme,
       defaultReaderFontSizePx: record.defaultReaderFontSizePx,
-      lineBreakNormalizationEnabled: record.lineBreakNormalizationEnabled,
+      lineBreakNormalizationEnabled: DEFAULT_APP_SETTINGS.lineBreakNormalizationEnabled
+        && record.lineBreakNormalizationEnabled,
     };
   } catch {
     return DEFAULT_APP_SETTINGS;
