@@ -2,19 +2,19 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add local settings, move reader appearance controls into settings, and improve the library with icon actions, persisted document metadata/tags, title-and-tag search, ordering, favorites, and filters.
+**Goal:** Add local settings, move reader appearance controls into settings, and improve the library with icon actions, persisted document metadata/tags/source, title-and-tag search, ordering, favorites, filters, a polished metadata/tag experience, and a public text-import API.
 
-**Architecture:** Add a versioned local settings store consumed through the existing app provider/router boundaries. Implement settings as a desktop-first route, then make the reader consume shared defaults while preserving existing document-local preferences. Extend document persistence for description and tags before building metadata/tag views. Keep library filtering and ordering client-side, with search derived only from title and tag names.
+**Architecture:** Add a versioned local settings store consumed through the existing app provider/router boundaries. Implement settings as a desktop-first route, then make the reader consume shared defaults while preserving existing document-local preferences. Extend document persistence for description, source, and tags before building metadata/tag views. Reuse one document-creation service for the UI and public import API. Keep library filtering and ordering client-side, with search derived only from title and tag names.
 
 **Tech Stack:** React 19, TypeScript, Vite, Vitest, Testing Library, localStorage.
 
 **Spec:** `docs/superpowers/specs/2026-09-29-settings-library-improvements-design.md`
 
-**Execution order:** Complete Tasks 1–4, then Tasks 6–8, then Tasks 10–13. Execute Task 14 last as the final suite-alignment checkpoint.
+**Execution order:** Complete Tasks 1–4, then Tasks 6–8, then Tasks 10–13, then Tasks 15–16. Execute Task 14 last as the final suite-alignment checkpoint.
 
 ## Global Constraints
 
-- No content-analysis contract changes; metadata endpoints and persistence may be extended for description and tags.
+- No content-analysis contract changes; metadata endpoints and persistence may be extended for description, source, and tags.
 - Persist document description, tags, and tag colors in the document store; keep favorites local until their later SQLite migration.
 - No mobile-specific redesign.
 - Preserve document-local reader selections and manual reading overrides.
@@ -102,10 +102,10 @@
 - Modify: tests identified by the full frontend suite, especially `frontend/src/features/reader/ReaderLayout.test.ts`
 
 **Interfaces:**
-- Consumes the final UI contracts produced by Tasks 1–4, 6–8, and 10–13.
+- Consumes the final UI/API contracts produced by Tasks 1–4, 6–8, 10–13, and 15–16.
 - Produces a clean, current frontend test suite without weakening behavioral assertions.
 
-Run this task only after Tasks 6–8 and 10–13 as the final cleanup checkpoint.
+Run this task only after Tasks 6–8, 10–13, and 15–16 as the final cleanup checkpoint.
 
 - [ ] Run the full frontend suite and inventory every failure after Tasks 1–4.
 - [ ] Update stale expectations to the approved contracts and add missing regression coverage where the failure exposes a real behavior gap.
@@ -160,7 +160,7 @@ Run this task only after Tasks 6–8 and 10–13 as the final cleanup checkpoint
 
 **Files:** backend document schemas/repository/service/router and frontend document API types/client; backend metadata API tests and frontend contract tests.
 
-**Interfaces:** Extends the document contract with optional persisted `description` and `tags`, preserving existing content-analysis fields and older documents. Exposes server-owned `createdAt` and `updatedAt` as read-only metadata.
+**Interfaces:** Extends the document contract with optional persisted `description`, `source`, and `tags`, preserving existing content-analysis fields and older documents. Exposes server-owned `createdAt` and `updatedAt` as read-only metadata. UI-created documents use `Local` as their source.
 
 - [ ] Add failing tests for backward-compatible reads, metadata updates, validation, and persistence of tag names/colors.
 - [ ] Implement the backend/database schema extension and typed frontend client methods.
@@ -171,9 +171,9 @@ Run this task only after Tasks 6–8 and 10–13 as the final cleanup checkpoint
 
 **Files:** document metadata route/page, document API hooks, related styles, and tests.
 
-**Interfaces:** Produces a metadata screen reachable from the library, with read-only dates and editable description/tags. Save and cancel preserve the current document and handle request errors without losing the reader flow.
+**Interfaces:** Produces a metadata screen reachable from the library, with read-only dates and editable description/source. Tag assignment offers existing tags in a list and inline creation for a new tag. Save and cancel preserve the current document and handle request errors without losing the reader flow.
 
-- [ ] Add failing route and interaction tests for loading, editing description, adding an unknown tag, save, cancel, and error states.
+- [ ] Add failing route and interaction tests for loading, editing description/source, selecting an existing tag, creating a new tag inline, save, cancel, and error states.
 - [ ] Implement the screen against Task 10 contracts without duplicating document state in the library.
 - [ ] Run focused tests, build, and `git diff --check`.
 - [ ] Commit `feat(documents): add metadata editor`.
@@ -182,9 +182,9 @@ Run this task only after Tasks 6–8 and 10–13 as the final cleanup checkpoint
 
 **Files:** tag-management route/page, library card chips, metadata tag controls, styles, and tests.
 
-**Interfaces:** Produces tag creation, rename, and removal flows with confirmation when needed. Renders persistent tag colors below document titles with accessible text and sufficient contrast.
+**Interfaces:** Produces tag creation, rename, color change, and removal flows with confirmation when needed. Renders persistent tag colors below document titles with accessible text and sufficient contrast. Removing a tag removes only that association from all affected documents.
 
-- [ ] Add failing tests for unique names, controlled palette assignment, persistence across reloads, rename/remove effects, and chip rendering.
+- [ ] Add failing tests for unique names, palette and picker colors, persistence across reloads, rename/color/remove effects, selective association removal, and chip rendering.
 - [ ] Implement tag management and reuse the same tag entity in metadata and library views.
 - [ ] Run focused tests, build, and `git diff --check`.
 - [ ] Commit `feat(tags): add management and document chips`.
@@ -199,3 +199,27 @@ Run this task only after Tasks 6–8 and 10–13 as the final cleanup checkpoint
 - [ ] Implement the visual polish without changing the desktop-first information architecture or adding persistent toolbar clutter.
 - [ ] Run focused tests, build, and `git diff --check`.
 - [ ] Commit `style(library): refine search and ordering controls`.
+
+### Task 15: Frontend design pass for tags and metadata
+
+**Files:** tag-management page, document metadata page, shared styles, and focused frontend tests.
+
+**Interfaces:** Applies the `frontend-design` skill to improve hierarchy, spacing, control grouping, tag selection, color previews, focus states, and empty/error states while preserving the existing desktop-first information architecture and theme tokens.
+
+- [ ] Define the visual direction and compact token/layout adjustments before implementation.
+- [ ] Add tests for existing-tag selection, inline tag creation, editable source, color palette/picker interaction, and accessible feedback states.
+- [ ] Implement the redesign without changing document or tag persistence semantics.
+- [ ] Run focused tests, build, and `git diff --check`.
+- [ ] Commit `style(documents): refine metadata and tag screens`.
+
+### Task 16: Public text import API
+
+**Files:** backend document creation service, public import router/schema, persistence adapters, frontend generated client/types, and backend API tests.
+
+**Interfaces:** Exposes a public import endpoint whose request includes text, title, tags, description, and source. It reuses the canonical document creation and tag persistence flow, preserves text exactly, validates input, assigns server-owned identifiers/timestamps, and returns the created document contract.
+
+- [ ] Add failing API tests for valid imports, source preservation, tags/metadata persistence, malformed payloads, duplicate/invalid tags, and exact text preservation.
+- [ ] Implement the endpoint through a shared creation service so UI and API cannot diverge in persistence behavior.
+- [ ] Regenerate OpenAPI/TypeScript contracts and add integration coverage for SQLite reload.
+- [ ] Run focused backend/frontend tests, build, and `git diff --check`.
+- [ ] Commit `feat(api): add public text import endpoint`.

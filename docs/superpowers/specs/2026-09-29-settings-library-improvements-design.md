@@ -36,15 +36,25 @@ Improve the visual treatment of library filters with a subtle popup menu that fo
 
 ## Document metadata and tags
 
-Add a metadata view for each document. It exposes server-provided creation and last-modified dates as read-only information and allows the user to edit a persisted description.
+Add a metadata view for each document. It exposes server-provided creation and last-modified dates as read-only information and allows the user to edit a persisted description and source. Documents created manually in the UI use `Local` as their source; imported documents retain the source supplied by the import API.
 
-Documents may have persisted tags. Tags belong to the document, appear below its title in the library, and are included in library search. Search is limited to title and tag names; document content is never searched. Assigning an unknown tag name creates it automatically.
+Documents may have persisted tags. Tags belong to the document, appear below its title in the library, and are included in library search. Search is limited to title and tag names; document content is never searched. The metadata screen lets the user select existing tags from a list or create a new tag inline.
 
 Each tag receives a distinct color from a controlled palette when first created. The assigned color is persisted and reused consistently. A tag-management view provides creation, rename, and removal operations with confirmation where removal affects existing documents.
 
+Tag management must allow changing both a tag name and its color. Color selection uses the predefined palette and may additionally offer a color picker. Deleting a tag removes only that tag association from every document that contains it; other tags and document metadata remain unchanged.
+
+## Frontend design pass
+
+Use the `frontend-design` skill for a focused visual redesign of the tag-management and document-metadata screens. Preserve the existing desktop-first information architecture and dark/light tokens while improving hierarchy, spacing, control grouping, inline tag selection, color previews, focus states, and empty/error states. The result should remain restrained and consistent with the reader rail rather than introducing a new visual language.
+
+## Public text import API
+
+Expose a public API endpoint for importing documents from external plugins. The request body includes the document text, title, tags, description, and source metadata. Imported documents use the source value received from the API; manually created documents use `Local`. The endpoint must reuse the same document creation and tag persistence contracts as the UI, validate the payload, preserve content exactly, and return the created document contract including server-owned timestamps and identifiers.
+
 ## Boundaries and compatibility
 
-- No content-analysis contract changes. The document metadata API may be extended for persisted description and tags, remaining backward-compatible with older documents.
+- No content-analysis contract changes. The document metadata API may be extended for persisted description, source, and tags, remaining backward-compatible with older documents.
 - Description, document tags, tag names, and tag colors are persisted in the document store; favorites remain a separate local preference until SQLite-backed favorites are introduced.
 - No mobile-specific redesign.
 - Preserve document-local reader selections and manual reading overrides.
