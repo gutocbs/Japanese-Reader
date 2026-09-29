@@ -32,9 +32,18 @@ Add client-side ordering controls for title, creation date, update date, and las
 
 Add a document-local favorites preference keyed by document id and persisted in versioned localStorage until SQLite-backed persistence is introduced. The favorite action must be available from each card with an accessible label and visible state. Add filters for favorites and creation date; filters compose with search and ordering and do not change API contracts.
 
+## Document metadata and tags
+
+Add a metadata view for each document. It exposes server-provided creation and last-modified dates as read-only information and allows the user to edit a persisted description.
+
+Documents may have persisted tags. Tags belong to the document, appear below its title in the library, and are included in library search. Search is limited to title and tag names; document content is never searched. Assigning an unknown tag name creates it automatically.
+
+Each tag receives a distinct color from a controlled palette when first created. The assigned color is persisted and reused consistently. A tag-management view provides creation, rename, and removal operations with confirmation where removal affects existing documents.
+
 ## Boundaries and compatibility
 
-- No SQLite or API contract changes.
+- No content-analysis contract changes. The document metadata API may be extended for persisted description and tags, remaining backward-compatible with older documents.
+- Description, document tags, tag names, and tag colors are persisted in the document store; favorites remain a separate local preference until SQLite-backed favorites are introduced.
 - No mobile-specific redesign.
 - Preserve document-local reader selections and manual reading overrides.
 - Keep the line-break normalizer opt-in at the action level; settings only controls its availability/default behavior.

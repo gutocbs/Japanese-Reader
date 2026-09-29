@@ -2,17 +2,20 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add local settings, move reader appearance controls into settings, and improve the library with icon actions, created-date metadata, and client-side search.
+**Goal:** Add local settings, move reader appearance controls into settings, and improve the library with icon actions, persisted document metadata/tags, title-and-tag search, ordering, favorites, and filters.
 
-**Architecture:** Add a versioned local settings store consumed through the existing app provider/router boundaries. Implement settings as a desktop-first route, then make the reader consume shared defaults while preserving existing document-local preferences. Keep library filtering client-side and isolate card actions from search state.
+**Architecture:** Add a versioned local settings store consumed through the existing app provider/router boundaries. Implement settings as a desktop-first route, then make the reader consume shared defaults while preserving existing document-local preferences. Extend document persistence for description and tags before building metadata/tag views. Keep library filtering and ordering client-side, with search derived only from title and tag names.
 
 **Tech Stack:** React 19, TypeScript, Vite, Vitest, Testing Library, localStorage.
 
 **Spec:** `docs/superpowers/specs/2026-09-29-settings-library-improvements-design.md`
 
+**Execution order:** Complete Tasks 1–4, then Tasks 6–8, then Tasks 10–13. Execute Task 14 last as the final suite-alignment checkpoint.
+
 ## Global Constraints
 
-- No SQLite or API contract changes.
+- No content-analysis contract changes; metadata endpoints and persistence may be extended for description and tags.
+- Persist document description, tags, and tag colors in the document store; keep favorites local until their later SQLite migration.
 - No mobile-specific redesign.
 - Preserve document-local reader selections and manual reading overrides.
 - Keep local-storage payloads versioned and recoverable through defaults.
@@ -85,24 +88,24 @@
 
 **Interfaces:**
 - Consumes the existing document list query.
-- Produces immediate case-insensitive title filtering, a clear action, and distinct no-match messaging without API changes.
+- Produces immediate case-insensitive title-and-tag filtering, a clear action, and distinct no-match messaging without searching document content.
 
-- [ ] Add failing tests for title filtering, clear behavior, empty-library messaging, and no-match messaging.
+- [ ] Add failing tests for title/tag filtering, exclusion of document content, clear behavior, empty-library messaging, and no-match messaging.
 - [ ] Run focused tests and confirm failures.
 - [ ] Implement controlled search state and filtered rendering while preserving document actions and keyboard behavior.
 - [ ] Run focused tests, full frontend tests where permissions allow, build, and `git diff --check`.
 - [ ] Commit `feat(library): add client-side document search`.
 
-### Task 9: Final test-suite alignment
+### Task 14: Final test-suite alignment
 
 **Files:**
 - Modify: tests identified by the full frontend suite, especially `frontend/src/features/reader/ReaderLayout.test.ts`
 
 **Interfaces:**
-- Consumes the final UI contracts produced by Tasks 1–4 and 6–8.
+- Consumes the final UI contracts produced by Tasks 1–4, 6–8, and 10–13.
 - Produces a clean, current frontend test suite without weakening behavioral assertions.
 
-Run this task only after Tasks 6–8 as the final cleanup checkpoint.
+Run this task only after Tasks 6–8 and 10–13 as the final cleanup checkpoint.
 
 - [ ] Run the full frontend suite and inventory every failure after Tasks 1–4.
 - [ ] Update stale expectations to the approved contracts and add missing regression coverage where the failure exposes a real behavior gap.
@@ -152,3 +155,47 @@ Run this task only after Tasks 6–8 as the final cleanup checkpoint.
 - [ ] Implement filters as client-side derived state with accessible controls.
 - [ ] Run focused tests, build, and `git diff --check`.
 - [ ] Commit `feat(library): add favorite and date filters`.
+
+### Task 10: Persisted document metadata contract
+
+**Files:** backend document schemas/repository/service/router and frontend document API types/client; backend metadata API tests and frontend contract tests.
+
+**Interfaces:** Extends the document contract with optional persisted `description` and `tags`, preserving existing content-analysis fields and older documents. Exposes server-owned `createdAt` and `updatedAt` as read-only metadata.
+
+- [ ] Add failing tests for backward-compatible reads, metadata updates, validation, and persistence of tag names/colors.
+- [ ] Implement the backend/database schema extension and typed frontend client methods.
+- [ ] Run focused backend/frontend tests, build, and `git diff --check`.
+- [ ] Commit `feat(documents): persist metadata and tags`.
+
+### Task 11: Document metadata screen
+
+**Files:** document metadata route/page, document API hooks, related styles, and tests.
+
+**Interfaces:** Produces a metadata screen reachable from the library, with read-only dates and editable description/tags. Save and cancel preserve the current document and handle request errors without losing the reader flow.
+
+- [ ] Add failing route and interaction tests for loading, editing description, adding an unknown tag, save, cancel, and error states.
+- [ ] Implement the screen against Task 10 contracts without duplicating document state in the library.
+- [ ] Run focused tests, build, and `git diff --check`.
+- [ ] Commit `feat(documents): add metadata editor`.
+
+### Task 12: Tag management and library presentation
+
+**Files:** tag-management route/page, library card chips, metadata tag controls, styles, and tests.
+
+**Interfaces:** Produces tag creation, rename, and removal flows with confirmation when needed. Renders persistent tag colors below document titles with accessible text and sufficient contrast.
+
+- [ ] Add failing tests for unique names, controlled palette assignment, persistence across reloads, rename/remove effects, and chip rendering.
+- [ ] Implement tag management and reuse the same tag entity in metadata and library views.
+- [ ] Run focused tests, build, and `git diff --check`.
+- [ ] Commit `feat(tags): add management and document chips`.
+
+### Task 13: Library search and ordering visual polish
+
+**Files:** library page/styles/tests.
+
+**Interfaces:** Refines search and ordering controls using the approved visual language. Search matches only title and tag names; ordering, favorite filters, and date filters remain composable.
+
+- [ ] Add regression tests for title/tag search, content exclusion, control accessibility, and composed search/order/filter state.
+- [ ] Implement the visual polish without changing the desktop-first information architecture.
+- [ ] Run focused tests, build, and `git diff --check`.
+- [ ] Commit `style(library): refine search and ordering controls`.
