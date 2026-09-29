@@ -1,6 +1,14 @@
 import type { DocumentTag } from '../../shared/api/client';
 
-const PALETTE = ['#0F766E', '#1D4ED8', '#7C3AED', '#B45309', '#BE123C'] as const;
+export const TAG_COLOR_OPTIONS = [
+  { color: '#0F766E', label: 'Verde-azulado' },
+  { color: '#1D4ED8', label: 'Azul' },
+  { color: '#7C3AED', label: 'Violeta' },
+  { color: '#B45309', label: 'Âmbar' },
+  { color: '#BE123C', label: 'Carmim' },
+] as const;
+
+const PALETTE = TAG_COLOR_OPTIONS.map(({ color }) => color);
 
 function normalizedName(name: string) {
   return name.trim().toLocaleLowerCase();

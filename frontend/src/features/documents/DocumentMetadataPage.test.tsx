@@ -104,4 +104,17 @@ describe('document metadata route', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Tentar novamente' }));
     await waitFor(() => expect(update).toHaveBeenCalledTimes(2));
   });
+
+  it('selects an existing catalogue tag with its color preview and offers compact labelled removal', async () => {
+    const catalog = [...document.tags, { name: 'Gramática', color: '#0F766E' }];
+    render(<App client={client({ listTags: vi.fn().mockResolvedValue(catalog) })} initialPath={`/documents/${document.id}/metadata`} />);
+
+    await screen.findByRole('heading', { name: 'Metadados do documento' });
+    fireEvent.click(screen.getByRole('button', { name: 'Selecionar etiqueta Gramática' }));
+
+    expect(screen.getByLabelText('Etiqueta Gramática')).toHaveStyle({ '--tag-color': '#0F766E' });
+    const remove = screen.getByRole('button', { name: 'Remover etiqueta Gramática' });
+    expect(remove).toHaveTextContent('×');
+    expect(remove).toHaveAttribute('title', 'Remover etiqueta Gramática');
+  });
 });

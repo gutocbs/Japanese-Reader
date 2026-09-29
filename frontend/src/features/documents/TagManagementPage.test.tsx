@@ -53,4 +53,29 @@ describe('tag management route', () => {
     expect(chip).toHaveTextContent('Clássico');
     expect(chip).toHaveStyle({ '--tag-color': '#7C3AED' });
   });
+
+  it('previews the selected controlled color before creating a tag and exposes a compact labelled removal control', async () => {
+    localStorage.clear();
+    const createTag = vi.fn().mockResolvedValue({ name: 'Leitura', color: '#1D4ED8' });
+    render(<App client={client({ createTag })} initialPath="/tags" />);
+
+    await screen.findByRole('heading', { name: 'Etiquetas' });
+    fireEvent.click(screen.getByRole('radio', { name: 'Azul' }));
+    fireEvent.change(screen.getByLabelText('Nova etiqueta'), { target: { value: 'Leitura' } });
+
+    expect(screen.getByLabelText('Prévia da nova etiqueta')).toHaveStyle({ '--tag-color': '#1D4ED8' });
+    fireEvent.click(screen.getByRole('button', { name: 'Criar etiqueta' }));
+    await waitFor(() => expect(createTag).toHaveBeenCalledWith({ name: 'Leitura', color: '#1D4ED8' }));
+    const remove = screen.getByRole('button', { name: 'Remover etiqueta Clássico' });
+    expect(remove).toHaveTextContent('×');
+    expect(remove).toHaveAttribute('title', 'Remover etiqueta Clássico');
+  });
+
+  it('announces an empty catalogue with a direct creation action', async () => {
+    localStorage.clear();
+    render(<App client={client({ listTags: vi.fn().mockResolvedValue([]) })} initialPath="/tags" />);
+
+    expect(await screen.findByText('Nenhuma etiqueta criada. Crie a primeira para organizar sua biblioteca.')).toHaveAttribute('role', 'status');
+    expect(screen.getByLabelText('Nova etiqueta')).toBeInTheDocument();
+  });
 });

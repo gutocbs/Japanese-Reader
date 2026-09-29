@@ -135,22 +135,37 @@ export function DocumentMetadataPage({ documentId }: DocumentMetadataPageProps) 
 
         <div className="field">
           <span>Etiquetas</span>
+          <p className="field-hint">Selecione uma etiqueta existente ou crie uma nova para este documento.</p>
           <ul className="metadata-tags" aria-label="Etiquetas atuais">
             {tags.map((tag) => (
               <li key={`${tag.name}-${tag.color}`}>
-                <span className="metadata-tag" style={{ '--tag-color': tag.color } as CSSProperties}>{tag.name}</span>
+                <span className="metadata-tag" aria-label={`Etiqueta ${tag.name}`} style={{ '--tag-color': tag.color } as CSSProperties}>{tag.name}</span>
                 <button
-                  className="button button--quiet"
+                  className="tag-remove-button"
                   type="button"
                   disabled={isSaving}
                   aria-label={`Remover etiqueta ${tag.name}`}
+                  title={`Remover etiqueta ${tag.name}`}
                   onClick={() => { setTags((current) => current.filter((item) => item !== tag)); setSaved(false); }}
                 >
-                  Remover
+                  <span aria-hidden="true">×</span>
                 </button>
               </li>
             ))}
           </ul>
+          {catalog.filter((tag) => !tags.some((selected) => selected.name.localeCompare(tag.name, undefined, { sensitivity: 'accent' }) === 0)).length > 0 && (
+            <div className="tag-selection" aria-label="Etiquetas disponíveis">
+              <span className="tag-selection__label">Etiquetas disponíveis</span>
+              <div className="tag-selection__options">
+                {catalog.filter((tag) => !tags.some((selected) => selected.name.localeCompare(tag.name, undefined, { sensitivity: 'accent' }) === 0)).map((tag) => (
+                  <button key={tag.name} className="tag-selection__option" type="button" disabled={isSaving} aria-label={`Selecionar etiqueta ${tag.name}`} onClick={() => { setTags((current) => [...current, tag]); setSaved(false); }}>
+                    <span className="metadata-tag" style={{ '--tag-color': tag.color } as CSSProperties}>{tag.name}</span>
+                    <span aria-hidden="true">+</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           <div className="metadata-tag-form">
             <label>
               <span className="sr-only">Nova etiqueta</span>
