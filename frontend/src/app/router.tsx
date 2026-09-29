@@ -1,6 +1,7 @@
 import { DocumentEditorPage } from '../features/documents/DocumentEditorPage';
 import { DocumentLibraryPage } from '../features/documents/DocumentLibraryPage';
 import { DocumentMetadataPage } from '../features/documents/DocumentMetadataPage';
+import { TagManagementPage } from '../features/documents/TagManagementPage';
 import { ReaderPage } from '../features/reader/ReaderPage';
 import { SettingsPage } from '../features/settings/SettingsPage';
 import { useRouter } from './providers';
@@ -18,6 +19,10 @@ export function AppRouter() {
 
   if (location.path === '/settings') {
     return <SettingsPage />;
+  }
+
+  if (location.path === '/tags') {
+    return <TagManagementPage />;
   }
 
   const match = /^\/documents\/([^/]+)\/(edit|metadata|read)$/.exec(location.path);

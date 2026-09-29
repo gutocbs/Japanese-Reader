@@ -1,4 +1,4 @@
-import { type FormEvent, type ReactNode, useMemo, useRef, useState } from 'react';
+import { type CSSProperties, type FormEvent, type ReactNode, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useDocumentClient, useRouter } from '../../app/providers';
 import type { Document } from '../../shared/api/client';
@@ -225,6 +225,7 @@ export function DocumentLibraryPage() {
         >
           Novo documento
         </a>
+        <a className="text-link" href="/tags" onClick={(event) => { event.preventDefault(); navigate('/tags'); }}>Etiquetas</a>
       </header>
 
       {documents.length === 0 ? (
@@ -290,6 +291,9 @@ export function DocumentLibraryPage() {
                   </a>
                 </h2>
                 <p>{createdLabel(document.createdAt)}</p>
+                {document.tags.length > 0 && <ul className="document-tag-chips" aria-label={`Etiquetas de ${document.title || 'Sem título'}`}>
+                  {document.tags.map((tag) => <li key={tag.name}><span className="metadata-tag" aria-label={`Etiqueta ${tag.name}`} style={{ '--tag-color': tag.color } as CSSProperties}>{tag.name}</span></li>)}
+                </ul>}
               </div>
 
               {renaming?.id === document.id ? (

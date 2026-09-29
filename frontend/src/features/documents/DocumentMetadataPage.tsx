@@ -3,12 +3,11 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useDocumentClient, useRouter } from '../../app/providers';
 import type { Document, DocumentTag } from '../../shared/api/client';
 import { documentKeys } from './queries';
+import { canonicalTag, loadCatalogTags, mergeCatalogTags } from './tags';
 
 interface DocumentMetadataPageProps {
   documentId: string;
 }
-
-const DEFAULT_TAG_COLOR = '#7C3AED';
 
 function formattedDate(value: string) {
   return new Intl.DateTimeFormat('pt-BR', {
@@ -39,6 +38,7 @@ export function DocumentMetadataPage({ documentId }: DocumentMetadataPageProps) 
       setDocument(loaded);
       setDescription(loaded.description ?? '');
       setTags(loaded.tags);
+      mergeCatalogTags(loadCatalogTags(), loaded.tags);
       queryClient.setQueryData(documentKeys.detail(documentId), loaded);
     } catch {
       setLoadError(true);
@@ -81,7 +81,11 @@ export function DocumentMetadataPage({ documentId }: DocumentMetadataPageProps) 
     if (name.length === 0 || tags.some((tag) => tag.name.localeCompare(name, undefined, { sensitivity: 'accent' }) === 0)) {
       return;
     }
-    setTags((current) => [...current, { name, color: DEFAULT_TAG_COLOR }]);
+    setTags((current) => {
+      const tag = canonicalTag(loadCatalogTags(), name);
+      mergeCatalogTags(loadCatalogTags(), [tag]);
+      return [...current, tag];
+    });
     setNewTagName('');
     setSaved(false);
   };
@@ -161,6 +165,7 @@ export function DocumentMetadataPage({ documentId }: DocumentMetadataPageProps) 
               Adicionar etiqueta
             </button>
           </div>
+          <button className="button button--quiet" type="button" disabled={isSaving} onClick={() => navigate('/tags')}>Gerenciar etiquetas</button>
         </div>
 
         {saveError && (
