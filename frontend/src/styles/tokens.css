@@ -9,8 +9,8 @@
   --color-border: #aebdb5;
   --color-primary: #1f5a43;
   --color-primary-hover: #174633;
-  --color-reader-token-hover: rgb(31 90 67 / 14%);
-  --color-reader-token-selected: rgb(31 90 67 / 22%);
+  --color-reader-token-hover: rgb(243 243 247 / 14%);
+  --color-reader-token-selected: rgb(243 243 247 / 14%);
   --color-on-primary: #ffffff;
   --color-focus: #0f6b4a;
   --color-error: #842d2d;
@@ -49,7 +49,7 @@
   --color-primary: #dedfe5;
   --color-primary-hover: #ffffff;
   --color-reader-token-hover: rgb(243 243 247 / 14%);
-  --color-reader-token-selected: rgb(243 243 247 / 22%);
+  --color-reader-token-selected: rgb(243 243 247 / 14%);
   --color-on-primary: #1f2022;
   --color-focus: #ffffff;
   --color-error: #ffb8b8;

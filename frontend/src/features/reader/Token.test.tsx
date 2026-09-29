@@ -33,7 +33,7 @@ beforeAll(() => {
 afterAll(() => readerStyles.remove());
 
 describe('Token', () => {
-  it('uses a translucent primary-derived surface for lexical hover and keyboard focus', () => {
+  it('uses the approved neutral translucent surface for lexical hover and keyboard focus', () => {
     const hoverRule = Array.from(document.styleSheets)
       .flatMap((sheet) => Array.from(sheet.cssRules))
       .find((rule): rule is CSSStyleRule => (
@@ -42,11 +42,11 @@ describe('Token', () => {
       ));
 
     expect(getComputedStyle(document.documentElement)
-      .getPropertyValue('--color-reader-token-hover').trim()).toBe('rgb(31 90 67/14%)');
+      .getPropertyValue('--color-reader-token-hover').trim()).toBe('rgb(243 243 247/14%)');
     expect(hoverRule?.style.background).toBe('var(--color-reader-token-hover)');
   });
 
-  it('uses a distinct translucent surface for a selected token without changing its ruby reading', () => {
+  it('uses the same translucent surface for a selected token with one dotted underline', () => {
     const selectedRule = Array.from(document.styleSheets)
       .flatMap((sheet) => Array.from(sheet.cssRules))
       .find((rule): rule is CSSStyleRule => (
@@ -55,8 +55,10 @@ describe('Token', () => {
     const { container } = render(<Token token={lexicalToken} selected />);
 
     expect(getComputedStyle(document.documentElement)
-      .getPropertyValue('--color-reader-token-selected').trim()).toBe('rgb(31 90 67/22%)');
+      .getPropertyValue('--color-reader-token-selected').trim()).toBe('rgb(243 243 247/14%)');
     expect(selectedRule?.style.background).toBe('var(--color-reader-token-selected)');
+    expect(selectedRule?.style.textDecoration).toContain('dotted');
+    expect(selectedRule?.style.textDecoration).not.toContain('double');
     expect(container.querySelector('.reader-token')).toHaveAttribute('data-selected');
     expect(container.querySelector('ruby > rt')).toHaveTextContent('きのう');
   });

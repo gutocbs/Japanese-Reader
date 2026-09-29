@@ -291,37 +291,38 @@ export function ReaderPage({ documentId }: ReaderPageProps) {
   return (
     <article className="reader-page" aria-labelledby="reader-title">
       <header className="reader-heading">
-        <div>
-          <p className="eyebrow">Modo de leitura</p>
-          <h1 id="reader-title">{snapshot.document.title || 'Sem título'}</h1>
-        </div>
-        <div className="reader-heading__actions">
+        <h1 id="reader-title">{snapshot.document.title || 'Sem título'}</h1>
+      </header>
+      <aside className="reader-rail" aria-label="Ações do leitor">
           <a
-            className="text-link"
+            className="reader-rail__button"
             href="/"
+            aria-label="Voltar à biblioteca"
+            title="Voltar à biblioteca"
             onClick={(event) => {
               event.preventDefault();
               navigate('/');
             }}
           >
-            Voltar à biblioteca
+            <span aria-hidden="true">←</span>
           </a>
           <a
-            className="text-link"
+            className="reader-rail__button"
             href={`/documents/${encodeURIComponent(documentId)}/edit`}
+            aria-label="Editar documento"
+            title="Editar documento"
             onClick={(event) => {
               event.preventDefault();
               navigate(`/documents/${encodeURIComponent(documentId)}/edit`);
             }}
           >
-            Editar documento
+            <span aria-hidden="true">✎</span>
           </a>
           <ReaderMenu
             preferences={readerPreferences}
             onPreferencesChange={updateReaderPreferences}
           />
-        </div>
-      </header>
+      </aside>
       <DocumentText
         content={snapshot.document.content}
         analysis={snapshot.analysis}

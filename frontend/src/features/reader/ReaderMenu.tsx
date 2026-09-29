@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import {
   READER_FONT_SIZE_RANGE,
   type ReaderPreferences,
@@ -10,8 +9,6 @@ interface ReaderMenuProps {
 }
 
 export function ReaderMenu({ preferences, onPreferencesChange }: ReaderMenuProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const panelId = 'reader-preferences-panel';
   const decreaseFontSize = () => onPreferencesChange({
     ...preferences,
     fontSizePx: preferences.fontSizePx - READER_FONT_SIZE_RANGE.step,
@@ -20,59 +17,47 @@ export function ReaderMenu({ preferences, onPreferencesChange }: ReaderMenuProps
     ...preferences,
     fontSizePx: preferences.fontSizePx + READER_FONT_SIZE_RANGE.step,
   });
+  const furiganaAction = preferences.showFurigana ? 'Ocultar furigana' : 'Mostrar furigana';
 
   return (
-    <div className="reader-menu">
+    <div className="reader-menu" role="group" aria-label="Controles de leitura">
       <button
-        className="button button--secondary"
+        className="reader-rail__button"
         type="button"
-        aria-expanded={isOpen}
-        aria-controls={panelId}
-        onClick={() => setIsOpen((open) => !open)}
+        aria-label="Diminuir tamanho da fonte japonesa"
+        title="Diminuir tamanho da fonte japonesa"
+        disabled={preferences.fontSizePx <= READER_FONT_SIZE_RANGE.min}
+        onClick={decreaseFontSize}
       >
-        Preferências de leitura
+        <span aria-hidden="true">−</span>
       </button>
-      {isOpen && (
-        <section id={panelId} className="reader-menu__panel" aria-label="Preferências de leitura">
-          <div className="reader-menu__field">
-            <span id="reader-font-size-label">Tamanho da fonte japonesa</span>
-            <div className="reader-menu__font-size-control" role="group" aria-labelledby="reader-font-size-label">
-              <button
-                className="button button--secondary reader-menu__font-size-button"
-                type="button"
-                aria-label="Diminuir tamanho da fonte japonesa"
-                disabled={preferences.fontSizePx <= READER_FONT_SIZE_RANGE.min}
-                onClick={decreaseFontSize}
-              >
-                −
-              </button>
-              <output className="reader-menu__font-size-value" aria-live="polite">
-                {preferences.fontSizePx} px
-              </output>
-              <button
-                className="button button--secondary reader-menu__font-size-button"
-                type="button"
-                aria-label="Aumentar tamanho da fonte japonesa"
-                disabled={preferences.fontSizePx >= READER_FONT_SIZE_RANGE.max}
-                onClick={increaseFontSize}
-              >
-                ＋
-              </button>
-            </div>
-          </div>
-          <label className="reader-menu__toggle">
-            <input
-              type="checkbox"
-              checked={preferences.showFurigana}
-              onChange={(event) => onPreferencesChange({
-                ...preferences,
-                showFurigana: event.target.checked,
-              })}
-            />
-            Exibir furigana
-          </label>
-        </section>
-      )}
+      <output className="reader-rail__font-size" aria-live="polite">
+        {preferences.fontSizePx} px
+      </output>
+      <button
+        className="reader-rail__button"
+        type="button"
+        aria-label="Aumentar tamanho da fonte japonesa"
+        title="Aumentar tamanho da fonte japonesa"
+        disabled={preferences.fontSizePx >= READER_FONT_SIZE_RANGE.max}
+        onClick={increaseFontSize}
+      >
+        <span aria-hidden="true">＋</span>
+      </button>
+      <span className="reader-rail__divider" aria-hidden="true" />
+      <button
+        className="reader-rail__button reader-rail__furigana"
+        type="button"
+        aria-label={furiganaAction}
+        title={furiganaAction}
+        aria-pressed={preferences.showFurigana}
+        onClick={() => onPreferencesChange({
+          ...preferences,
+          showFurigana: !preferences.showFurigana,
+        })}
+      >
+        <span aria-hidden="true">{preferences.showFurigana ? 'あ' : 'あ̸'}</span>
+      </button>
     </div>
   );
 }
