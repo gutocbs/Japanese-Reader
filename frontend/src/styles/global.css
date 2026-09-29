@@ -465,6 +465,11 @@ a {
   box-shadow: 0 0 0 3px var(--color-focus);
 }
 
+.tag-color-picker__option:has(input:focus-visible) span[aria-hidden='true'] {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 3px;
+}
+
 .tag-selection {
   margin-top: var(--space-4);
   padding: var(--space-4);

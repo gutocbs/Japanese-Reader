@@ -78,4 +78,16 @@ describe('tag management route', () => {
     expect(await screen.findByText('Nenhuma etiqueta criada. Crie a primeira para organizar sua biblioteca.')).toHaveAttribute('role', 'status');
     expect(screen.getByLabelText('Nova etiqueta')).toBeInTheDocument();
   });
+
+  it('retries the document query when document loading fails', async () => {
+    localStorage.clear();
+    const list = vi.fn().mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce([document]);
+    render(<App client={client({ list })} initialPath="/tags" />);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Etiquetas indisponíveis');
+    fireEvent.click(screen.getByRole('button', { name: 'Tentar novamente' }));
+
+    expect(await screen.findByRole('heading', { name: 'Etiquetas' })).toBeInTheDocument();
+    expect(list).toHaveBeenCalledTimes(2);
+  });
 });

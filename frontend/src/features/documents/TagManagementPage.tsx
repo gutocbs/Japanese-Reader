@@ -66,7 +66,7 @@ export function TagManagementPage() {
   };
 
   if (documentsQuery.isPending || tagsQuery.isPending) return <p className="page-state" role="status">Carregando etiquetas…</p>;
-  if (documentsQuery.isError || tagsQuery.isError) return <section className="page-state" role="alert"><h1>Etiquetas indisponíveis</h1><button className="button button--primary" type="button" onClick={() => void tagsQuery.refetch()}>Tentar novamente</button></section>;
+  if (documentsQuery.isError || tagsQuery.isError) return <section className="page-state" role="alert"><h1>Etiquetas indisponíveis</h1><button className="button button--primary" type="button" onClick={() => void Promise.all([documentsQuery.refetch(), tagsQuery.refetch()])}>Tentar novamente</button></section>;
 
   return (
     <section className="editor-page tag-management-page" aria-labelledby="tags-title">
