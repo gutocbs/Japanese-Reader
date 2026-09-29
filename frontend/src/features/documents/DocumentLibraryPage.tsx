@@ -514,6 +514,12 @@ function LibrarySearch({
           aria-pressed={hasActivePopupFilters}
           title={hasActivePopupFilters ? 'Filtros ativos' : 'Abrir filtros'}
           onClick={() => onFiltersOpenChange(!filtersOpen)}
+          onKeyDown={(event) => {
+            if (filtersOpen && event.key === 'Escape') {
+              event.preventDefault();
+              closeFilters();
+            }
+          }}
         >
           <FilterIcon />
           <span aria-hidden="true">Filtros</span>

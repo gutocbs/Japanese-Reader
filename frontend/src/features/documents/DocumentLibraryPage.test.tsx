@@ -378,6 +378,21 @@ describe('document library flows', () => {
     expect(filterButton).toHaveFocus();
   });
 
+  it('closes the filter popup when Escape is pressed on its trigger after opening', async () => {
+    render(<App client={client({ list: vi.fn().mockResolvedValue([firstDocument]) })} initialPath="/" />);
+
+    const filterButton = await screen.findByRole('button', { name: 'Abrir filtros' });
+    filterButton.focus();
+    fireEvent.keyDown(filterButton, { key: 'Enter' });
+    fireEvent.click(filterButton);
+    expect(screen.getByRole('group', { name: 'Filtros da biblioteca' })).toBeInTheDocument();
+
+    fireEvent.keyDown(filterButton, { key: 'Escape' });
+
+    expect(screen.queryByRole('group', { name: 'Filtros da biblioteca' })).not.toBeInTheDocument();
+    expect(filterButton).toHaveFocus();
+  });
+
   it('announces active library filters on the icon-led popup trigger', async () => {
     render(<App client={client({ list: vi.fn().mockResolvedValue([firstDocument]) })} initialPath="/" />);
 
