@@ -213,6 +213,27 @@ describe('document library flows', () => {
     expect(libraryTitles()).toEqual(['Atualizado depois', 'Atualizado antes']);
   });
 
+  it('preserves updated-date descending for unread documents in the default ordering', async () => {
+    const unreadDocuments = [
+      {
+        ...orderingDocuments[2],
+        id: '00000000-0000-0000-0000-000000000005',
+        title: 'Não lido atualizado antes',
+        updatedAt: '2026-09-28T12:00:00Z',
+      },
+      {
+        ...orderingDocuments[2],
+        id: '00000000-0000-0000-0000-000000000040',
+        title: 'Não lido atualizado depois',
+        updatedAt: '2026-09-29T12:00:00Z',
+      },
+    ];
+    render(<App client={client({ list: vi.fn().mockResolvedValue(unreadDocuments) })} initialPath="/" />);
+
+    await screen.findByRole('list', { name: 'Documentos' });
+    expect(libraryTitles()).toEqual(['Não lido atualizado depois', 'Não lido atualizado antes']);
+  });
+
   it('uses document id as a deterministic tie-breaker for equal ordering values', async () => {
     const tiedDocuments = [
       { ...orderingDocuments[0], id: '00000000-0000-0000-0000-000000000040', title: 'Segundo' },

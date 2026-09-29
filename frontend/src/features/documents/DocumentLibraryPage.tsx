@@ -63,6 +63,10 @@ function orderDocuments(
     if (field === 'lastReadAt' && (left.lastReadAt === null || right.lastReadAt === null)) {
       if (left.lastReadAt === null && right.lastReadAt !== null) return 1;
       if (left.lastReadAt !== null && right.lastReadAt === null) return -1;
+      if (direction === 'desc') {
+        const updatedComparison = Date.parse(right.updatedAt) - Date.parse(left.updatedAt);
+        if (updatedComparison !== 0) return updatedComparison;
+      }
       return left.id.localeCompare(right.id);
     }
 
