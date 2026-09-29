@@ -375,6 +375,34 @@ a {
   color: var(--color-error);
 }
 
+.metadata-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+}
+
+.metadata-tags li,
+.metadata-tag-form {
+  align-items: center;
+  display: flex;
+  gap: 0.35rem;
+}
+
+.metadata-tag {
+  background: color-mix(in srgb, var(--tag-color) 16%, transparent);
+  border: 1px solid var(--tag-color);
+  border-radius: 999px;
+  color: var(--color-text);
+  padding: 0.15rem 0.5rem;
+}
+
+.metadata-tag-form {
+  margin-top: 0.75rem;
+}
+
 .button--danger {
   border-color: var(--color-error);
   background: var(--color-error);

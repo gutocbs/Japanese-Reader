@@ -1,5 +1,6 @@
 import { DocumentEditorPage } from '../features/documents/DocumentEditorPage';
 import { DocumentLibraryPage } from '../features/documents/DocumentLibraryPage';
+import { DocumentMetadataPage } from '../features/documents/DocumentMetadataPage';
 import { ReaderPage } from '../features/reader/ReaderPage';
 import { SettingsPage } from '../features/settings/SettingsPage';
 import { useRouter } from './providers';
@@ -19,12 +20,12 @@ export function AppRouter() {
     return <SettingsPage />;
   }
 
-  const match = /^\/documents\/([^/]+)\/(edit|read)$/.exec(location.path);
+  const match = /^\/documents\/([^/]+)\/(edit|metadata|read)$/.exec(location.path);
   if (match !== null) {
     const documentId = decodeURIComponent(match[1]);
-    return match[2] === 'edit'
-      ? <DocumentEditorPage key={`edit-${documentId}`} documentId={documentId} />
-      : <ReaderPage documentId={documentId} />;
+    if (match[2] === 'edit') return <DocumentEditorPage key={`edit-${documentId}`} documentId={documentId} />;
+    if (match[2] === 'metadata') return <DocumentMetadataPage key={`metadata-${documentId}`} documentId={documentId} />;
+    return <ReaderPage documentId={documentId} />;
   }
 
   return (

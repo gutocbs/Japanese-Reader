@@ -356,6 +356,18 @@ export function DocumentLibraryPage() {
                   >
                     <DocumentActionIcon name="file-pen" />
                   </a>
+                  <a
+                    className="document-row__action"
+                    href={`/documents/${encodeURIComponent(document.id)}/metadata`}
+                    aria-label="Editar metadados"
+                    title="Editar metadados"
+                    onClick={(event) => {
+                      event.preventDefault();
+                      navigate(`/documents/${encodeURIComponent(document.id)}/metadata`);
+                    }}
+                  >
+                    <span aria-hidden="true">#</span>
+                  </a>
                   <button
                     className="document-row__action"
                     type="button"
