@@ -147,6 +147,10 @@ describe('document library flows', () => {
     expect(editAction).toHaveAttribute('title', 'Editar documento');
     expect(renameAction).toHaveAttribute('title', 'Renomear documento');
     expect(deleteAction).toHaveAttribute('title', 'Excluir documento');
+    expect(openAction.querySelector('svg[data-lucide="file-symlink"]')).toBeInTheDocument();
+    expect(editAction.querySelector('svg[data-lucide="file-pen"]')).toBeInTheDocument();
+    expect(deleteAction.querySelector('svg[data-lucide="trash"]')).toBeInTheDocument();
+    expect(renameAction).toHaveTextContent('Aa');
     fireEvent.click(titleLink);
 
     expect(await screen.findByRole('heading', { name: '雪国', level: 1 })).toBeInTheDocument();
