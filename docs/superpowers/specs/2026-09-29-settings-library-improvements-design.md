@@ -44,6 +44,8 @@ Each tag receives a distinct color from a controlled palette when first created.
 
 Tag management must allow changing both a tag name and its color. Color selection uses the predefined palette and may additionally offer a color picker. Deleting a tag removes only that tag association from every document that contains it; other tags and document metadata remain unchanged.
 
+Tag removal controls should use a compact red `X` icon instead of the word "Remover", while retaining an accessible name, tooltip, keyboard focus state, and the established destructive-action color.
+
 ## Frontend design pass
 
 Use the `frontend-design` skill for a focused visual redesign of the tag-management and document-metadata screens. Preserve the existing desktop-first information architecture and dark/light tokens while improving hierarchy, spacing, control grouping, inline tag selection, color previews, focus states, and empty/error states. The result should remain restrained and consistent with the reader rail rather than introducing a new visual language.

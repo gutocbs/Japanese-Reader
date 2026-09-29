@@ -204,10 +204,10 @@ Run this task only after Tasks 6–8, 10–13, and 15–16 as the final cleanup 
 
 **Files:** tag-management page, document metadata page, shared styles, and focused frontend tests.
 
-**Interfaces:** Applies the `frontend-design` skill to improve hierarchy, spacing, control grouping, tag selection, color previews, focus states, and empty/error states while preserving the existing desktop-first information architecture and theme tokens.
+**Interfaces:** Applies the `frontend-design` skill to improve hierarchy, spacing, control grouping, tag selection, color previews, focus states, and empty/error states while preserving the existing desktop-first information architecture and theme tokens. Tag removal uses a compact red `X` icon with an accessible label and tooltip.
 
 - [ ] Define the visual direction and compact token/layout adjustments before implementation.
-- [ ] Add tests for existing-tag selection, inline tag creation, editable source, color palette/picker interaction, and accessible feedback states.
+- [ ] Add tests for existing-tag selection, inline tag creation, editable source, color palette/picker interaction, compact red `X` removal controls, and accessible feedback states.
 - [ ] Implement the redesign without changing document or tag persistence semantics.
 - [ ] Run focused tests, build, and `git diff --check`.
 - [ ] Commit `style(documents): refine metadata and tag screens`.
