@@ -3,6 +3,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useDocumentClient, useRouter } from '../../app/providers';
 import type { Document } from '../../shared/api/client';
 import { DeleteDocumentDialog } from './DeleteDocumentDialog';
+import {
+  loadFavoriteDocumentIds,
+  saveFavoriteDocumentIds,
+  toggleFavoriteDocumentId,
+} from './favorites';
 import { documentKeys } from './queries';
 
 type DocumentActionIconName = 'file-symlink' | 'file-pen' | 'trash';
@@ -103,6 +108,7 @@ export function DocumentLibraryPage() {
   const [search, setSearch] = useState('');
   const [orderField, setOrderField] = useState<DocumentOrderField>('lastReadAt');
   const [orderDirection, setOrderDirection] = useState<DocumentOrderDirection>('desc');
+  const [favoriteDocumentIds, setFavoriteDocumentIds] = useState(() => loadFavoriteDocumentIds());
   const deleteTriggerRef = useRef<HTMLButtonElement | null>(null);
 
   const documentsQuery = useQuery({
@@ -151,6 +157,14 @@ export function DocumentLibraryPage() {
     setRenaming(document);
     setRenameTitle(document.title);
     setRenameError(false);
+  };
+
+  const toggleFavorite = (documentId: string) => {
+    setFavoriteDocumentIds((current) => {
+      const next = toggleFavoriteDocumentId(current, documentId);
+      saveFavoriteDocumentIds(next);
+      return next;
+    });
   };
 
   const submitRename = (event: FormEvent<HTMLFormElement>) => {
@@ -276,6 +290,16 @@ export function DocumentLibraryPage() {
                 </form>
               ) : (
                 <div className="document-row__actions">
+                  <button
+                    className={`document-row__action${favoriteDocumentIds.has(document.id) ? ' document-row__action--active' : ''}`}
+                    type="button"
+                    aria-label={favoriteDocumentIds.has(document.id) ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+                    aria-pressed={favoriteDocumentIds.has(document.id)}
+                    title={favoriteDocumentIds.has(document.id) ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+                    onClick={() => toggleFavorite(document.id)}
+                  >
+                    <span aria-hidden="true">{favoriteDocumentIds.has(document.id) ? '★' : '☆'}</span>
+                  </button>
                   <a
                     className="document-row__action"
                     href={`/documents/${encodeURIComponent(document.id)}/read`}

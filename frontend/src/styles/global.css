@@ -316,6 +316,10 @@ a {
   color: var(--color-error);
 }
 
+.document-row__action--active {
+  color: var(--color-primary);
+}
+
 .rename-form input {
   min-height: 2.75rem;
   border: 1px solid var(--color-border);

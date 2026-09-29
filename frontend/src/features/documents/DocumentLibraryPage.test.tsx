@@ -118,6 +118,7 @@ function libraryTitles() {
 }
 
 beforeEach(() => {
+  localStorage.clear();
   window.history.replaceState(null, '', '/');
 });
 
@@ -336,6 +337,28 @@ describe('document library flows', () => {
     fireEvent.click(screen.getByRole('link', { name: 'Voltar à biblioteca' }));
     expect(await screen.findByRole('heading', { name: 'Biblioteca', level: 1 })).toBeInTheDocument();
     expect(window.location.pathname).toBe('/');
+  });
+
+  it('toggles the favorite action with active and inactive accessible labels', async () => {
+    const api = client({ list: vi.fn().mockResolvedValue([firstDocument]) });
+    render(<App client={api} initialPath="/" />);
+    const row = await screen.findByRole('listitem', { name: '雪国' });
+
+    const addFavorite = within(row).getByRole('button', { name: 'Adicionar aos favoritos' });
+    expect(addFavorite).toHaveAttribute('title', 'Adicionar aos favoritos');
+    expect(addFavorite).toHaveAttribute('aria-pressed', 'false');
+    expect(addFavorite).toHaveTextContent('☆');
+
+    fireEvent.click(addFavorite);
+
+    const removeFavorite = within(row).getByRole('button', { name: 'Remover dos favoritos' });
+    expect(removeFavorite).toHaveAttribute('title', 'Remover dos favoritos');
+    expect(removeFavorite).toHaveAttribute('aria-pressed', 'true');
+    expect(removeFavorite).toHaveTextContent('★');
+    expect(localStorage.getItem('japanese-reader:document-favorites')).toBe(JSON.stringify({
+      version: 1,
+      documentIds: [firstDocument.id],
+    }));
   });
 
   it('renames a document and keeps the editor available for content changes', async () => {
