@@ -1,0 +1,62 @@
+import { READER_FONT_SIZE_RANGE } from '../features/reader/preferences';
+import type { Theme } from './theme';
+
+export interface AppSettings {
+  theme: Theme;
+  defaultReaderFontSizePx: number;
+  lineBreakNormalizationEnabled: boolean;
+}
+
+const STORAGE_KEY = 'japanese-reader:app-settings';
+const STORAGE_VERSION = 1;
+
+function isFontSize(value: unknown): value is number {
+  return typeof value === 'number'
+    && Number.isInteger(value)
+    && value >= READER_FONT_SIZE_RANGE.min
+    && value <= READER_FONT_SIZE_RANGE.max;
+}
+
+function isTheme(value: unknown): value is Theme {
+  return value === 'light' || value === 'dark';
+}
+
+export const DEFAULT_APP_SETTINGS: AppSettings = {
+  theme: 'light',
+  defaultReaderFontSizePx: 24,
+  lineBreakNormalizationEnabled: import.meta.env.VITE_ENABLE_LINE_BREAK_NORMALIZATION !== 'false',
+};
+
+export function loadAppSettings(): AppSettings {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored === null) return DEFAULT_APP_SETTINGS;
+
+    const value: unknown = JSON.parse(stored);
+    if (typeof value !== 'object' || value === null) return DEFAULT_APP_SETTINGS;
+
+    const record = value as Record<string, unknown>;
+    if (record.version !== STORAGE_VERSION
+      || !isTheme(record.theme)
+      || !isFontSize(record.defaultReaderFontSizePx)
+      || typeof record.lineBreakNormalizationEnabled !== 'boolean') {
+      return DEFAULT_APP_SETTINGS;
+    }
+
+    return {
+      theme: record.theme,
+      defaultReaderFontSizePx: record.defaultReaderFontSizePx,
+      lineBreakNormalizationEnabled: record.lineBreakNormalizationEnabled,
+    };
+  } catch {
+    return DEFAULT_APP_SETTINGS;
+  }
+}
+
+export function saveAppSettings(settings: AppSettings): void {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: STORAGE_VERSION, ...settings }));
+  } catch {
+    // The selected settings remain active for the current visit when storage is unavailable.
+  }
+}
