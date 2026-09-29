@@ -120,15 +120,20 @@ describe('document library flows', () => {
     expect(screen.getByLabelText('Texto japonês')).toHaveValue('下書きの本文');
   });
 
-  it('opens a document in the reader and exposes the edit route from the library', async () => {
+  it('opens a document from its title while keeping the explicit reader and edit actions available', async () => {
     const api = client({ list: vi.fn().mockResolvedValue([firstDocument]) });
     render(<App client={api} initialPath="/" />);
     const row = await screen.findByRole('listitem', { name: '雪国' });
 
+    const titleLink = within(row).getByRole('link', { name: '雪国' });
+    expect(titleLink).toHaveAttribute('href', `/documents/${firstDocument.id}/read`);
+    expect(within(row).getByRole('link', { name: 'Abrir' })).toHaveAttribute(
+      'href', `/documents/${firstDocument.id}/read`,
+    );
     expect(within(row).getByRole('link', { name: 'Editar' })).toHaveAttribute(
       'href', `/documents/${firstDocument.id}/edit`,
     );
-    fireEvent.click(within(row).getByRole('link', { name: 'Abrir' }));
+    fireEvent.click(titleLink);
 
     expect(await screen.findByRole('heading', { name: '雪国', level: 1 })).toBeInTheDocument();
     expect(window.location.pathname).toBe(`/documents/${firstDocument.id}/read`);

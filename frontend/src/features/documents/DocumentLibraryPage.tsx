@@ -130,7 +130,18 @@ export function DocumentLibraryPage() {
           {documents.map((document) => (
             <li key={document.id} className="document-row" aria-label={document.title || 'Sem título'}>
               <div className="document-row__summary">
-                <h2>{document.title || 'Sem título'}</h2>
+                <h2>
+                  <a
+                    className="document-row__title"
+                    href={`/documents/${encodeURIComponent(document.id)}/read`}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      navigate(`/documents/${encodeURIComponent(document.id)}/read`);
+                    }}
+                  >
+                    {document.title || 'Sem título'}
+                  </a>
+                </h2>
                 <p>{readLabel(document.lastReadAt)}</p>
               </div>
 

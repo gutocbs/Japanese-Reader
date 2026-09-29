@@ -170,6 +170,18 @@ a {
   font-size: 1.35rem;
 }
 
+.document-row__title {
+  color: var(--color-text);
+  text-decoration-color: transparent;
+  text-decoration-thickness: 0.08em;
+  text-underline-offset: 0.22em;
+}
+
+.document-row__title:hover {
+  color: var(--color-primary);
+  text-decoration-color: currentcolor;
+}
+
 .document-row p {
   margin-top: var(--space-1);
   color: var(--color-text-muted);
