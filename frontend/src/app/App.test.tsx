@@ -103,18 +103,18 @@ beforeEach(() => {
   window.matchMedia = vi.fn().mockReturnValue({ matches: false });
 });
 
-it('applies a saved manual theme instead of the system preference and persists a new choice', () => {
+it('migrates a saved legacy theme until settings are changed', () => {
   localStorage.setItem('japanese-reader:theme-preference', 'dark');
 
   render(<App client={client()} initialPath="/documents/new" />);
 
   expect(window.document.documentElement).toHaveAttribute('data-theme', 'dark');
 
-  fireEvent.click(screen.getByRole('button', { name: 'Aparência' }));
+  fireEvent.click(screen.getByRole('link', { name: 'Configurações' }));
   fireEvent.click(screen.getByRole('radio', { name: 'Tema claro' }));
 
   expect(window.document.documentElement).toHaveAttribute('data-theme', 'light');
-  expect(localStorage.getItem('japanese-reader:theme-preference')).toBe('light');
+  expect(localStorage.getItem('japanese-reader:app-settings')).toContain('"theme":"light"');
 });
 
 it('uses the system dark preference until the reader has a saved choice', () => {

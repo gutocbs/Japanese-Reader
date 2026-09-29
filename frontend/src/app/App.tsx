@@ -2,13 +2,28 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState } from 'react';
 import type { DocumentClient } from '../shared/api/client';
 import '../styles/global.css';
-import { AppearanceMenu } from './AppearanceMenu';
-import { AppProviders } from './providers';
+import { AppProviders, useRouter } from './providers';
 import { AppRouter } from './router';
 
 interface AppProps {
   client?: DocumentClient;
   initialPath?: string;
+}
+
+function SettingsLink() {
+  const { navigate } = useRouter();
+  return (
+    <a
+      className="text-link"
+      href="/settings"
+      onClick={(event) => {
+        event.preventDefault();
+        navigate('/settings');
+      }}
+    >
+      Configurações
+    </a>
+  );
 }
 
 export function App({ client, initialPath }: AppProps) {
@@ -29,7 +44,7 @@ export function App({ client, initialPath }: AppProps) {
               <span aria-hidden="true" className="brand-mark" />
               Japanese Reader
             </a>
-            <AppearanceMenu />
+            <SettingsLink />
           </div>
         </header>
         <main id="main-content" className="app-main">

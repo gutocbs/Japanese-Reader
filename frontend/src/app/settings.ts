@@ -27,30 +27,38 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   lineBreakNormalizationEnabled: import.meta.env.VITE_ENABLE_LINE_BREAK_NORMALIZATION !== 'false',
 };
 
+function isLineBreakNormalizationAvailable(): boolean {
+  return import.meta.env.VITE_ENABLE_LINE_BREAK_NORMALIZATION !== 'false';
+}
+
 export function loadAppSettings(): AppSettings {
+  const defaults = {
+    ...DEFAULT_APP_SETTINGS,
+    lineBreakNormalizationEnabled: isLineBreakNormalizationAvailable(),
+  };
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored === null) return DEFAULT_APP_SETTINGS;
+    if (stored === null) return defaults;
 
     const value: unknown = JSON.parse(stored);
-    if (typeof value !== 'object' || value === null) return DEFAULT_APP_SETTINGS;
+    if (typeof value !== 'object' || value === null) return defaults;
 
     const record = value as Record<string, unknown>;
     if (record.version !== STORAGE_VERSION
       || !isTheme(record.theme)
       || !isFontSize(record.defaultReaderFontSizePx)
       || typeof record.lineBreakNormalizationEnabled !== 'boolean') {
-      return DEFAULT_APP_SETTINGS;
+      return defaults;
     }
 
     return {
       theme: record.theme,
       defaultReaderFontSizePx: record.defaultReaderFontSizePx,
-      lineBreakNormalizationEnabled: DEFAULT_APP_SETTINGS.lineBreakNormalizationEnabled
+      lineBreakNormalizationEnabled: defaults.lineBreakNormalizationEnabled
         && record.lineBreakNormalizationEnabled,
     };
   } catch {
-    return DEFAULT_APP_SETTINGS;
+    return defaults;
   }
 }
 

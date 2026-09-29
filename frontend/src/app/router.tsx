@@ -1,6 +1,7 @@
 import { DocumentEditorPage } from '../features/documents/DocumentEditorPage';
 import { DocumentLibraryPage } from '../features/documents/DocumentLibraryPage';
 import { ReaderPage } from '../features/reader/ReaderPage';
+import { SettingsPage } from '../features/settings/SettingsPage';
 import { useRouter } from './providers';
 
 export function AppRouter() {
@@ -12,6 +13,10 @@ export function AppRouter() {
 
   if (location.path === '/documents/new') {
     return <DocumentEditorPage key="new-document" />;
+  }
+
+  if (location.path === '/settings') {
+    return <SettingsPage />;
   }
 
   const match = /^\/documents\/([^/]+)\/(edit|read)$/.exec(location.path);

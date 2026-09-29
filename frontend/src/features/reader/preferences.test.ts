@@ -25,4 +25,13 @@ describe('reader preferences', () => {
     }));
     expect(loadReaderPreferences()).toEqual(DEFAULT_READER_PREFERENCES);
   });
+
+  it('uses the configured default only before reader preferences have been saved', () => {
+    localStorage.clear();
+    expect(loadReaderPreferences(28)).toEqual({ fontSizePx: 28, showFurigana: true });
+
+    saveReaderPreferences({ fontSizePx: 26, showFurigana: false });
+
+    expect(loadReaderPreferences(28)).toEqual({ fontSizePx: 26, showFurigana: false });
+  });
 });

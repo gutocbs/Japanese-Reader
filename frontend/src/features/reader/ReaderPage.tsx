@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useDocumentClient, useRouter } from '../../app/providers';
+import { useAppSettings, useDocumentClient, useRouter } from '../../app/providers';
 import { ApiError } from '../../shared/api/client';
 import type {
   Analysis,
@@ -68,6 +68,7 @@ function replaceAnalysisOccurrence(
 
 export function ReaderPage({ documentId }: ReaderPageProps) {
   const client = useDocumentClient();
+  const { settings } = useAppSettings();
   const { location, navigate } = useRouter();
   const routedSnapshot = isReaderSnapshot(location.state, documentId) ? location.state : null;
   const [snapshot, setSnapshot] = useState<ReaderSnapshot | null>(routedSnapshot);
@@ -77,7 +78,7 @@ export function ReaderPage({ documentId }: ReaderPageProps) {
   const [areSelectionsHydrated, setAreSelectionsHydrated] = useState(false);
   const [persistenceError, setPersistenceError] = useState('');
   const [readerPreferences, setReaderPreferences] = useState<ReaderPreferences>(
-    loadReaderPreferences,
+    () => loadReaderPreferences(settings.defaultReaderFontSizePx),
   );
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(() => new Set());
   const [displayPreferences, setDisplayPreferences] = useState<

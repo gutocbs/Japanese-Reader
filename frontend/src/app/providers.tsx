@@ -9,7 +9,8 @@ import {
   useState,
 } from 'react';
 import { documentClient, type DocumentClient } from '../shared/api/client';
-import { loadTheme, saveTheme, type Theme } from './theme';
+import { loadTheme, type Theme } from './theme';
+import { loadAppSettings, saveAppSettings, type AppSettings } from './settings';
 
 interface RouterLocation {
   path: string;
@@ -27,6 +28,11 @@ interface ThemeContextValue {
   setTheme: (theme: Theme) => void;
 }
 
+interface AppSettingsContextValue {
+  settings: AppSettings;
+  updateSettings: (settings: AppSettings) => void;
+}
+
 interface AppProvidersProps {
   children: ReactNode;
   client?: DocumentClient;
@@ -36,9 +42,24 @@ interface AppProvidersProps {
 const ApiContext = createContext<DocumentClient | null>(null);
 const RouterContext = createContext<RouterContextValue | null>(null);
 const ThemeContext = createContext<ThemeContextValue | null>(null);
+const AppSettingsContext = createContext<AppSettingsContextValue | null>(null);
+
+function hasPersistedAppSettings(): boolean {
+  try {
+    return localStorage.getItem('japanese-reader:app-settings') !== null;
+  } catch {
+    return false;
+  }
+}
 
 export function AppProviders({ children, client = documentClient, initialPath }: AppProvidersProps) {
-  const [theme, setThemeState] = useState<Theme>(loadTheme);
+  const [settings, setSettings] = useState<AppSettings>(() => {
+    const loaded = loadAppSettings();
+    return hasPersistedAppSettings() ? loaded : { ...loaded, theme: loadTheme() };
+  });
+  const [theme, setThemeState] = useState<Theme>(() => (
+    hasPersistedAppSettings() ? loadAppSettings().theme : loadTheme()
+  ));
   const [location, setLocation] = useState<RouterLocation>(() => {
     if (initialPath !== undefined) {
       window.history.replaceState(null, '', initialPath);
@@ -59,8 +80,18 @@ export function AppProviders({ children, client = documentClient, initialPath }:
   }, [theme]);
 
   const setTheme = useCallback((nextTheme: Theme) => {
-    saveTheme(nextTheme);
     setThemeState(nextTheme);
+    setSettings((current) => {
+      const next = { ...current, theme: nextTheme };
+      saveAppSettings(next);
+      return next;
+    });
+  }, []);
+
+  const updateSettings = useCallback((nextSettings: AppSettings) => {
+    saveAppSettings(nextSettings);
+    setSettings(nextSettings);
+    setThemeState(nextSettings.theme);
   }, []);
 
   const navigate = useCallback((path: string, state?: unknown) => {
@@ -79,11 +110,13 @@ export function AppProviders({ children, client = documentClient, initialPath }:
   );
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme }}>
-      <ApiContext.Provider value={client}>
-        <RouterContext.Provider value={router}>{children}</RouterContext.Provider>
-      </ApiContext.Provider>
-    </ThemeContext.Provider>
+    <AppSettingsContext.Provider value={{ settings, updateSettings }}>
+      <ThemeContext.Provider value={{ theme, setTheme }}>
+        <ApiContext.Provider value={client}>
+          <RouterContext.Provider value={router}>{children}</RouterContext.Provider>
+        </ApiContext.Provider>
+      </ThemeContext.Provider>
+    </AppSettingsContext.Provider>
   );
 }
 
@@ -103,4 +136,10 @@ export function useTheme() {
   const theme = useContext(ThemeContext);
   if (theme === null) throw new Error('Theme provider is missing');
   return theme;
+}
+
+export function useAppSettings() {
+  const appSettings = useContext(AppSettingsContext);
+  if (appSettings === null) throw new Error('App settings provider is missing');
+  return appSettings;
 }

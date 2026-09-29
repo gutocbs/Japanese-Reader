@@ -21,10 +21,10 @@ function isFontSize(value: unknown): value is number {
     && value <= READER_FONT_SIZE_RANGE.max;
 }
 
-export function loadReaderPreferences(): ReaderPreferences {
+export function loadReaderPreferences(defaultFontSizePx = DEFAULT_READER_PREFERENCES.fontSizePx): ReaderPreferences {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored === null) return DEFAULT_READER_PREFERENCES;
+    if (stored === null) return { ...DEFAULT_READER_PREFERENCES, fontSizePx: defaultFontSizePx };
     const value: unknown = JSON.parse(stored);
     if (typeof value !== 'object' || value === null) return DEFAULT_READER_PREFERENCES;
     const record = value as Record<string, unknown>;

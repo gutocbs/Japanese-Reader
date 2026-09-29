@@ -4,7 +4,7 @@ import {
   isReadingOverridesConfirmationRequired,
   type Document,
 } from '../../shared/api/client';
-import { useDocumentClient, useRouter } from '../../app/providers';
+import { useAppSettings, useDocumentClient, useRouter } from '../../app/providers';
 import { joinSimpleJapaneseLineBreaks } from '../../shared/text/joinSimpleJapaneseLineBreaks';
 import { ContentEditConfirmationDialog } from './ContentEditConfirmationDialog';
 import { documentKeys } from './queries';
@@ -36,6 +36,7 @@ function routedDraft(state: unknown, documentId: string | undefined): EditorDraf
 
 export function DocumentEditorPage({ documentId }: DocumentEditorPageProps) {
   const client = useDocumentClient();
+  const { settings } = useAppSettings();
   const { location, navigate, replaceState } = useRouter();
   const queryClient = useQueryClient();
   const initialDraft = useRef(routedDraft(location.state, documentId));
@@ -151,7 +152,7 @@ export function DocumentEditorPage({ documentId }: DocumentEditorPageProps) {
     });
   };
 
-  const isLineBreakNormalizationEnabled = import.meta.env.VITE_ENABLE_LINE_BREAK_NORMALIZATION !== 'false';
+  const isLineBreakNormalizationEnabled = settings.lineBreakNormalizationEnabled;
 
   const normalizeLineBreaks = () => {
     const nextContent = joinSimpleJapaneseLineBreaks(content);
