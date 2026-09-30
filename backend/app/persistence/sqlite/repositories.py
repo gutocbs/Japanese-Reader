@@ -146,11 +146,30 @@ class SqliteDocumentRepository:
 
     def list(self) -> tuple[Document, ...]:
         with self._database.unit_of_work() as connection:
-            rows = connection.execute("SELECT * FROM documents ORDER BY rowid").fetchall()
-            documents = tuple(
-                _document(row, _document_tags(connection, row["id"])) for row in rows
-            )
-        return documents
+            rows = connection.execute(
+                """
+                SELECT documents.*, tags.name AS tag_name, tags.color AS tag_color
+                FROM documents
+                LEFT JOIN document_tags
+                  ON document_tags.document_id = documents.id
+                LEFT JOIN tags ON tags.name = document_tags.tag_name
+                ORDER BY documents.rowid, document_tags.position
+                """
+            ).fetchall()
+
+        documents: list[Document] = []
+        document_row = None
+        tags: list[DocumentTag] = []
+        for row in rows:
+            if document_row is not None and row["id"] != document_row["id"]:
+                documents.append(_document(document_row, tuple(tags)))
+                tags = []
+            document_row = row
+            if row["tag_name"] is not None:
+                tags.append(DocumentTag(name=row["tag_name"], color=row["tag_color"]))
+        if document_row is not None:
+            documents.append(_document(document_row, tuple(tags)))
+        return tuple(documents)
 
     def list_tags(self) -> tuple[DocumentTag, ...]:
         with self._database.unit_of_work() as connection:
