@@ -1,6 +1,25 @@
 # Importação de artigos do note.com
 
-Este diretório registra o contrato para uma futura userscript do Tampermonkey. A userscript ainda não foi implementada nem validada em um navegador.
+Este diretório contém a userscript gerada para importar artigos compatíveis do
+note.com para o Japanese Reader local. O arquivo que deve ser instalado é
+`note-import.user.js`; ele é gerado a partir de `config.js`,
+`noteExtractor.js`, `readerApiClient.js` e `ui.js`.
+
+## Instalação e uso
+
+1. Instale o Tampermonkey no navegador e, no painel da extensão, importe o
+   arquivo local `userscript/note-import/note-import.user.js`.
+2. Inicie a API local na raiz do repositório com `npm run dev:backend`.
+3. Abra um artigo compatível de `https://note.com/` e use o controle de
+   importação inserido após o artigo.
+
+Depois de alterar um dos módulos-fonte, regenere o arquivo instalável com
+`node userscript/note-import/build-userscript.mjs` e valide-o com
+`node --check userscript/note-import/note-import.user.js`.
+
+O fluxo acima ainda precisa de validação manual em uma instalação real do
+Tampermonkey e em um artigo publicado do note.com. Não trate os testes
+automatizados como evidência dessa execução no navegador.
 
 ## Contrato da API local
 
@@ -16,12 +35,12 @@ Este diretório registra o contrato para uma futura userscript do Tampermonkey. 
 - Sucesso: `201 Created`, com JSON de `DocumentResponse`.
 - Falhas: `application/problem+json`, com `type`, `title`, `status` e `detail`. Os status relevantes no contrato atual incluem `422` e `503`.
 
-## Mapeamento proposto
+## Mapeamento efetivo
 
 | Campo da importação | Origem na página note.com |
 | --- | --- |
 | `title` | título do artigo |
-| `text` | corpo extraído do artigo |
+| `text` | corpo extraído do artigo, preservado sem normalização adicional pelo cliente |
 | `description` | URL atual do artigo |
 | `source` | `note.com` |
 | `tags` | uma tag `{ "name": "note.com", "color": "#7C3AED" }` |
@@ -38,8 +57,9 @@ Este contrato não pressupõe uma porta de host publicada por Docker. Qualquer p
 
 ## Validação reproduzível
 
-1. Na raiz do repositório, execute `uv run pytest backend/tests/integration/test_public_import_api.py` para validar o endpoint público, o `201`, os erros `422` e o contrato OpenAPI. A baseline conhecida retorna 12 testes aprovados e 1 falha: o caso com `#ffffff` espera `422`, embora o contrato e o padrão atual aceitem essa cor minúscula. Esta tarefa não modifica backend nem testes para alterar essa baseline.
-2. Inicie o backend local com `npm run dev:backend` e consulte `http://127.0.0.1:8000/docs` (ou `http://127.0.0.1:8000/openapi.json`) para conferir `POST /api/imports` e os esquemas `ImportDocumentRequest` e `DocumentResponse` publicados.
+1. Execute `node .\\frontend\\node_modules\\vitest\\vitest.mjs run userscript/note-import --reporter=verbose` para a suíte determinística da userscript.
+2. Execute `node userscript/note-import/build-userscript.mjs` e `node --check userscript/note-import/note-import.user.js` para regenerar e verificar o bundle.
+3. Execute `uv run pytest backend/tests/integration/test_public_import_api.py` para validar o endpoint público, o `201`, os erros `422` e o contrato OpenAPI. A baseline conhecida retorna 12 testes aprovados e 1 falha: o caso com `#ffffff` espera `422`, embora o contrato e o padrão atual aceitem essa cor minúscula. Esta userscript não modifica backend nem testes para ocultar essa discrepância.
 
 ## Não objetivos
 
