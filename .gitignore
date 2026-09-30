@@ -11,3 +11,4 @@ frontend/dist/
 data/
 
 /.pytest-tmp
+/docs/superpowers
