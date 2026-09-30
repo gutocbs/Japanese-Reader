@@ -1,4 +1,4 @@
-import { type CSSProperties, useRef, useState } from 'react';
+import { type CSSProperties, useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useDocumentClient, useRouter } from '../../app/providers';
 import type { DocumentTag } from '../../shared/api/client';
@@ -21,10 +21,20 @@ export function TagManagementPage() {
   const [notice, setNotice] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const newTagInputRef = useRef<HTMLInputElement>(null);
+  const deleteDialogRef = useRef<HTMLDivElement>(null);
+  const removeTriggerRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (removing !== null) deleteDialogRef.current?.focus();
+  }, [removing]);
 
   const refresh = async () => { await Promise.all([queryClient.invalidateQueries({ queryKey: ['tags'] }), queryClient.invalidateQueries({ queryKey: documentKeys.list() })]); };
   const createTag = async () => {
+    if (isSaving) return;
     try {
+      setIsSaving(true);
+      setError('');
+      setNotice('');
       if (client.createTag === undefined) throw new Error('Tag API unavailable');
       await client.createTag({ name: newName.trim(), color: newColor });
       setNewName('');
@@ -32,7 +42,10 @@ export function TagManagementPage() {
       setNotice('Etiqueta criada.');
       await refresh();
     } catch (caught) {
+      setNotice('');
       setError(caught instanceof Error ? 'Essa etiqueta já existe.' : 'Não foi possível criar a etiqueta.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -40,6 +53,8 @@ export function TagManagementPage() {
     if (renaming === null || isSaving) return;
     try {
       setIsSaving(true);
+      setError('');
+      setNotice('');
       if (client.renameTag === undefined) throw new Error('Tag API unavailable');
       await client.renameTag(renaming.name, renameName.trim());
       await refresh();
@@ -47,6 +62,7 @@ export function TagManagementPage() {
       setError('');
       setNotice('Etiqueta atualizada.');
     } catch (caught) {
+      setNotice('');
       setError('Não foi possível salvar a etiqueta.');
     } finally {
       setIsSaving(false);
@@ -57,6 +73,8 @@ export function TagManagementPage() {
     if (removing === null || isSaving) return;
     try {
       setIsSaving(true);
+      setError('');
+      setNotice('');
       if (client.deleteTag === undefined) throw new Error('Tag API unavailable');
       await client.deleteTag(removing.name);
       await refresh();
@@ -64,10 +82,16 @@ export function TagManagementPage() {
       setError('');
       setNotice('Etiqueta removida.');
     } catch {
+      setNotice('');
       setError('Não foi possível remover a etiqueta.');
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const closeRemove = () => {
+    setRemoving(null);
+    requestAnimationFrame(() => removeTriggerRef.current?.focus());
   };
 
   if (documentsQuery.isPending || tagsQuery.isPending) return <p className="page-state" role="status">Carregando etiquetas…</p>;
@@ -83,7 +107,7 @@ export function TagManagementPage() {
         </div>
         <div className="metadata-tag-form">
           <label><span className="sr-only">Nova etiqueta</span><input ref={newTagInputRef} aria-label="Nova etiqueta" value={newName} disabled={isSaving} onChange={(event) => setNewName(event.target.value)} /></label>
-          <button className="button button--secondary" type="button" disabled={newName.trim().length === 0 || isSaving} onClick={() => void createTag()}>Criar etiqueta</button>
+          <button className="button button--secondary" type="button" disabled={newName.trim().length === 0 || isSaving} onClick={() => void createTag()}>{isSaving ? 'Criando etiqueta…' : 'Criar etiqueta'}</button>
         </div>
         <fieldset className="tag-color-picker" disabled={isSaving}>
           <legend>Cor da etiqueta</legend>
@@ -104,11 +128,11 @@ export function TagManagementPage() {
         {tags.map((tag) => <li key={tag.name} className={renaming?.name === tag.name ? 'tag-management-list__item tag-management-list__item--editing' : 'tag-management-list__item'}>
           <span className="tag-management-list__swatch" aria-hidden="true" style={{ '--tag-color': tag.color } as CSSProperties} />
           <div className="tag-management-list__content"><span className="tag-management-list__name" aria-label={`Etiqueta ${tag.name}`}>{tag.name}</span><span className="tag-management-list__color">{tag.color}</span></div>
-          {renaming?.name === tag.name ? <div className="tag-management-list__editor"><label><span className="sr-only">Novo nome para {tag.name}</span><input aria-label={`Novo nome para ${tag.name}`} value={renameName} disabled={isSaving} onChange={(event) => setRenameName(event.target.value)} /></label><button className="button button--secondary" type="button" disabled={isSaving || renameName.trim().length === 0} onClick={() => void saveRename()}>Salvar etiqueta</button><button className="button button--quiet" type="button" disabled={isSaving} onClick={() => setRenaming(null)}>Cancelar</button></div> : <div className="tag-management-list__actions"><button className="button button--quiet" type="button" disabled={isSaving} aria-label={`Renomear etiqueta ${tag.name}`} onClick={() => { setNotice(''); setRenaming(tag); setRenameName(tag.name); }}>Editar</button><button className="tag-remove-button" type="button" disabled={isSaving} aria-label={`Remover etiqueta ${tag.name}`} title={`Remover etiqueta ${tag.name}`} onClick={() => setRemoving(tag)}><span aria-hidden="true">×</span></button></div>}
+          {renaming?.name === tag.name ? <div className="tag-management-list__editor"><label><span className="sr-only">Novo nome para {tag.name}</span><input aria-label={`Novo nome para ${tag.name}`} value={renameName} disabled={isSaving} onChange={(event) => setRenameName(event.target.value)} /></label><button className="button button--secondary" type="button" disabled={isSaving || renameName.trim().length === 0} onClick={() => void saveRename()}>Salvar etiqueta</button><button className="button button--quiet" type="button" disabled={isSaving} onClick={() => setRenaming(null)}>Cancelar</button></div> : <div className="tag-management-list__actions"><button className="button button--quiet" type="button" disabled={isSaving} aria-label={`Renomear etiqueta ${tag.name}`} onClick={() => { setNotice(''); setRenaming(tag); setRenameName(tag.name); }}>Editar</button><button ref={removeTriggerRef} className="tag-remove-button" type="button" disabled={isSaving} aria-label={`Remover etiqueta ${tag.name}`} title={`Remover etiqueta ${tag.name}`} onClick={(event) => { removeTriggerRef.current = event.currentTarget; setRemoving(tag); }}><span aria-hidden="true">×</span></button></div>}
         </li>)}
       </ul>
       <button className="button button--quiet" type="button" onClick={() => navigate('/')}>Voltar à biblioteca</button>
-      {removing && <div className="delete-dialog" role="dialog" aria-modal="true" aria-labelledby="remove-tag-title"><div className="delete-dialog__panel"><p className="eyebrow">Ação permanente</p><h2 id="remove-tag-title">Remover etiqueta</h2><p>A etiqueta <strong>{removing.name}</strong> será removida dos documentos associados. Essa ação não pode ser desfeita.</p><div className="delete-dialog__actions"><button className="button button--quiet" type="button" disabled={isSaving} onClick={() => setRemoving(null)}>Cancelar</button><button className="button button--danger" type="button" disabled={isSaving} onClick={() => void confirmRemove()}>Remover etiqueta definitivamente</button></div></div></div>}
+      {removing && <div ref={deleteDialogRef} className="delete-dialog" role="dialog" tabIndex={-1} aria-modal="true" aria-labelledby="remove-tag-title" aria-describedby="remove-tag-description" onKeyDown={(event) => { if (event.key === 'Escape' && !isSaving) { event.preventDefault(); closeRemove(); } }}><div className="delete-dialog__panel"><p className="eyebrow">Ação permanente</p><h2 id="remove-tag-title">Remover etiqueta</h2><p id="remove-tag-description">A etiqueta <strong>{removing.name}</strong> será removida dos documentos associados. Essa ação não pode ser desfeita.</p><div className="delete-dialog__actions"><button className="button button--quiet" type="button" disabled={isSaving} onClick={closeRemove}>Cancelar</button><button className="button button--danger" type="button" disabled={isSaving} onClick={() => void confirmRemove()}>Remover etiqueta definitivamente</button></div></div></div>}
     </section>
   );
 }

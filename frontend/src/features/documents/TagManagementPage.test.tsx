@@ -1,7 +1,11 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { App } from '../../app/App';
-import type { Analysis, Document, DocumentClient } from '../../shared/api/client';
+import type { Analysis, Document, DocumentClient, DocumentTag } from '../../shared/api/client';
+
+const stylesheet = readFileSync(resolve(import.meta.dirname, '../../styles/global.css'), 'utf8');
 
 const document: Document = {
   id: '00000000-0000-0000-0000-000000000001', title: '雪国', content: '国境', description: null,
@@ -96,6 +100,66 @@ describe('tag management route', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Criar etiqueta' }));
 
     await waitFor(() => expect(createTag).toHaveBeenCalledWith({ name: 'Anotações', color: '#123456' }));
+  });
+
+  it('prevents duplicate tag creation while saving and announces the pending state', async () => {
+    localStorage.clear();
+    let completeCreation: ((value: DocumentTag) => void) | undefined;
+    const createTag = vi.fn(() => new Promise<DocumentTag>((resolveCreation) => { completeCreation = resolveCreation; }));
+    render(<App client={client({ createTag })} initialPath="/tags" />);
+
+    await screen.findByRole('heading', { name: 'Etiquetas' });
+    fireEvent.change(screen.getByLabelText('Nova etiqueta'), { target: { value: 'Leitura' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Criar etiqueta' }));
+
+    expect(screen.getByLabelText('Nova etiqueta')).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Criando etiqueta…' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Criando etiqueta…' }));
+    expect(createTag).toHaveBeenCalledTimes(1);
+
+    completeCreation?.({ name: 'Leitura', color: '#0F766E' });
+    expect(await screen.findByRole('status')).toHaveTextContent('Etiqueta criada.');
+  });
+
+  it('replaces stale success feedback with an error when a later creation fails', async () => {
+    localStorage.clear();
+    const createTag = vi.fn()
+      .mockResolvedValueOnce({ name: 'Leitura', color: '#0F766E' })
+      .mockRejectedValueOnce(new Error('offline'));
+    render(<App client={client({ createTag })} initialPath="/tags" />);
+
+    await screen.findByRole('heading', { name: 'Etiquetas' });
+    fireEvent.change(screen.getByLabelText('Nova etiqueta'), { target: { value: 'Leitura' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Criar etiqueta' }));
+    expect(await screen.findByRole('status')).toHaveTextContent('Etiqueta criada.');
+
+    fireEvent.change(screen.getByLabelText('Nova etiqueta'), { target: { value: 'Outra' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Criar etiqueta' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Essa etiqueta já existe.');
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+
+  it('moves focus into the delete dialog and returns it to the trigger when dismissed with Escape', async () => {
+    localStorage.clear();
+    render(<App client={client()} initialPath="/tags" />);
+
+    await screen.findByRole('heading', { name: 'Etiquetas' });
+    const remove = screen.getByRole('button', { name: 'Remover etiqueta Clássico' });
+    remove.focus();
+    fireEvent.click(remove);
+
+    const dialog = screen.getByRole('dialog', { name: 'Remover etiqueta' });
+    await waitFor(() => expect(dialog).toHaveFocus());
+    expect(dialog).toHaveAttribute('aria-describedby', 'remove-tag-description');
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    expect(screen.queryByRole('dialog', { name: 'Remover etiqueta' })).not.toBeInTheDocument();
+    await waitFor(() => expect(remove).toHaveFocus());
+  });
+
+  it('keeps creation controls aligned and uses themed, non-white swatch outlines and focus rings', () => {
+    expect(stylesheet).toMatch(/\.tag-management-page \.metadata-tag-form input,[\s\S]*\{[\s\S]*min-height: 2\.75rem;[\s\S]*border: 1px solid var\(--color-border\);[\s\S]*background: var\(--color-surface\);/);
+    expect(stylesheet).toMatch(/\.tag-color-picker__option span\[aria-hidden='true'\] \{[\s\S]*border: 1px solid color-mix\(in srgb, var\(--tag-color\) 60%, var\(--color-text\)\);/);
+    expect(stylesheet).toMatch(/\.tag-color-picker__option input:checked \+ span\[aria-hidden='true'\] \{[\s\S]*outline: 3px solid var\(--color-focus\);/);
   });
 
   it('announces an empty catalogue with a direct creation action', async () => {
