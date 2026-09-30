@@ -12,3 +12,4 @@ data/
 
 /.pytest-tmp
 /docs/superpowers
+*.ico
