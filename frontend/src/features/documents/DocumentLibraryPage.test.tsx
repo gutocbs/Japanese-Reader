@@ -398,6 +398,8 @@ describe('document library flows', () => {
     fireEvent.click(filterButton);
     const popup = screen.getByRole('group', { name: 'Filtros da biblioteca' });
     expect(filterButton).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByLabelText('Data de criação a partir de')).toHaveAttribute('lang', 'pt-BR');
+    expect(screen.getByLabelText('Data de criação até')).toHaveAttribute('lang', 'pt-BR');
     fireEvent.keyDown(popup, { key: 'Escape' });
 
     expect(screen.queryByRole('group', { name: 'Filtros da biblioteca' })).not.toBeInTheDocument();

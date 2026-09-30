@@ -599,6 +599,7 @@ function LibrarySearch({
               <input
                 id="document-created-after"
                 type="date"
+                lang="pt-BR"
                 value={createdAfter}
                 onChange={(event) => onCreatedAfterChange(event.target.value)}
               />
@@ -606,6 +607,7 @@ function LibrarySearch({
               <input
                 id="document-created-before"
                 type="date"
+                lang="pt-BR"
                 value={createdBefore}
                 onChange={(event) => onCreatedBeforeChange(event.target.value)}
               />
