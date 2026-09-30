@@ -10,6 +10,23 @@ const stylesheet = readFileSync(resolve(process.cwd(), 'src/styles/global.css'),
 describe('ReaderTagsPopup', () => {
   it('keeps a long tag list inside a viewport-bounded scrolling popup', () => {
     expect(stylesheet).toMatch(/\.reader-tags-popup__panel \{[\s\S]*max-height: calc\(100vh - var\(--space-12\)\);[\s\S]*overflow-y: auto;/);
+    expect(stylesheet).toMatch(/\.reader-tags-popup__panel \{[\s\S]*box-sizing: border-box;[\s\S]*max-width: calc\(100vw - 7rem\);[\s\S]*overflow-x: hidden;/);
+    expect(stylesheet).toMatch(/\.reader-tags-popup__panel \.metadata-tags \{[\s\S]*min-width: 0;/);
+  });
+
+  it('uses the rail trigger as the only popup close affordance', () => {
+    render(
+      <ReaderTagsPopup
+        tags={[{ name: 'Clássico', color: '#7C3AED' }]}
+        loadCatalog={vi.fn().mockResolvedValue([])}
+        onSaveTags={vi.fn().mockResolvedValue(undefined)}
+        onCreateTag={vi.fn().mockResolvedValue(undefined)}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Etiquetas do documento' }));
+
+    expect(screen.queryByRole('button', { name: 'Fechar etiquetas' })).not.toBeInTheDocument();
   });
 
   it('opens from the rail, exposes its active state, and restores focus after Escape', () => {

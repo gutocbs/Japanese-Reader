@@ -561,6 +561,10 @@ a {
   gap: 0.35rem;
 }
 
+.metadata-tags li {
+  min-width: 0;
+}
+
 .tag-creation-panel,
 .tag-selection {
   max-width: var(--reading-width);
@@ -648,6 +652,8 @@ a {
 .tag-selection__option {
   display: inline-flex;
   align-items: center;
+  max-width: 100%;
+  min-width: 0;
   gap: var(--space-1);
   border: 1px solid transparent;
   border-radius: 999px;
@@ -685,6 +691,8 @@ a {
 }
 
 .metadata-tag {
+  min-width: 0;
+  overflow-wrap: anywhere;
   background: color-mix(in srgb, var(--tag-color) 16%, transparent);
   border: 1px solid var(--tag-color);
   border-radius: 999px;
@@ -694,6 +702,7 @@ a {
 
 .metadata-tag-form {
   margin-top: 0.75rem;
+  flex-wrap: wrap;
 }
 
 .document-tag-chips,
@@ -885,15 +894,22 @@ a {
   top: 0;
   left: calc(100% + var(--space-3));
   display: grid;
+  box-sizing: border-box;
   gap: var(--space-3);
   width: min(21rem, calc(100vw - 7rem));
+  max-width: calc(100vw - 7rem);
   max-height: calc(100vh - var(--space-12));
+  overflow-x: hidden;
   overflow-y: auto;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-small);
   background: var(--color-surface);
   padding: var(--space-4);
   box-shadow: 0 0.25rem 0.75rem var(--color-elevation-shadow);
+}
+
+.reader-tags-popup__panel .metadata-tags {
+  min-width: 0;
 }
 
 .reader-tags-popup__heading {

@@ -121,9 +121,6 @@ export function ReaderTagsPopup({
               <p className="eyebrow">Organização</p>
               <h2 id={titleId}>Etiquetas do documento</h2>
             </div>
-            <button className="tag-remove-button" type="button" aria-label="Fechar etiquetas" title="Fechar etiquetas" onClick={close}>
-              <span aria-hidden="true">×</span>
-            </button>
           </div>
           <ul className="metadata-tags" aria-label="Etiquetas atuais">
             {tags.map((tag) => (
