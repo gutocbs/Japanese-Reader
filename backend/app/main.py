@@ -2,7 +2,9 @@ from contextlib import asynccontextmanager
 import os
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from backend.app.analysis.furigana import FuriganaAligner
 from backend.app.analysis.morphology import SudachiMorphologicalAnalyzer
@@ -55,7 +57,10 @@ async def lifespan(application: FastAPI):
         application.state.database.close()
 
 
-def create_app(database_path: str | Path | None = None) -> FastAPI:
+def create_app(
+    database_path: str | Path | None = None,
+    static_directory: str | Path | None = None,
+) -> FastAPI:
     configured_path = database_path or os.environ.get(
         "DATABASE_PATH", "./data/japanese-reader.db"
     )
@@ -80,6 +85,27 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
     @application.get("/api/health")
     def health() -> dict[str, str]:
         return {"status": "ok"}
+
+    configured_static_directory = static_directory or os.environ.get(
+        "STATIC_DIRECTORY"
+    )
+    if configured_static_directory:
+        frontend_directory = Path(configured_static_directory)
+        index_file = frontend_directory / "index.html"
+        assets_directory = frontend_directory / "assets"
+
+        if assets_directory.is_dir():
+            application.mount(
+                "/assets", StaticFiles(directory=assets_directory), name="assets"
+            )
+
+        if index_file.is_file():
+
+            @application.get("/{frontend_path:path}", include_in_schema=False)
+            def frontend(frontend_path: str) -> FileResponse:
+                if frontend_path == "api" or frontend_path.startswith("api/"):
+                    raise HTTPException(status_code=404, detail="Not Found")
+                return FileResponse(index_file)
 
     return application
 
