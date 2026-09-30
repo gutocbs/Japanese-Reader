@@ -115,6 +115,46 @@ describe('ReaderApiClient', () => {
       error: { code: ReaderApiErrorCode.NETWORK_FAILURE },
     });
   });
+
+  it.each([
+    ['an unavailable transport', undefined],
+    ['a non-function transport', {}],
+  ])('returns a stable failure for %s', async (_description, transport) => {
+    const result = await new ReaderApiClient({ transport }).importDocument(article);
+
+    expect(result).toEqual({
+      ok: false,
+      error: { code: ReaderApiErrorCode.TRANSPORT_UNAVAILABLE },
+    });
+  });
+
+  it('returns a stable failure when the transport throws synchronously', async () => {
+    const result = await new ReaderApiClient({
+      transport: () => {
+        throw new Error('Tampermonkey transport failed');
+      },
+    }).importDocument(article);
+
+    expect(result).toEqual({
+      ok: false,
+      error: { code: ReaderApiErrorCode.TRANSPORT_EXCEPTION },
+    });
+  });
+
+  it.each([
+    ['a null response envelope', null],
+    ['a response envelope without a status', { responseText: '{"id":"document-1"}' }],
+  ])('returns a stable failure for %s', async (_description, response) => {
+    const transport = createFakeTransport();
+    const resultPromise = createClient(transport).importDocument(article);
+
+    transport.respond(response);
+
+    await expect(resultPromise).resolves.toEqual({
+      ok: false,
+      error: { code: ReaderApiErrorCode.MALFORMED_RESPONSE },
+    });
+  });
 });
 
 describe('joinApiUrl', () => {
