@@ -11,6 +11,7 @@ html {
   color: var(--color-text);
   font-family: var(--font-ui);
   font-size: 100%;
+  scrollbar-gutter: stable;
 }
 
 body {
@@ -87,6 +88,31 @@ a {
   width: 0.25rem;
   height: 1.75rem;
   background: var(--color-primary);
+}
+
+.app-header__navigation {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.app-header__link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 2.75rem;
+  border-radius: var(--radius-small);
+  color: var(--color-text-muted);
+  padding: var(--space-2) var(--space-3);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.app-header__link:hover,
+.app-header__link:focus-visible,
+.app-header__link[aria-current='page'] {
+  background: var(--color-surface-muted);
+  color: var(--color-primary);
 }
 
 .app-main {
@@ -195,7 +221,7 @@ a {
 
 .library-controls {
   max-width: var(--content-width);
-  margin-bottom: var(--space-6);
+  margin-bottom: 0;
   border-top: 1px solid var(--color-border);
   border-bottom: 1px solid var(--color-border);
   padding: var(--space-4) 0;
@@ -283,7 +309,7 @@ a {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  min-height: 2.5rem;
+  min-height: 3rem;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-small);
   background: var(--color-surface);
@@ -355,32 +381,38 @@ a {
 }
 
 .library-ordering {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(8.5rem, 1fr) minmax(7.5rem, auto);
   align-items: center;
-  gap: 0;
+  gap: var(--space-2);
   flex: none;
   min-height: 3rem;
-  border: 1px solid var(--color-border);
+  padding: 0 var(--space-3);
   border-radius: var(--radius-small);
   background: var(--color-surface);
 }
 
 .library-ordering label {
-  padding-left: var(--space-3);
   color: var(--color-text-muted);
   font-size: 0.8125rem;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .library-ordering select {
   min-height: 2.875rem;
-  border: 0;
-  border-left: 1px solid var(--color-border);
-  border-radius: 0;
-  background: transparent;
+  min-width: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-small);
+  background: var(--color-surface);
   color: var(--color-text);
   padding: 0 var(--space-3);
   font-weight: 650;
+}
+
+.library-ordering select option {
+  background: var(--color-surface);
+  color: var(--color-text);
 }
 
 .document-list {
@@ -1276,6 +1308,16 @@ a {
     width: min(calc(100% - 2rem), var(--content-width));
   }
 
+  .app-header__link span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+
   .library-heading,
   .library-heading__actions,
   .library-controls__main,
@@ -1294,6 +1336,7 @@ a {
 
   .library-ordering {
     width: 100%;
+    grid-template-columns: auto minmax(0, 1fr) minmax(7.5rem, auto);
   }
 
   .review-list__heading,

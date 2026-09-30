@@ -136,6 +136,26 @@ describe('document library flows', () => {
     );
   });
 
+  it('keeps document tags visible while moving tag navigation into the application header', async () => {
+    const taggedDocument = {
+      ...firstDocument,
+      tags: [{ name: 'Clássico', color: '#1f5a43' }],
+    };
+    render(<App client={client({ list: vi.fn().mockResolvedValue([taggedDocument]) })} initialPath="/" />);
+
+    await screen.findByRole('list', { name: 'Documentos' });
+
+    const header = document.querySelector<HTMLElement>('.app-header');
+    if (header === null) throw new Error('Application header was not rendered');
+    const tagsLink = within(header).getByRole('link', { name: 'Etiquetas' });
+    const settingsLink = within(header).getByRole('link', { name: 'Configurações' });
+    expect(tagsLink).toHaveAttribute('href', '/tags');
+    expect(tagsLink.querySelector('[data-lucide="tags"]')).toBeInTheDocument();
+    expect(settingsLink).toHaveAttribute('href', '/settings');
+    expect(settingsLink.querySelector('[data-lucide="settings"]')).toBeInTheDocument();
+    expect(screen.getByLabelText('Etiquetas de 雪国')).toHaveTextContent('Clássico');
+  });
+
   it('orders documents by last reading time and leaves unread documents last', async () => {
     const api = client({
       list: vi.fn().mockResolvedValue([unreadDocument, firstDocument, secondDocument]),

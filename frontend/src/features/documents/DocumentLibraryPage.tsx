@@ -252,7 +252,6 @@ export function DocumentLibraryPage() {
           </p>
         </div>
         <div className="library-heading__actions">
-          <a className="text-link" href="/tags" onClick={(event) => { event.preventDefault(); navigate('/tags'); }}>Etiquetas</a>
           <a
             className="button button--primary button-link"
             href="/documents/new"
