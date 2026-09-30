@@ -30,6 +30,6 @@ describe('reader rail layout', () => {
 describe('library filter popup layout', () => {
   it('anchors the popup top edge to the library controls divider', () => {
     expect(stylesheet).toMatch(/\.library-controls \{[\s\S]*border-top: 1px solid var\(--color-border\);[\s\S]*padding: var\(--space-4\) 0;/);
-    expect(stylesheet).toMatch(/\.library-filters \{[\s\S]*top: calc\(-1 \* \(var\(--space-4\) \+ 1px\)\);/);
+    expect(stylesheet).toMatch(/\.library-filters \{[\s\S]*top: calc\(100% \+ var\(--space-4\) \+ 1px\);/);
   });
 });
