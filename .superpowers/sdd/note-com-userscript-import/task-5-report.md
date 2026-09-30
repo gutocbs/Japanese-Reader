@@ -50,7 +50,7 @@ The control is inserted immediately after the article, so it does not resemble a
 - Initial red phase: the placement and state-hook tests failed against the previous implementation (4 expected failures).
 - Fix-round red phase: focus-visible and narrow-layout token tests failed against the literal-based stylesheet (2 expected failures); the singleton test characterized existing idempotent style injection.
 - Focused green phase: `node .\\frontend\\node_modules\\vitest\\vitest.mjs run userscript/note-import/ui.test.js --reporter=verbose` — 16 passed. It verifies native focus, the tokenized `:focus-visible` rule, the tokenized narrow-layout width, and a single local stylesheet after repeated and navigation reinitialization.
-- Full deterministic userscript suite: `node .\\frontend\\node_modules\\vitest\\vitest.mjs run userscript/note-import --reporter=verbose` — 32 passed across 3 files.
+- Full deterministic userscript suite: `node .\\frontend\\node_modules\\vitest\\vitest.mjs run userscript/note-import --reporter=verbose` — 35 passed across 3 files.
 - Bundle: `node userscript\\note-import\\build-userscript.mjs` regenerated `note-import.user.js`; `node --check userscript\\note-import\\note-import.user.js` exited successfully.
 
 ## Visual limitations
