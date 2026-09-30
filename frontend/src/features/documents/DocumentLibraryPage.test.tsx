@@ -285,6 +285,36 @@ describe('document library flows', () => {
     expect(screen.queryByRole('listitem', { name: titledDocument.title })).not.toBeInTheDocument();
   });
 
+  it('filters by a clicked tag chip and keeps the document route unchanged', async () => {
+    const taggedDocument = { ...secondDocument, tags: [{ name: 'Clássico', color: '#657d75' }] };
+    render(<App client={client({ list: vi.fn().mockResolvedValue([firstDocument, taggedDocument]) })} initialPath="/" />);
+
+    const tagButton = await screen.findByRole('button', { name: 'Pesquisar por etiqueta Clássico' });
+    expect(tagButton).toHaveClass('metadata-tag');
+    fireEvent.click(tagButton);
+
+    expect(screen.getByRole('searchbox', { name: 'Pesquisar documentos' })).toHaveValue('Clássico');
+    expect(screen.getByRole('listitem', { name: taggedDocument.title })).toBeInTheDocument();
+    expect(screen.queryByRole('listitem', { name: firstDocument.title })).not.toBeInTheDocument();
+    expect(window.location.pathname).toBe('/');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Limpar pesquisa' }));
+    expect(screen.getByRole('listitem', { name: firstDocument.title })).toBeInTheDocument();
+  });
+
+  it('filters by a tag chip after keyboard activation', async () => {
+    const taggedDocument = { ...secondDocument, tags: [{ name: 'Clássico', color: '#657d75' }] };
+    render(<App client={client({ list: vi.fn().mockResolvedValue([firstDocument, taggedDocument]) })} initialPath="/" />);
+
+    const tagButton = await screen.findByRole('button', { name: 'Pesquisar por etiqueta Clássico' });
+    tagButton.focus();
+    fireEvent.keyDown(tagButton, { key: 'Enter' });
+    fireEvent.click(tagButton, { detail: 0 });
+
+    expect(screen.getByRole('searchbox', { name: 'Pesquisar documentos' })).toHaveValue('Clássico');
+    expect(screen.queryByRole('listitem', { name: firstDocument.title })).not.toBeInTheDocument();
+  });
+
   it('clears the document search and restores the ordered library', async () => {
     const api = client({ list: vi.fn().mockResolvedValue([firstDocument, titledDocument, secondDocument]) });
     render(<App client={api} initialPath="/" />);

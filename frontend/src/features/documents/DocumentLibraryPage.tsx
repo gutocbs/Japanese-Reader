@@ -408,7 +408,7 @@ export function DocumentLibraryPage() {
                 </h2>
                 <p>{createdLabel(document.createdAt)}</p>
                 {document.tags.length > 0 && <ul className="document-tag-chips" aria-label={`Etiquetas de ${document.title || 'Sem título'}`}>
-                  {document.tags.map((tag) => <li key={tag.name}><span className="metadata-tag" aria-label={`Etiqueta ${tag.name}`} style={{ '--tag-color': tag.color } as CSSProperties}>{tag.name}</span></li>)}
+                  {document.tags.map((tag) => <li key={tag.name}><button className="metadata-tag" type="button" aria-label={`Pesquisar por etiqueta ${tag.name}`} style={{ '--tag-color': tag.color } as CSSProperties} onClick={() => setSearch(tag.name)}>{tag.name}</button></li>)}
                 </ul>}
               </div>
 

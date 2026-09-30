@@ -53,7 +53,7 @@ describe('tag management route', () => {
   it('renders persistent colored tag chips below document titles in the library', async () => {
     localStorage.clear();
     render(<App client={client()} initialPath="/" />);
-    const chip = await screen.findByLabelText('Etiqueta Clássico');
+    const chip = await screen.findByRole('button', { name: 'Pesquisar por etiqueta Clássico' });
     expect(chip).toHaveTextContent('Clássico');
     expect(chip).toHaveStyle({ '--tag-color': '#7C3AED' });
   });
