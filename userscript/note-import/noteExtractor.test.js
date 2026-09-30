@@ -21,6 +21,8 @@ describe('extractNoteArticle', () => {
       'https://note.com/example_creator/m/magazine',
       'https://note.com/example_creator/n/not-an-article',
       'https://www.note.com/example_creator/n/n123456789abc',
+      'http://note.com/example_creator/n/n123456789abc',
+      'ftp://note.com/example_creator/n/n123456789abc',
     ]) {
       expect(extractNoteArticle({ document, url })).toEqual({
         ok: false,

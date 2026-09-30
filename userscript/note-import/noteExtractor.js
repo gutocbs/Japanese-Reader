@@ -52,7 +52,9 @@ export function extractNoteArticle({ document, url }) {
 function isSupportedArticleUrl(value) {
   try {
     const url = new URL(value);
-    return url.hostname === 'note.com' && /^\/[^/]+\/n\/n[a-z0-9]+$/i.test(url.pathname);
+    return url.protocol === 'https:'
+      && url.hostname === 'note.com'
+      && /^\/[^/]+\/n\/n[a-z0-9]+$/i.test(url.pathname);
   } catch {
     return false;
   }
@@ -108,7 +110,7 @@ function collectTextBlocks(textContainer) {
 }
 
 function shouldIgnore(element) {
-  return IGNORED_TAGS.has(element.tagName) || element.hasAttribute('data-note-import-ignore');
+  return IGNORED_TAGS.has(element.tagName);
 }
 
 function normalizeBlockText(element) {
