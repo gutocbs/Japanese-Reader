@@ -15,6 +15,7 @@ import {
 } from '../vocabulary/ReviewList';
 import { DocumentText } from './DocumentText';
 import { ReaderMenu } from './ReaderMenu';
+import { ReaderTagsPopup } from './ReaderTagsPopup';
 import {
   loadReaderPreferences,
   saveReaderPreferences,
@@ -253,6 +254,21 @@ export function ReaderPage({ documentId }: ReaderPageProps) {
     );
   }, [client, documentId, refreshReadingOccurrence]);
 
+  const saveDocumentTags = useCallback(async (tags: Document['tags']) => {
+    const updated = await client.update(documentId, { tags });
+    setSnapshot((current) => current === null ? current : { ...current, document: updated });
+  }, [client, documentId]);
+
+  const createDocumentTag = useCallback(async (tag: Document['tags'][number]) => {
+    if (client.createTag === undefined) throw new Error('Tag API unavailable');
+    return client.createTag(tag);
+  }, [client]);
+
+  const loadTagCatalog = useCallback(async () => {
+    if (client.listTags === undefined) throw new Error('Tag API unavailable');
+    return client.listTags();
+  }, [client]);
+
   if (isLoading) {
     return <p className="page-state" role="status">Preparando leitura…</p>;
   }
@@ -316,6 +332,12 @@ export function ReaderPage({ documentId }: ReaderPageProps) {
         >
           <span aria-hidden="true">✎</span>
         </a>
+        <ReaderTagsPopup
+          tags={snapshot.document.tags}
+          loadCatalog={loadTagCatalog}
+          onSaveTags={saveDocumentTags}
+          onCreateTag={createDocumentTag}
+        />
         <ReaderMenu
           preferences={readerPreferences}
           onPreferencesChange={updateReaderPreferences}
