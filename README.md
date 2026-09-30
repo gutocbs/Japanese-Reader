@@ -3,7 +3,7 @@
 Aplicação local para leitura e estudo de japonês. A aplicação usa React,
 TypeScript e Vite no frontend, FastAPI no backend e SQLite para manter a
 biblioteca e o cache de análises. O desenvolvimento é executado diretamente na
-máquina, sem Docker.
+máquina; Docker oferece uma execução empacotada opcional.
 
 ## Requisitos
 
@@ -58,16 +58,42 @@ npm run dev:backend
 ```
 
 O diretório pai é criado automaticamente. `DATABASE_PATH=:memory:` é destinado
-somente a execuções explícitas e testes. O caminho configurável poderá apontar
-para um volume persistente quando o empacotamento Docker for implementado; esta
-etapa ainda não adiciona arquivos Docker.
+somente a execuções explícitas e testes.
+
+## Executar com Docker
+
+Docker é uma forma opcional de executar o pacote da aplicação. Para desenvolver,
+prefira o ciclo local com `npm run dev`, que mantém o reload do backend e o
+servidor Vite.
+
+Na raiz do repositório, crie a imagem e inicie o serviço:
+
+```powershell
+docker compose build
+docker compose up -d
+```
+
+Abra <http://localhost:8000>. A porta de destino do serviço é fixa em `8000`;
+o Compose a publica como `8000:8000`. A imagem desativa os logs de acesso do
+Uvicorn, portanto as sondas do healthcheck não geram linhas de access log. Para
+acompanhar os demais logs e parar o serviço:
+
+```powershell
+docker compose logs -f
+docker compose down
+```
+
+O banco persistente fica em `./data/japanese-reader.db`, montado no contêiner em
+`/app/data`. Faça uma cópia de segurança desse arquivo antes de remover o
+diretório `data`, pois essa remoção descarta os documentos e o cache locais.
 
 ## Verificação
 
 ```powershell
 uv run pytest
 npm --prefix frontend test -- --run
-npm --prefix frontend run build
+npm run build
+docker compose config
 ```
 
 Na raiz, `npm test` executa os testes do backend e frontend e `npm run build`
