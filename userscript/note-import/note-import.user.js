@@ -292,6 +292,47 @@
     const ROOT_ATTRIBUTE = 'data-japanese-reader-note-import';
     const ROOT_ID = 'japanese-reader-note-import-control';
     const ARTICLE_SELECTOR = 'article.p-article__body';
+    const NAVIGATION_MARKER = '__japaneseReaderNoteImportNavigation';
+
+    function installNoteImportNavigation({
+      window = globalThis.window,
+      initialize = initializeNoteImport,
+      initializeOptions = {},
+    } = {}) {
+      if (!window || window[NAVIGATION_MARKER]) {
+        return;
+      }
+
+      let scheduled = false;
+      const reinitialize = () => {
+        if (scheduled) {
+          return;
+        }
+
+        scheduled = true;
+        window.queueMicrotask(() => {
+          scheduled = false;
+          initialize({
+            ...initializeOptions,
+            document: window.document,
+            url: window.location.href,
+          });
+        });
+      };
+
+      window[NAVIGATION_MARKER] = true;
+      observeHistory(window, reinitialize);
+      window.addEventListener('popstate', reinitialize);
+
+      if (typeof window.MutationObserver === 'function') {
+        new window.MutationObserver(reinitialize).observe(window.document.documentElement, {
+          childList: true,
+          subtree: true,
+        });
+      }
+
+      reinitialize();
+    }
 
     function initializeNoteImport({
       document = globalThis.document,
@@ -426,8 +467,19 @@
       return 'The local Reader API is unavailable.';
     }
 
-    return { initializeNoteImport };
+    function observeHistory(window, onNavigate) {
+      for (const method of ['pushState', 'replaceState']) {
+        const original = window.history[method].bind(window.history);
+        window.history[method] = (...args) => {
+          const result = original(...args);
+          onNavigate();
+          return result;
+        };
+      }
+    }
+
+    return { installNoteImportNavigation };
   })();
 
-  NoteImportUi.initializeNoteImport();
+  NoteImportUi.installNoteImportNavigation();
 })();

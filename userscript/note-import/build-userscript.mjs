@@ -45,10 +45,10 @@ ${indent(stripExports(client).replace(/^import .*?;\r?\n/m, ''))}
     const { extractNoteArticle } = NoteImportExtractor;
     const { ReaderApiClient } = NoteImportApi;
 ${indent(stripExports(ui).replace(/^import .*?;\r?\n/gm, ''))}
-    return { initializeNoteImport };
+    return { installNoteImportNavigation };
   })();
 
-  NoteImportUi.initializeNoteImport();
+  NoteImportUi.installNoteImportNavigation();
 })();
 `;
 

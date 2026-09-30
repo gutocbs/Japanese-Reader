@@ -1,6 +1,6 @@
 import { JSDOM } from '../../frontend/node_modules/jsdom/lib/api.js';
 import { describe, expect, it } from 'vitest';
-import { initializeNoteImport } from './ui.js';
+import { initializeNoteImport, installNoteImportNavigation } from './ui.js';
 
 const article = Object.freeze({
   title: '春の読書メモ',
@@ -12,12 +12,20 @@ function createDocument() {
   return new JSDOM('<main><article class="p-article__body"><h1>春の読書メモ</h1></article></main>').window.document;
 }
 
+function createNavigationWindow(url = article.url) {
+  return new JSDOM('<main><article class="p-article__body"><h1>春の読書メモ</h1></article></main>', { url }).window;
+}
+
 function supportedExtractor({ url }) {
   return { ok: true, value: { ...article, url } };
 }
 
 function unsupportedExtractor() {
   return { ok: false, error: { code: 'UNSUPPORTED_ROUTE' } };
+}
+
+function routeAwareExtractor({ url }) {
+  return url.includes('/n/') ? supportedExtractor({ url }) : unsupportedExtractor();
 }
 
 function deferred() {
@@ -159,5 +167,30 @@ describe('initializeNoteImport', () => {
     button(document).click();
 
     expect(imports).toBe(1);
+  });
+
+  it('updates the control for a new supported history route and removes it for an unsupported route', async () => {
+    const window = createNavigationWindow();
+    const nextArticleUrl = 'https://note.com/example_creator/n/nabcdef123456';
+
+    installNoteImportNavigation({
+      window,
+      initializeOptions: { extractArticle: routeAwareExtractor, client: {} },
+    });
+
+    window.document.querySelector('main').innerHTML = '<article class="p-article__body"><h1>次の記事</h1></article>';
+    window.history.pushState({}, '', nextArticleUrl);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(window.document.querySelectorAll('[data-japanese-reader-note-import]')).toHaveLength(1);
+    expect(window.document.querySelector('[data-japanese-reader-note-import]').dataset.noteImportUrl).toBe(nextArticleUrl);
+
+    window.document.querySelector('main').innerHTML = '<section>Creator profile</section>';
+    window.history.pushState({}, '', 'https://note.com/example_creator');
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(window.document.querySelector('[data-japanese-reader-note-import]')).toBeNull();
   });
 });
