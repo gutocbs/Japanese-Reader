@@ -6,6 +6,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $projectRoot = $PSScriptRoot
+$imageName = 'japanesereader:latest'
 $url = 'http://localhost:8000/'
 $healthUrl = 'http://localhost:8000/api/health'
 $composeFile = Join-Path $projectRoot 'docker-compose.yml'
@@ -35,12 +36,17 @@ if (-not (Test-Path -LiteralPath $composeFile -PathType Leaf)) {
 try {
     Push-Location $projectRoot
 
-    Log 'Iniciando a aplicação com Docker Compose...'
+    Log "Construindo a imagem '$imageName' e iniciando a aplicação com Docker Compose..."
     docker compose up -d --build
     if ($LASTEXITCODE -ne 0) {
         throw 'O Docker Compose não conseguiu iniciar a aplicação.'
     }
     $composeStartedByScript = $true
+
+    docker image inspect $imageName *> $null
+    if ($LASTEXITCODE -ne 0) {
+        throw "A imagem '$imageName' não foi encontrada após o build."
+    }
 
     Log "Aguardando a aplicação responder em $healthUrl..."
     $deadline = (Get-Date).AddSeconds($StartupTimeoutSeconds)
@@ -72,13 +78,13 @@ finally {
     Pop-Location -ErrorAction SilentlyContinue
 
     if ($composeStartedByScript) {
-        Log 'Encerrando a aplicação Docker...'
-        docker compose -f $composeFile down
+        Log 'Parando a aplicação Docker sem remover o container...'
+        docker compose -f $composeFile stop
         if ($LASTEXITCODE -ne 0) {
-            Log 'Não foi possível encerrar a aplicação automaticamente.'
+            Log 'Não foi possível parar a aplicação automaticamente.'
         }
         else {
-            Log 'Aplicação encerrada.'
+            Log 'Aplicação parada; o container foi preservado.'
         }
     }
 }

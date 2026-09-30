@@ -1,5 +1,8 @@
+name: japanesereader
+
 services:
   japanese-reader:
+    image: japanesereader:latest
     build:
       context: .
     ports:
