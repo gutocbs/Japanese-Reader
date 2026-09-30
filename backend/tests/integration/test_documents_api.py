@@ -28,11 +28,12 @@ def test_crud_preserves_exact_unicode_and_camel_case(client):
             assert response.status_code == 201
             document = response.json()
             assert set(document) == {
-                "id", "title", "content", "description", "tags", "revision",
+                "id", "title", "content", "description", "source", "tags", "revision",
                 "createdAt", "updatedAt", "lastReadAt",
             }
             assert document["content"] == content
             assert document["description"] is None
+            assert document["source"] == "Local"
             assert document["tags"] == []
             assert document["revision"] == 1
             assert document["lastReadAt"] is None
@@ -202,3 +203,8 @@ def test_openapi_matches_update_and_problem_payloads():
     ) == {"application/problem+json"}
     response = schema["components"]["schemas"]["DocumentResponse"]
     assert {"description", "tags", "createdAt", "updatedAt"} <= set(response["required"])
+    assert response["properties"]["source"] == {
+        "type": "string",
+        "title": "Source",
+        "default": "Local",
+    }

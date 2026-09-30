@@ -1,8 +1,13 @@
 import type { components, operations } from './generated';
 
-export type Document = components['schemas']['DocumentResponse'];
+type GeneratedDocument = components['schemas']['DocumentResponse'];
+// Cached documents from contracts predating source remain valid app inputs.
+export type Document = Omit<GeneratedDocument, 'source'> & {
+  source?: GeneratedDocument['source'];
+};
 export type DocumentTag = components['schemas']['DocumentTagModel'];
 export type CreateDocument = components['schemas']['CreateDocumentRequest'];
+export type ImportDocument = components['schemas']['ImportDocumentRequest'];
 export type UpdateDocument = components['schemas']['UpdateDocumentRequest'];
 export type Analysis = components['schemas']['DocumentAnalysisResponse'];
 export type AnalysisBlock = components['schemas']['AnalysisBlockResponse'];
@@ -67,6 +72,7 @@ export function createDocumentClient(fetcher: typeof fetch = globalThis.fetch) {
   return {
     list: () => request<Document[]>('/api/documents', 'GET'),
     create: (data: CreateDocument) => request<Document>('/api/documents', 'POST', data),
+    importDocument: (data: ImportDocument) => request<Document>('/api/imports', 'POST', data),
     get: (id: string) => request<Document>(documentPath(id), 'GET'),
     update: (id: string, data: UpdateDocument) => request<Document>(documentPath(id), 'PUT', data),
     delete: (id: string) => request<void>(documentPath(id), 'DELETE'),
@@ -96,7 +102,12 @@ export function createDocumentClient(fetcher: typeof fetch = globalThis.fetch) {
   };
 }
 
-type TagClientMethods = 'listTags' | 'createTag' | 'renameTag' | 'deleteTag';
-export type DocumentClient = Omit<ReturnType<typeof createDocumentClient>, TagClientMethods>
-  & Partial<Pick<ReturnType<typeof createDocumentClient>, TagClientMethods>>;
+type OptionalClientMethods =
+  | 'importDocument'
+  | 'listTags'
+  | 'createTag'
+  | 'renameTag'
+  | 'deleteTag';
+export type DocumentClient = Omit<ReturnType<typeof createDocumentClient>, OptionalClientMethods>
+  & Partial<Pick<ReturnType<typeof createDocumentClient>, OptionalClientMethods>>;
 export const documentClient = createDocumentClient();

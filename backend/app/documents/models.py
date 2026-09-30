@@ -25,6 +25,7 @@ class Document:
     updated_at: datetime
     last_read_at: datetime | None = None
     description: str | None = None
+    source: str = "Local"
     tags: tuple[DocumentTag, ...] = ()
 
 
@@ -32,6 +33,16 @@ class Document:
 class CreateDocument:
     title: str
     content: str
+    description: str | None = None
+    source: str = "Local"
+    tags: tuple[DocumentTag, ...] = ()
+
+    def __post_init__(self) -> None:
+        if not self.source.strip():
+            raise ValueError("Document source cannot be empty")
+        names = [tag.name.casefold() for tag in self.tags]
+        if len(names) != len(set(names)):
+            raise ValueError("Document tag names must be unique")
 
 
 @dataclass(frozen=True)

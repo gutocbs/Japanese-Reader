@@ -36,6 +36,9 @@ class InMemoryDocumentRepository:
     def create(self, data: CreateDocument) -> Document:
         with self._lock:
             timestamp = self._now()
+            tags = tuple(
+                self._tags.setdefault(tag.name.casefold(), tag) for tag in data.tags
+            )
             document = Document(
                 id=self._uuid_factory(),
                 title=data.title,
@@ -43,6 +46,9 @@ class InMemoryDocumentRepository:
                 revision=1,
                 created_at=timestamp,
                 updated_at=timestamp,
+                description=data.description,
+                source=data.source,
+                tags=tags,
             )
             self._documents[document.id] = document
             return document

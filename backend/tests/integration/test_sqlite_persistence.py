@@ -97,6 +97,46 @@ def test_reopening_the_same_file_preserves_document_description_and_tags(tmp_pat
     assert stored.json()["tags"] == [{"name": "Grammar", "color": "#7C3AED"}]
 
 
+def test_reopening_the_same_file_preserves_public_import_source_text_and_tags(tmp_path):
+    path = tmp_path / "public-import.db"
+    application = create_app(path)
+    exact_text = "  𠮷野家\r\n日本語  \n😀  "
+
+    async def import_document():
+        async with AsyncClient(
+            transport=ASGITransport(app=application), base_url="http://test"
+        ) as client:
+            return await client.post(
+                "/api/imports",
+                json={
+                    "title": "Imported",
+                    "text": exact_text,
+                    "description": "Persisted import",
+                    "source": "Browser plugin",
+                    "tags": [{"name": "Grammar", "color": "#7C3AED"}],
+                },
+            )
+
+    response = asyncio.run(import_document())
+    assert response.status_code == 201
+    document_id = response.json()["id"]
+
+    reopened = create_app(path)
+
+    async def read_document():
+        async with AsyncClient(
+            transport=ASGITransport(app=reopened), base_url="http://test"
+        ) as client:
+            return await client.get(f"/api/documents/{document_id}")
+
+    stored = asyncio.run(read_document())
+    assert stored.status_code == 200
+    assert stored.json()["content"] == exact_text
+    assert stored.json()["description"] == "Persisted import"
+    assert stored.json()["source"] == "Browser plugin"
+    assert stored.json()["tags"] == [{"name": "Grammar", "color": "#7C3AED"}]
+
+
 def test_migration_reads_documents_created_before_metadata_fields(tmp_path):
     path = tmp_path / "legacy.db"
     migration = (
@@ -192,7 +232,7 @@ def test_database_configuration_uses_environment_and_versioned_migrations(tmp_pa
             for row in connection.execute(
                 "SELECT version FROM schema_migrations ORDER BY version"
             )
-        ] == [1, 2]
+        ] == [1, 2, 3]
         tables = {
             row[0]
             for row in connection.execute(
@@ -244,4 +284,4 @@ def test_concurrent_database_initialization_applies_each_migration_once(
     with ThreadPoolExecutor(max_workers=workers) as executor:
         versions = list(executor.map(lambda _: initialize(), range(workers)))
 
-    assert versions == [[1, 2]] * workers
+    assert versions == [[1, 2, 3]] * workers

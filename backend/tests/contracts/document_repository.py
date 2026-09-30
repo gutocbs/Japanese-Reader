@@ -30,7 +30,30 @@ class DocumentRepositoryContract:
         assert document.updated_at.tzinfo is timezone.utc
         assert document.last_read_at is None
         assert document.description is None
+        assert document.source == "Local"
         assert document.tags == ()
+
+    def test_create_persists_source_description_and_tags(self, repository):
+        tags = (
+            DocumentTag(name="Grammar", color="#7C3AED"),
+            DocumentTag(name="News", color="#0F766E"),
+        )
+
+        document = repository.create(
+            CreateDocument(
+                title="Imported",
+                content=CONTENT,
+                description="External text",
+                source="Browser plugin",
+                tags=tags,
+            )
+        )
+
+        assert document.description == "External text"
+        assert document.source == "Browser plugin"
+        assert document.tags == tags
+        assert repository.get(document.id) == document
+        assert repository.list_tags() == tags
 
     def test_get_and_list_return_created_documents(self, repository):
         assert repository.list() == ()
@@ -161,3 +184,18 @@ class DocumentRepositoryContract:
                     DocumentTag(name="grammar", color="#0F766E"),
                 )
             )
+
+    def test_create_rejects_duplicate_tag_names_case_insensitively(self, repository):
+        with pytest.raises(ValueError, match="names must be unique"):
+            CreateDocument(
+                title="Imported",
+                content=CONTENT,
+                tags=(
+                    DocumentTag(name="Grammar", color="#7C3AED"),
+                    DocumentTag(name="grammar", color="#0F766E"),
+                ),
+            )
+
+    def test_create_rejects_blank_source(self, repository):
+        with pytest.raises(ValueError, match="source cannot be empty"):
+            CreateDocument(title="Imported", content=CONTENT, source=" ")

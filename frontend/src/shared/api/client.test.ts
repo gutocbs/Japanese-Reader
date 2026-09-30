@@ -50,6 +50,35 @@ describe('document client', () => {
     expect(JSON.parse(fetcher.mock.calls[0][1]!.body as string)).toEqual(metadata);
   });
 
+  it('imports exact text and metadata through the public contract', async () => {
+    const imported = {
+      ...document,
+      content: '  𠮷野家\r\n日本語  \n😀  ',
+      description: 'Browser import',
+      source: 'Yomitan',
+      tags: [{ name: 'Grammar', color: '#7C3AED' }],
+    };
+    const payload = {
+      title: imported.title,
+      text: imported.content,
+      description: imported.description,
+      source: imported.source,
+      tags: imported.tags,
+    };
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(JSON.stringify(imported), { status: 201 }),
+    );
+
+    const result = await createDocumentClient(fetcher).importDocument(payload);
+
+    expect(result).toEqual(imported);
+    expect(fetcher).toHaveBeenCalledWith('/api/imports', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+  });
+
   it('requests analysis for the encoded document resource', async () => {
     const analysis = {
       documentId: document.id,

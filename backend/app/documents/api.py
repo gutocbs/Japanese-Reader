@@ -103,6 +103,7 @@ class DocumentResponse(HttpModel):
     title: str
     content: str
     description: str | None
+    source: str = "Local"
     tags: list[DocumentTagModel]
     revision: int
     created_at: datetime
@@ -114,6 +115,7 @@ class DocumentResponse(HttpModel):
         return cls(
             id=document.id, title=document.title, content=document.content,
             description=document.description,
+            source=document.source,
             tags=[DocumentTagModel.from_tag(tag) for tag in document.tags],
             revision=document.revision, createdAt=document.created_at,
             updatedAt=document.updated_at, lastReadAt=document.last_read_at,

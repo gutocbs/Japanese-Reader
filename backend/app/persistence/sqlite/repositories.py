@@ -54,6 +54,7 @@ def _document(row, tags: tuple[DocumentTag, ...] = ()) -> Document:
         updated_at=_parse_datetime(row["updated_at"]),
         last_read_at=_parse_datetime(row["last_read_at"]),
         description=row["description"],
+        source=row["source"],
         tags=tags,
     )
 
@@ -95,21 +96,43 @@ class SqliteDocumentRepository:
             revision=1,
             created_at=timestamp,
             updated_at=timestamp,
+            description=data.description,
+            source=data.source,
+            tags=data.tags,
         )
         with self._database.unit_of_work(write=True) as connection:
             connection.execute(
                 """
                 INSERT INTO documents(
-                    id, title, content, revision, created_at, updated_at, last_read_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                    id, title, content, description, source, revision,
+                    created_at, updated_at, last_read_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     str(document.id), document.title, document.content,
-                    document.revision, document.created_at.isoformat(),
+                    document.description, document.source, document.revision,
+                    document.created_at.isoformat(),
                     document.updated_at.isoformat(), None,
                 ),
             )
-        return document
+            for position, tag in enumerate(data.tags):
+                connection.execute(
+                    "INSERT INTO tags(name, color) VALUES (?, ?) "
+                    "ON CONFLICT(name) DO NOTHING",
+                    (tag.name, tag.color),
+                )
+                connection.execute(
+                    """
+                    INSERT INTO document_tags(document_id, tag_name, position)
+                    VALUES (?, ?, ?)
+                    """,
+                    (str(document.id), tag.name, position),
+                )
+            row = connection.execute(
+                "SELECT * FROM documents WHERE id = ?", (str(document.id),)
+            ).fetchone()
+            tags = _document_tags(connection, str(document.id))
+        return _document(row, tags)
 
     def get(self, document_id: UUID) -> Document | None:
         with self._database.unit_of_work() as connection:
