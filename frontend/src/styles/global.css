@@ -784,7 +784,7 @@ a {
 .tag-management-page .tag-creation-panel {
   max-width: none;
   margin-top: var(--space-4);
-  border-width: 1px 0;
+  border-width: 0;
   border-radius: 0;
   background: transparent;
   padding: var(--space-5) 0;

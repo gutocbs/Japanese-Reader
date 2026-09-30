@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { App } from '../../app/App';
-import type { Analysis, Document, DocumentClient, DocumentTag } from '../../shared/api/client';
+import { ApiError, type Analysis, type Document, type DocumentClient, type DocumentTag } from '../../shared/api/client';
 
 const stylesheet = readFileSync(resolve(import.meta.dirname, '../../styles/global.css'), 'utf8');
 
@@ -135,8 +135,46 @@ describe('tag management route', () => {
 
     fireEvent.change(screen.getByLabelText('Nova etiqueta'), { target: { value: 'Outra' } });
     fireEvent.click(screen.getByRole('button', { name: 'Criar etiqueta' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('Essa etiqueta já existe.');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Não foi possível criar a etiqueta.');
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+
+  it('reports duplicate names separately from validation and other API errors', async () => {
+    localStorage.clear();
+    const createTag = vi.fn()
+      .mockRejectedValueOnce(new ApiError(409, 'Tag already exists'))
+      .mockRejectedValueOnce(new ApiError(422, { detail: 'invalid color' }));
+    render(<App client={client({ createTag })} initialPath="/tags" />);
+
+    await screen.findByRole('heading', { name: 'Etiquetas' });
+    fireEvent.change(screen.getByLabelText('Nova etiqueta'), { target: { value: 'Leitura' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Criar etiqueta' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Essa etiqueta já existe.');
+
+    fireEvent.change(screen.getByLabelText('Nova etiqueta'), { target: { value: 'Outra' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Criar etiqueta' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Não foi possível criar a etiqueta.');
+  });
+
+  it('clears an earlier error before opening edit or delete actions', async () => {
+    localStorage.clear();
+    const createTag = vi.fn().mockRejectedValue(new Error('offline'));
+    render(<App client={client({ createTag })} initialPath="/tags" />);
+
+    await screen.findByRole('heading', { name: 'Etiquetas' });
+    fireEvent.change(screen.getByLabelText('Nova etiqueta'), { target: { value: 'Leitura' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Criar etiqueta' }));
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Renomear etiqueta Clássico' }));
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+
+    fireEvent.change(screen.getByLabelText('Nova etiqueta'), { target: { value: 'Outra' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Criar etiqueta' }));
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Remover etiqueta Clássico' }));
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
   it('moves focus into the delete dialog and returns it to the trigger when dismissed with Escape', async () => {
@@ -157,7 +195,8 @@ describe('tag management route', () => {
   });
 
   it('keeps creation controls aligned and uses themed, non-white swatch outlines and focus rings', () => {
-    expect(stylesheet).toMatch(/\.tag-management-page \.metadata-tag-form input,[\s\S]*\{[\s\S]*min-height: 2\.75rem;[\s\S]*border: 1px solid var\(--color-border\);[\s\S]*background: var\(--color-surface\);/);
+    expect(stylesheet).toMatch(/\.tag-management-page \.metadata-tag-form input,[\s\S]*\{[\s\S]*box-sizing: border-box;[\s\S]*height: 2\.75rem;[\s\S]*min-height: 2\.75rem;[\s\S]*border: 1px solid var\(--color-border\);[\s\S]*padding: 0 var\(--space-3\);[\s\S]*line-height: 1\.2;/);
+    expect(stylesheet).toMatch(/\.tag-management-page \.metadata-tag-form \.button \{[\s\S]*box-sizing: border-box;[\s\S]*height: 2\.75rem;[\s\S]*min-height: 2\.75rem;[\s\S]*padding: 0 var\(--space-3\);[\s\S]*line-height: 1\.2;/);
     expect(stylesheet).toMatch(/\.tag-color-picker__option span\[aria-hidden='true'\] \{[\s\S]*border: 1px solid color-mix\(in srgb, var\(--tag-color\) 60%, var\(--color-text\)\);/);
     expect(stylesheet).toMatch(/\.tag-color-picker__option input:checked \+ span\[aria-hidden='true'\] \{[\s\S]*outline: 3px solid var\(--color-focus\);/);
   });
