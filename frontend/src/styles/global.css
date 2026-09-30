@@ -371,7 +371,7 @@ a {
   justify-self: start;
 }
 
-.library-filters input[type='date'] {
+.library-filters__date {
   min-height: 2.75rem;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);

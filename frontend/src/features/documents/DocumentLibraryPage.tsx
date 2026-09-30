@@ -1,4 +1,4 @@
-import { type CSSProperties, type FormEvent, type ReactNode, useMemo, useRef, useState } from 'react';
+import { type CSSProperties, type FormEvent, type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useDocumentClient, useRouter } from '../../app/providers';
 import type { Document } from '../../shared/api/client';
@@ -122,6 +122,75 @@ function createdLabel(createdAt: string) {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(createdAt))}`;
+}
+
+function formatLocalizedDate(isoDate: string): string {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(isoDate)) return '';
+  const [year, month, day] = isoDate.split('-');
+  return `${day}/${month}/${year}`;
+}
+
+function maskLocalizedDate(value: string): string {
+  const digits = value.replace(/\D/g, '').slice(0, 8);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+  return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+}
+
+function parseLocalizedDate(value: string): string | null {
+  const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value);
+  if (match === null) return null;
+
+  const [, day, month, year] = match;
+  const parsed = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+  if (
+    parsed.getUTCFullYear() !== Number(year)
+    || parsed.getUTCMonth() !== Number(month) - 1
+    || parsed.getUTCDate() !== Number(day)
+  ) {
+    return null;
+  }
+  return `${year}-${month}-${day}`;
+}
+
+function LocalizedDateField({
+  id,
+  value,
+  onValueChange,
+}: {
+  id: string;
+  value: string;
+  onValueChange: (value: string) => void;
+}) {
+  const [displayValue, setDisplayValue] = useState(() => formatLocalizedDate(value));
+
+  useEffect(() => {
+    setDisplayValue(formatLocalizedDate(value));
+  }, [value]);
+
+  return (
+    <input
+      id={id}
+      className="library-filters__date"
+      type="text"
+      inputMode="numeric"
+      autoComplete="off"
+      placeholder="dd/mm/aaaa"
+      pattern="\\d{2}/\\d{2}/\\d{4}"
+      value={displayValue}
+      onChange={(event) => {
+        const nextDisplayValue = maskLocalizedDate(event.target.value);
+        setDisplayValue(nextDisplayValue);
+        if (nextDisplayValue.length === 0) {
+          onValueChange('');
+          return;
+        }
+
+        const isoDate = parseLocalizedDate(nextDisplayValue);
+        if (isoDate !== null) onValueChange(isoDate);
+      }}
+    />
+  );
 }
 
 export function DocumentLibraryPage() {
@@ -596,20 +665,16 @@ function LibrarySearch({
                 Somente favoritos
               </label>
               <label htmlFor="document-created-after">Data de criação a partir de</label>
-              <input
+              <LocalizedDateField
                 id="document-created-after"
-                type="date"
-                lang="pt-BR"
                 value={createdAfter}
-                onChange={(event) => onCreatedAfterChange(event.target.value)}
+                onValueChange={onCreatedAfterChange}
               />
               <label htmlFor="document-created-before">Data de criação até</label>
-              <input
+              <LocalizedDateField
                 id="document-created-before"
-                type="date"
-                lang="pt-BR"
                 value={createdBefore}
-                onChange={(event) => onCreatedBeforeChange(event.target.value)}
+                onValueChange={onCreatedBeforeChange}
               />
               <button
                 className="button button--quiet"

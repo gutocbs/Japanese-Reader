@@ -322,10 +322,44 @@ describe('document library flows', () => {
 
     await screen.findByRole('list', { name: 'Documentos' });
     fireEvent.click(screen.getByRole('button', { name: 'Abrir filtros' }));
-    fireEvent.change(screen.getByLabelText('Data de criação a partir de'), { target: { value: '2026-09-25' } });
-    fireEvent.change(screen.getByLabelText('Data de criação até'), { target: { value: '2026-09-25' } });
+    fireEvent.change(screen.getByLabelText('Data de criação a partir de'), { target: { value: '25/09/2026' } });
+    fireEvent.change(screen.getByLabelText('Data de criação até'), { target: { value: '25/09/2026' } });
 
     expect(libraryTitles()).toEqual(['Gama']);
+  });
+
+  it('displays creation-date filters as localized masked text fields', async () => {
+    render(<App client={client({ list: vi.fn().mockResolvedValue([firstDocument]) })} initialPath="/" />);
+
+    await screen.findByRole('list', { name: 'Documentos' });
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir filtros' }));
+
+    const createdAfter = screen.getByRole('textbox', { name: 'Data de criação a partir de' });
+    const createdBefore = screen.getByRole('textbox', { name: 'Data de criação até' });
+    expect(createdAfter).toHaveAttribute('inputmode', 'numeric');
+    expect(createdAfter).toHaveAttribute('placeholder', 'dd/mm/aaaa');
+    expect(createdAfter).not.toHaveAttribute('type', 'date');
+    expect(createdBefore).toHaveValue('');
+
+    fireEvent.change(createdAfter, { target: { value: '25092026' } });
+
+    expect(createdAfter).toHaveValue('25/09/2026');
+  });
+
+  it('keeps incomplete or invalid creation dates out of the applied filters', async () => {
+    render(<App client={client({ list: vi.fn().mockResolvedValue(orderingDocuments) })} initialPath="/" />);
+
+    await screen.findByRole('list', { name: 'Documentos' });
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir filtros' }));
+    const createdAfter = screen.getByRole('textbox', { name: 'Data de criação a partir de' });
+
+    fireEvent.change(createdAfter, { target: { value: '25/09' } });
+    expect(createdAfter).toHaveValue('25/09');
+    expect(libraryTitles()).toEqual(['Beta', 'Alfa', 'Gama']);
+
+    fireEvent.change(createdAfter, { target: { value: '31/02/2026' } });
+    expect(createdAfter).toHaveValue('31/02/2026');
+    expect(libraryTitles()).toEqual(['Beta', 'Alfa', 'Gama']);
   });
 
   it('composes title, favorite, and creation-date filters while preserving the selected ordering', async () => {
@@ -341,7 +375,7 @@ describe('document library flows', () => {
     fireEvent.change(screen.getByRole('searchbox', { name: 'Pesquisar documentos' }), { target: { value: 'diário' } });
     fireEvent.click(screen.getByRole('button', { name: 'Abrir filtros' }));
     fireEvent.click(screen.getByRole('checkbox', { name: 'Somente favoritos' }));
-    fireEvent.change(screen.getByLabelText('Data de criação a partir de'), { target: { value: '2026-09-25' } });
+    fireEvent.change(screen.getByLabelText('Data de criação a partir de'), { target: { value: '25/09/2026' } });
 
     expect(libraryTitles()).toEqual(['Diário recente']);
   });
@@ -354,7 +388,7 @@ describe('document library flows', () => {
     fireEvent.change(screen.getByRole('searchbox', { name: 'Pesquisar documentos' }), { target: { value: '雪' } });
     fireEvent.click(screen.getByRole('button', { name: 'Abrir filtros' }));
     fireEvent.click(screen.getByRole('checkbox', { name: 'Somente favoritos' }));
-    fireEvent.change(screen.getByLabelText('Data de criação a partir de'), { target: { value: '2026-09-24' } });
+    fireEvent.change(screen.getByLabelText('Data de criação a partir de'), { target: { value: '24/09/2026' } });
     fireEvent.click(screen.getByRole('button', { name: 'Limpar filtros' }));
 
     expect(screen.getByRole('searchbox', { name: 'Pesquisar documentos' })).toHaveValue('');
@@ -398,8 +432,8 @@ describe('document library flows', () => {
     fireEvent.click(filterButton);
     const popup = screen.getByRole('group', { name: 'Filtros da biblioteca' });
     expect(filterButton).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByLabelText('Data de criação a partir de')).toHaveAttribute('lang', 'pt-BR');
-    expect(screen.getByLabelText('Data de criação até')).toHaveAttribute('lang', 'pt-BR');
+    expect(screen.getByRole('textbox', { name: 'Data de criação a partir de' })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Data de criação até' })).toBeInTheDocument();
     fireEvent.keyDown(popup, { key: 'Escape' });
 
     expect(screen.queryByRole('group', { name: 'Filtros da biblioteca' })).not.toBeInTheDocument();
