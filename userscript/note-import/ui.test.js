@@ -54,6 +54,10 @@ function control(document) {
   return document.querySelector('[data-japanese-reader-note-import]');
 }
 
+function stylesheet(document) {
+  return document.getElementById('japanese-reader-note-import-styles');
+}
+
 async function flushNavigation() {
   await Promise.resolve();
   await Promise.resolve();
@@ -89,7 +93,55 @@ describe('initializeNoteImport', () => {
     });
     expect(status(document)).toMatchObject({ className: 'japanese-reader-note-import__status' });
     expect(button(document).getAttribute('aria-describedby')).toBe(status(document).id);
-    expect(document.getElementById('japanese-reader-note-import-styles')).not.toBeNull();
+    expect(stylesheet(document)).not.toBeNull();
+  });
+
+  it('keeps the native button focusable and exposes a tokenized focus-visible hook', () => {
+    const document = createDocument();
+
+    initializeNoteImport({ document, url: article.url, extractArticle: supportedExtractor, client: {} });
+    button(document).focus();
+
+    expect(document.activeElement).toBe(button(document));
+    expect(stylesheet(document).textContent).toContain('--japanese-reader-note-import-focus-outline-width: 2px;');
+    expect(stylesheet(document).textContent).toContain('--japanese-reader-note-import-hover-surface: #F2F0EA;');
+    expect(stylesheet(document).textContent).toContain(
+      'outline: var(--japanese-reader-note-import-focus-outline-width) solid var(--japanese-reader-note-import-accent);',
+    );
+    expect(stylesheet(document).textContent).toContain(
+      'background: var(--japanese-reader-note-import-hover-surface);',
+    );
+  });
+
+  it('uses a tokenized full-width button inside the narrow-layout media rule', () => {
+    const document = createDocument();
+
+    initializeNoteImport({ document, url: article.url, extractArticle: supportedExtractor, client: {} });
+
+    expect(stylesheet(document).textContent).toContain('@media (max-width: 480px)');
+    expect(stylesheet(document).textContent).toContain(
+      'width: var(--japanese-reader-note-import-full-width);',
+    );
+  });
+
+  it('keeps one local stylesheet after repeated and navigation reinitialization', async () => {
+    const document = createDocument();
+
+    initializeNoteImport({ document, url: article.url, extractArticle: supportedExtractor, client: {} });
+    initializeNoteImport({ document, url: article.url, extractArticle: supportedExtractor, client: {} });
+    expect(document.querySelectorAll('#japanese-reader-note-import-styles')).toHaveLength(1);
+
+    const window = createNavigationWindow();
+    installNoteImportNavigation({
+      window,
+      initializeOptions: { extractArticle: routeAwareExtractor, client: {} },
+    });
+    await flushNavigation();
+
+    window.history.replaceState({}, '', 'https://note.com/example_creator/n/nabcdef123456');
+    await flushNavigation();
+
+    expect(window.document.querySelectorAll('#japanese-reader-note-import-styles')).toHaveLength(1);
   });
 
   it('does not add a duplicate button or listener when initialized repeatedly for the same article', async () => {

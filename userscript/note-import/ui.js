@@ -10,49 +10,74 @@ const CONTROL_CLASS = 'japanese-reader-note-import__control';
 const BUTTON_CLASS = 'japanese-reader-note-import__button';
 const STATUS_CLASS = 'japanese-reader-note-import__status';
 const STATUS_ID = 'japanese-reader-note-import-status';
+const NARROW_LAYOUT_MAX_WIDTH = '480px';
 
 const CONTROL_STYLES = `
 #${ROOT_ID} {
   --japanese-reader-note-import-ink: #2C2A27;
   --japanese-reader-note-import-muted: #6B675F;
   --japanese-reader-note-import-paper: #FBFAF7;
+  --japanese-reader-note-import-hover-surface: #F2F0EA;
   --japanese-reader-note-import-rule: #D7D2C8;
   --japanese-reader-note-import-accent: #5C4B8A;
   --japanese-reader-note-import-accent-strong: #43345F;
+  --japanese-reader-note-import-space-none: 0;
+  --japanese-reader-note-import-space-tight: 8px;
+  --japanese-reader-note-import-space-inline: 12px;
+  --japanese-reader-note-import-space-block: 16px;
+  --japanese-reader-note-import-space-boundary: clamp(18px, 3vw, 32px);
+  --japanese-reader-note-import-button-padding-block: 7px;
+  --japanese-reader-note-import-button-padding-inline: 11px;
+  --japanese-reader-note-import-button-min-height: 36px;
+  --japanese-reader-note-import-full-width: 100%;
+  --japanese-reader-note-import-font-family: system-ui, sans-serif;
+  --japanese-reader-note-import-font-size: 14px;
+  --japanese-reader-note-import-font-line-height: 1.45;
+  --japanese-reader-note-import-font-weight: 500;
+  --japanese-reader-note-import-font-weight-emphasis: 650;
+  --japanese-reader-note-import-border-width: 1px;
+  --japanese-reader-note-import-button-radius: 3px;
+  --japanese-reader-note-import-focus-outline-width: 2px;
+  --japanese-reader-note-import-focus-outline-offset: 3px;
+  --japanese-reader-note-import-disabled-opacity: 0.58;
+  --japanese-reader-note-import-reduced-motion-duration: 0.01ms;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px 12px;
-  margin: clamp(18px, 3vw, 32px) 0 0;
-  padding: 16px 0 0;
-  border-top: 1px solid var(--japanese-reader-note-import-rule);
+  gap: var(--japanese-reader-note-import-space-tight) var(--japanese-reader-note-import-space-inline);
+  margin: var(--japanese-reader-note-import-space-boundary) var(--japanese-reader-note-import-space-none) var(--japanese-reader-note-import-space-none);
+  padding: var(--japanese-reader-note-import-space-block) var(--japanese-reader-note-import-space-none) var(--japanese-reader-note-import-space-none);
+  border-top: var(--japanese-reader-note-import-border-width) solid var(--japanese-reader-note-import-rule);
   color: var(--japanese-reader-note-import-ink);
-  font: 500 14px/1.45 system-ui, sans-serif;
+  font-family: var(--japanese-reader-note-import-font-family);
+  font-size: var(--japanese-reader-note-import-font-size);
+  font-weight: var(--japanese-reader-note-import-font-weight);
+  line-height: var(--japanese-reader-note-import-font-line-height);
 }
 
 #${ROOT_ID} .${BUTTON_CLASS} {
-  min-height: 36px;
-  padding: 7px 11px;
-  border: 1px solid var(--japanese-reader-note-import-accent);
-  border-radius: 3px;
+  min-height: var(--japanese-reader-note-import-button-min-height);
+  padding: var(--japanese-reader-note-import-button-padding-block) var(--japanese-reader-note-import-button-padding-inline);
+  border: var(--japanese-reader-note-import-border-width) solid var(--japanese-reader-note-import-accent);
+  border-radius: var(--japanese-reader-note-import-button-radius);
   background: var(--japanese-reader-note-import-paper);
   color: var(--japanese-reader-note-import-accent-strong);
   font: inherit;
-  font-weight: 650;
+  font-weight: var(--japanese-reader-note-import-font-weight-emphasis);
   cursor: pointer;
 }
 
 #${ROOT_ID} .${BUTTON_CLASS}:hover:not(:disabled) {
-  background: #F2F0EA;
+  background: var(--japanese-reader-note-import-hover-surface);
 }
 
 #${ROOT_ID} .${BUTTON_CLASS}:focus-visible {
-  outline: 2px solid var(--japanese-reader-note-import-accent);
-  outline-offset: 3px;
+  outline: var(--japanese-reader-note-import-focus-outline-width) solid var(--japanese-reader-note-import-accent);
+  outline-offset: var(--japanese-reader-note-import-focus-outline-offset);
 }
 
 #${ROOT_ID} .${BUTTON_CLASS}:disabled {
-  opacity: 0.58;
+  opacity: var(--japanese-reader-note-import-disabled-opacity);
   cursor: default;
 }
 
@@ -64,20 +89,20 @@ const CONTROL_STYLES = `
   color: var(--japanese-reader-note-import-muted);
 }
 
-@media (max-width: 480px) {
+@media (max-width: ${NARROW_LAYOUT_MAX_WIDTH}) {
   #${ROOT_ID} {
     align-items: stretch;
   }
 
   #${ROOT_ID} .${BUTTON_CLASS} {
-    width: 100%;
+    width: var(--japanese-reader-note-import-full-width);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   #${ROOT_ID} * {
     scroll-behavior: auto;
-    transition-duration: 0.01ms;
+    transition-duration: var(--japanese-reader-note-import-reduced-motion-duration);
   }
 }
 `;
