@@ -38,12 +38,13 @@ describe('Token', () => {
       .flatMap((sheet) => Array.from(sheet.cssRules))
       .find((rule): rule is CSSStyleRule => (
         rule instanceof CSSStyleRule
-        && rule.selectorText === '.reader-token[data-lexical]:hover,\n.reader-token[data-lexical]:focus-visible'
+        && rule.selectorText.replace(/\s+/g, ' ').trim()
+          === '.reader-token[data-lexical]:hover, .reader-token[data-lexical]:focus-visible'
       ));
 
     expect(getComputedStyle(document.documentElement)
       .getPropertyValue('--color-reader-token-hover').trim()).toBe('rgb(243 243 247/14%)');
-    expect(hoverRule?.style.background).toBe('var(--color-reader-token-hover)');
+    expect(hoverRule?.style.getPropertyValue('background')).toBe('var(--color-reader-token-hover)');
   });
 
   it('uses the same translucent surface for a selected token with one dotted underline', () => {
@@ -56,7 +57,7 @@ describe('Token', () => {
 
     expect(getComputedStyle(document.documentElement)
       .getPropertyValue('--color-reader-token-selected').trim()).toBe('rgb(243 243 247/14%)');
-    expect(selectedRule?.style.background).toBe('var(--color-reader-token-selected)');
+    expect(selectedRule?.style.getPropertyValue('background')).toBe('var(--color-reader-token-selected)');
     expect(selectedRule?.style.textDecoration).toContain('dotted');
     expect(selectedRule?.style.textDecoration).not.toContain('double');
     expect(container.querySelector('.reader-token')).toHaveAttribute('data-selected');
