@@ -122,16 +122,18 @@ export function ReaderTagsPopup({
               <h2 id={titleId}>Etiquetas do documento</h2>
             </div>
           </div>
-          <ul className="metadata-tags" aria-label="Etiquetas atuais">
-            {tags.map((tag) => (
-              <li key={tag.name}>
-                <span className="metadata-tag" aria-label={`Etiqueta ${tag.name}`} style={{ '--tag-color': tag.color } as CSSProperties}>{tag.name}</span>
-                <button className="tag-remove-button" type="button" disabled={isSaving} aria-label={`Remover etiqueta ${tag.name}`} title={`Remover etiqueta ${tag.name}`} onClick={() => void save(tags.filter((item) => item.name !== tag.name))}>
-                  <span aria-hidden="true">×</span>
-                </button>
-              </li>
-            ))}
-          </ul>
+          <div className="reader-tags-popup__current-tags">
+            <ul className="metadata-tags" aria-label="Etiquetas atuais">
+              {tags.map((tag) => (
+                <li key={tag.name}>
+                  <span className="metadata-tag" aria-label={`Etiqueta ${tag.name}`} style={{ '--tag-color': tag.color } as CSSProperties}>{tag.name}</span>
+                  <button className="tag-remove-button" type="button" disabled={isSaving} aria-label={`Remover etiqueta ${tag.name}`} title={`Remover etiqueta ${tag.name}`} onClick={() => void save(tags.filter((item) => item.name !== tag.name))}>
+                    <span aria-hidden="true">×</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
           {tags.length === 0 && <p className="reader-tags-popup__empty">Nenhuma etiqueta neste documento.</p>}
           {availableTags.length > 0 && (
             <div className="tag-selection" aria-label="Etiquetas disponíveis">

@@ -12,6 +12,8 @@ describe('ReaderTagsPopup', () => {
     expect(stylesheet).toMatch(/\.reader-tags-popup__panel \{[\s\S]*max-height: calc\(100vh - var\(--space-12\)\);[\s\S]*overflow-y: auto;/);
     expect(stylesheet).toMatch(/\.reader-tags-popup__panel \{[\s\S]*box-sizing: border-box;[\s\S]*max-width: calc\(100vw - 7rem\);[\s\S]*overflow-x: hidden;/);
     expect(stylesheet).toMatch(/\.reader-tags-popup__panel \.metadata-tags \{[\s\S]*min-width: 0;/);
+    expect(stylesheet).toMatch(/\.reader-tags-popup__current-tags \{[\s\S]*max-height: [^;]+;[\s\S]*overflow-y: auto;/);
+    expect(stylesheet).toMatch(/\.reader-tags-popup__creation input:focus-visible \{[\s\S]*outline: 0;[\s\S]*box-shadow: 0 0 0 2px color-mix\(in srgb, var\(--color-focus\) 24%, transparent\);/);
   });
 
   it('uses the rail trigger as the only popup close affordance', () => {

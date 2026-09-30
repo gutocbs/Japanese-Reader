@@ -912,6 +912,11 @@ a {
   min-width: 0;
 }
 
+.reader-tags-popup__current-tags {
+  max-height: 12rem;
+  overflow-y: auto;
+}
+
 .reader-tags-popup__heading {
   display: flex;
   align-items: start;
@@ -938,6 +943,11 @@ a {
 
 .reader-tags-popup__creation {
   margin-top: 0;
+}
+
+.reader-tags-popup__creation input:focus-visible {
+  outline: 0;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-focus) 24%, transparent);
 }
 
 .appearance-menu {
