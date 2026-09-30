@@ -5,7 +5,10 @@ from __future__ import annotations
 import argparse
 from dataclasses import asdict, dataclass
 import json
+import os
 from pathlib import Path
+import platform
+import sqlite3
 from statistics import median
 import sys
 from tempfile import TemporaryDirectory
@@ -24,6 +27,8 @@ from backend.app.main import create_app  # noqa: E402
 from backend.app.persistence.sqlite.connection import SqliteDatabase  # noqa: E402
 from backend.app.persistence.sqlite.repositories import (  # noqa: E402
     SqliteDocumentRepository,
+    _document,
+    _document_tags,
 )
 from tests.performance.generate_documents import generate_document  # noqa: E402
 
@@ -101,12 +106,30 @@ def seed_library(path: Path, document_count: int) -> None:
                 content=f"本文 {index}\r\n  preserved",
                 description=f"Description {index}",
                 source="Task 17 benchmark",
-                tags=TAGS,
+                tags=TAGS if index % 2 == 0 else (),
             )
         )
 
 
-def benchmark_reload(path: Path, document_count: int, runs: int) -> dict[str, object]:
+def legacy_n_plus_one_list(
+    database: SqliteDatabase,
+) -> tuple[object, ...]:
+    """Reproduce the pre-Task-17 list implementation for same-run comparison."""
+
+    with database.unit_of_work() as connection:
+        rows = connection.execute("SELECT * FROM documents ORDER BY rowid").fetchall()
+        return tuple(
+            _document(row, _document_tags(connection, row["id"])) for row in rows
+        )
+
+
+def benchmark_reload(
+    path: Path,
+    document_count: int,
+    runs: int,
+    *,
+    legacy: bool,
+) -> dict[str, object]:
     database = TracedSqliteDatabase(path)
     repository = SqliteDocumentRepository(database)
     database.select_count = 0
@@ -114,18 +137,23 @@ def benchmark_reload(path: Path, document_count: int, runs: int) -> dict[str, ob
 
     def reload_documents() -> None:
         nonlocal observed
-        observed = repository.list()
+        observed = (
+            legacy_n_plus_one_list(database) if legacy else repository.list()
+        )
         if len(observed) != document_count:
             raise AssertionError("reload returned an unexpected document count")
-        first = observed[0]
+        first, second = observed[:2]
         if first.content != "本文 0\r\n  preserved" or first.tags != TAGS:
             raise AssertionError("reload changed canonical text, metadata, or tags")
+        if second.content != "本文 1\r\n  preserved" or second.tags != ():
+            raise AssertionError("reload lost an untagged document or changed its text")
 
     timing = measure(reload_documents, runs)
     return {
         **asdict(timing),
         "documents": document_count,
-        "tagsPerDocument": len(TAGS),
+        "taggedDocuments": (document_count + 1) // 2,
+        "tagsPerTaggedDocument": len(TAGS),
         "selectsPerReload": database.select_count // runs,
     }
 
@@ -140,17 +168,45 @@ def benchmark(document_count: int, runs: int) -> dict[str, object]:
         started = perf_counter()
         seed_library(library_path, document_count)
         persistence_ms = round((perf_counter() - started) * 1000, 3)
-        reload_result = benchmark_reload(library_path, document_count, runs)
+        legacy_reload = benchmark_reload(
+            library_path, document_count, runs, legacy=True
+        )
+        joined_reload = benchmark_reload(
+            library_path, document_count, runs, legacy=False
+        )
+        speedup_percent = round(
+            (legacy_reload["median_ms"] - joined_reload["median_ms"])
+            / legacy_reload["median_ms"]
+            * 100,
+            3,
+        )
     return {
+        "benchmark": "task17-sqlite-list-v1",
+        "environment": {
+            "platform": platform.platform(),
+            "processor": platform.processor() or "unknown",
+            "logicalCpuCount": os.cpu_count(),
+            "python": platform.python_version(),
+            "sqlite": sqlite3.sqlite_version,
+            "measurement": (
+                "same seeded SQLite file; legacy N+1 and current joined domain "
+                "reconstruction; median wall time"
+            ),
+        },
         "runs": runs,
         "import10k": import_result,
         "sqlitePersistence": {
             "documents": document_count,
-            "tagsPerDocument": len(TAGS),
+            "taggedDocuments": (document_count + 1) // 2,
+            "tagsPerTaggedDocument": len(TAGS),
             "totalMs": persistence_ms,
             "meanPerDocumentMs": round(persistence_ms / document_count, 3),
         },
-        "sqliteReload": reload_result,
+        "sqliteListComparison": {
+            "legacyNPlusOne": legacy_reload,
+            "joinedCurrent": joined_reload,
+            "medianSpeedupPercent": speedup_percent,
+        },
     }
 
 

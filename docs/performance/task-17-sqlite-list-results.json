@@ -1,0 +1,60 @@
+{
+  "benchmark": "task17-sqlite-list-v1",
+  "environment": {
+    "platform": "Windows-11-10.0.22631-SP0",
+    "processor": "Intel64 Family 6 Model 158 Stepping 13, GenuineIntel",
+    "logicalCpuCount": 6,
+    "python": "3.12.10",
+    "sqlite": "3.49.1",
+    "measurement": "same seeded SQLite file; legacy N+1 and current joined domain reconstruction; median wall time"
+  },
+  "runs": 5,
+  "import10k": {
+    "median_ms": 9.319,
+    "samples_ms": [
+      10.692,
+      9.515,
+      9.319,
+      8.904,
+      9.025
+    ]
+  },
+  "sqlitePersistence": {
+    "documents": 500,
+    "taggedDocuments": 250,
+    "tagsPerTaggedDocument": 3,
+    "totalMs": 4839.118,
+    "meanPerDocumentMs": 9.678
+  },
+  "sqliteListComparison": {
+    "legacyNPlusOne": {
+      "median_ms": 8.948,
+      "samples_ms": [
+        9.016,
+        20.071,
+        8.051,
+        8.948,
+        7.953
+      ],
+      "documents": 500,
+      "taggedDocuments": 250,
+      "tagsPerTaggedDocument": 3,
+      "selectsPerReload": 501
+    },
+    "joinedCurrent": {
+      "median_ms": 6.898,
+      "samples_ms": [
+        6.595,
+        6.898,
+        6.889,
+        6.908,
+        7.102
+      ],
+      "documents": 500,
+      "taggedDocuments": 250,
+      "tagsPerTaggedDocument": 3,
+      "selectsPerReload": 1
+    },
+    "medianSpeedupPercent": 22.91
+  }
+}

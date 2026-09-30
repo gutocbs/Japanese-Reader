@@ -97,6 +97,58 @@ def test_reopening_the_same_file_preserves_document_description_and_tags(tmp_pat
     assert stored.json()["tags"] == [{"name": "Grammar", "color": "#7C3AED"}]
 
 
+def test_document_list_serializes_interleaved_tagged_and_untagged_rows(tmp_path):
+    application = create_app(tmp_path / "list-serialization.db")
+    exact_contents = ["一  ", "二\r\n", "  三"]
+
+    async def exercise():
+        async with AsyncClient(
+            transport=ASGITransport(app=application), base_url="http://test"
+        ) as client:
+            created = []
+            for index, content in enumerate(exact_contents, start=1):
+                response = await client.post(
+                    "/api/documents",
+                    json={"title": f"Document {index}", "content": content},
+                )
+                assert response.status_code == 201
+                created.append(response.json())
+
+            first = await client.put(
+                f"/api/documents/{created[0]['id']}",
+                json={
+                    "tags": [
+                        {"name": "News", "color": "#0F766E"},
+                        {"name": "Grammar", "color": "#7C3AED"},
+                    ]
+                },
+            )
+            third = await client.put(
+                f"/api/documents/{created[2]['id']}",
+                json={"tags": [{"name": "Grammar", "color": "#7C3AED"}]},
+            )
+            assert first.status_code == third.status_code == 200
+
+            return await client.get("/api/documents")
+
+    response = asyncio.run(exercise())
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert [document["title"] for document in payload] == [
+        "Document 1", "Document 2", "Document 3"
+    ]
+    assert [document["content"] for document in payload] == exact_contents
+    assert [document["tags"] for document in payload] == [
+        [
+            {"name": "News", "color": "#0F766E"},
+            {"name": "Grammar", "color": "#7C3AED"},
+        ],
+        [],
+        [{"name": "Grammar", "color": "#7C3AED"}],
+    ]
+
+
 def test_reopening_the_same_file_preserves_public_import_source_text_and_tags(tmp_path):
     path = tmp_path / "public-import.db"
     application = create_app(path)

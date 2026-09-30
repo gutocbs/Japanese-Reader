@@ -66,6 +66,23 @@ def test_list_loads_document_tags_with_fixed_query_budget(tmp_path):
     assert database.select_count <= 2
 
 
+def test_list_preserves_interleaved_tagged_and_untagged_documents(tmp_path):
+    repository = SqliteDocumentRepository(SqliteDatabase(tmp_path / "mixed-tags.db"))
+    grammar = DocumentTag(name="Grammar", color="#7C3AED")
+    news = DocumentTag(name="News", color="#0F766E")
+    first = repository.create(
+        CreateDocument(title="First", content="一", tags=(news, grammar))
+    )
+    second = repository.create(CreateDocument(title="Second", content="二"))
+    third = repository.create(
+        CreateDocument(title="Third", content="三", tags=(grammar,))
+    )
+
+    assert repository.list() == (first, second, third)
+    assert repository.list()[0].tags == (news, grammar)
+    assert repository.list()[1].tags == ()
+
+
 def test_naive_clock_rolls_back_without_creating_a_document(tmp_path):
     repository = SqliteDocumentRepository(
         SqliteDatabase(tmp_path / "naive-clock.db"),
