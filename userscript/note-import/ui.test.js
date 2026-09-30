@@ -28,6 +28,12 @@ function routeAwareExtractor({ url }) {
   return url.includes('/n/') ? supportedExtractor({ url }) : unsupportedExtractor();
 }
 
+function selectorAwareExtractor({ document, url }) {
+  return document.querySelector('article.p-article__body')
+    ? routeAwareExtractor({ url })
+    : unsupportedExtractor();
+}
+
 function deferred() {
   let resolve;
   const promise = new Promise((resolvePromise) => {
@@ -42,6 +48,12 @@ function button(document) {
 
 function status(document) {
   return document.querySelector('[data-japanese-reader-note-import] [role="status"]');
+}
+
+async function flushNavigation() {
+  await Promise.resolve();
+  await Promise.resolve();
+  await Promise.resolve();
 }
 
 describe('initializeNoteImport', () => {
@@ -192,5 +204,78 @@ describe('initializeNoteImport', () => {
     await Promise.resolve();
 
     expect(window.document.querySelector('[data-japanese-reader-note-import]')).toBeNull();
+  });
+
+  it('updates the control URL after replaceState without replacing article DOM', async () => {
+    const window = createNavigationWindow();
+    const nextArticleUrl = 'https://note.com/example_creator/n/nabcdef123456';
+
+    installNoteImportNavigation({
+      window,
+      initializeOptions: { extractArticle: routeAwareExtractor, client: {} },
+    });
+    await flushNavigation();
+
+    window.history.replaceState({}, '', nextArticleUrl);
+    await flushNavigation();
+
+    expect(window.document.querySelector('[data-japanese-reader-note-import]').dataset.noteImportUrl).toBe(nextArticleUrl);
+  });
+
+  it('updates the control URL after browser back dispatches popstate', async () => {
+    const window = createNavigationWindow();
+    const nextArticleUrl = 'https://note.com/example_creator/n/nabcdef123456';
+
+    installNoteImportNavigation({
+      window,
+      initializeOptions: { extractArticle: routeAwareExtractor, client: {} },
+    });
+    await flushNavigation();
+
+    window.history.pushState({}, '', nextArticleUrl);
+    await flushNavigation();
+    const popstate = new Promise((resolve) => window.addEventListener('popstate', resolve, { once: true }));
+    window.history.back();
+    await popstate;
+    await flushNavigation();
+
+    expect(window.document.querySelector('[data-japanese-reader-note-import]').dataset.noteImportUrl).toBe(article.url);
+  });
+
+  it('injects and removes the control when an article gains and loses its selector class', async () => {
+    const window = new JSDOM('<main><article id="candidate"><h1>春の読書メモ</h1></article></main>', { url: article.url }).window;
+    const candidate = window.document.querySelector('#candidate');
+
+    installNoteImportNavigation({
+      window,
+      initializeOptions: { extractArticle: selectorAwareExtractor, client: {} },
+    });
+    await flushNavigation();
+    expect(window.document.querySelector('[data-japanese-reader-note-import]')).toBeNull();
+
+    candidate.className = 'p-article__body';
+    await flushNavigation();
+    expect(window.document.querySelectorAll('[data-japanese-reader-note-import]')).toHaveLength(1);
+
+    candidate.removeAttribute('class');
+    await flushNavigation();
+    expect(window.document.querySelector('[data-japanese-reader-note-import]')).toBeNull();
+  });
+
+  it('installs navigation hooks only once for repeated entry-point installation', async () => {
+    const window = createNavigationWindow();
+    let initializations = 0;
+    const initialize = () => {
+      initializations += 1;
+    };
+
+    installNoteImportNavigation({ window, initialize });
+    installNoteImportNavigation({ window, initialize });
+    await flushNavigation();
+
+    window.history.replaceState({}, '', 'https://note.com/example_creator/n/nabcdef123456');
+    await flushNavigation();
+
+    expect(initializations).toBe(2);
   });
 });

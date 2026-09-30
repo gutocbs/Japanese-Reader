@@ -326,6 +326,8 @@
 
       if (typeof window.MutationObserver === 'function') {
         new window.MutationObserver(reinitialize).observe(window.document.documentElement, {
+          attributes: true,
+          attributeFilter: ['class'],
           childList: true,
           subtree: true,
         });
