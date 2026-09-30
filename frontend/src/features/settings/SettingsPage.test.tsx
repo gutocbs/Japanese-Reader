@@ -1,7 +1,11 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 import { App } from '../../app/App';
 import type { DocumentClient } from '../../shared/api/client';
+
+const stylesheet = readFileSync(resolve(import.meta.dirname, '../../styles/global.css'), 'utf8');
 
 function client(): DocumentClient {
   return {
@@ -59,4 +63,10 @@ it('keeps changes active and announces a storage error when local persistence is
   );
 
   setItem.mockRestore();
+});
+
+it('keeps compact font glyphs in 44px targets and styles unavailable controls explicitly', () => {
+  expect(stylesheet).toMatch(/\.settings-font-control__actions \{[\s\S]*grid-template-columns: 2\.75rem 4\.5rem 2\.75rem;/);
+  expect(stylesheet).toMatch(/\.settings-font-control__button \{[\s\S]*width: 2\.75rem;[\s\S]*height: 2\.75rem;[\s\S]*font-size: 1\.2rem;/);
+  expect(stylesheet).toMatch(/\.settings-font-control__button:disabled,[\s\S]*\.settings-experiment:has\(input:disabled\) \{[\s\S]*background: var\(--color-surface-muted\);[\s\S]*color: var\(--color-text-muted\);[\s\S]*cursor: not-allowed;/);
 });
