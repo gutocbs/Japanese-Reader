@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="ja">
+  <body>
+    <nav>Global navigation must not be imported.</nav>
+    <h1>Unrelated page heading</h1>
+    <article class="p-article__body">
+      <h1>春の読書メモ</h1>
+      <div class="note-common-styles__textnote-body">
+        <p>最初の段落です。</p>
+        <p>意味のある<br>改行です。</p>
+        <h2>見出し</h2>
+        <blockquote>引用した文章です。</blockquote>
+        <p>空行の前です。</p>
+        <p><br></p>
+        <p>空行の後です。</p>
+        <figure>
+          <img alt="記事の画像" src="https://example.invalid/cover.png">
+          <figcaption>画像の説明は本文ではありません。</figcaption>
+        </figure>
+        <iframe src="https://example.invalid/embed">埋め込みの本文ではありません。</iframe>
+        <button>共有する</button>
+        <nav>記事内メニュー</nav>
+        <aside>おすすめ記事</aside>
+        <div data-note-import-ignore>記事に隣接する操作</div>
+        <p>最後の段落です。</p>
+      </div>
+    </article>
+    <footer>Footer recommendation must not be imported.</footer>
+  </body>
+</html>
