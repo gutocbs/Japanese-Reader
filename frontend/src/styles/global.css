@@ -335,7 +335,7 @@ a {
 .library-filters {
   position: absolute;
   z-index: 2;
-  top: calc(100% + var(--space-2));
+  top: calc(-1 * (var(--space-4) + 1px));
   right: 0;
   display: grid;
   grid-template-columns: auto minmax(12rem, 1fr);
