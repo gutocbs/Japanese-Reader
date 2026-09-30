@@ -941,6 +941,12 @@ a {
   padding: var(--space-3);
 }
 
+.reader-tags-popup__panel .tag-selection__options {
+  max-height: 12rem;
+  min-width: 0;
+  overflow-y: auto;
+}
+
 .reader-tags-popup__creation {
   margin-top: 0;
 }
