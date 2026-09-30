@@ -1145,6 +1145,10 @@ a {
   font-weight: 650;
 }
 
+.settings-font-control .settings-section__description {
+  margin-top: var(--space-2);
+}
+
 .settings-font-control__actions {
   display: grid;
   grid-template-columns: 2.75rem 4.5rem 2.75rem;

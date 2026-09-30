@@ -69,4 +69,5 @@ it('keeps compact font glyphs in 44px targets and styles unavailable controls ex
   expect(stylesheet).toMatch(/\.settings-font-control__actions \{[\s\S]*grid-template-columns: 2\.75rem 4\.5rem 2\.75rem;/);
   expect(stylesheet).toMatch(/\.settings-font-control__button \{[\s\S]*width: 2\.75rem;[\s\S]*height: 2\.75rem;[\s\S]*font-size: 1\.2rem;/);
   expect(stylesheet).toMatch(/\.settings-font-control__button:disabled,[\s\S]*\.settings-experiment:has\(input:disabled\) \{[\s\S]*background: var\(--color-surface-muted\);[\s\S]*color: var\(--color-text-muted\);[\s\S]*cursor: not-allowed;/);
+  expect(stylesheet).toMatch(/\.settings-font-control \.settings-section__description \{[\s\S]*margin-top: var\(--space-2\);/);
 });
