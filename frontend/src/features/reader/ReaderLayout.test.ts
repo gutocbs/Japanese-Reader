@@ -6,7 +6,7 @@ const stylesheet = readFileSync(resolve(import.meta.dirname, '../../styles/globa
 
 describe('reader rail layout', () => {
   it('keeps the rail in a symmetric side column that follows the reading scroll', () => {
-    expect(stylesheet).toMatch(/\.reader-layout \{[\s\S]*display: grid;[\s\S]*grid-template-columns: 3rem minmax\(0, var\(--reader-text-width\)\) 3rem;/);
+    expect(stylesheet).toMatch(/\.reader-layout \{[\s\S]*display: grid;[\s\S]*grid-template-columns: 3\.5rem minmax\(0, var\(--reader-text-width\)\) 3\.5rem;/);
     expect(stylesheet).toMatch(/\.reader-rail \{[\s\S]*position: sticky;[\s\S]*align-self: start;/);
     expect(stylesheet).toMatch(/\.reader-page \{[\s\S]*grid-column: 2;[\s\S]*padding-left: var\(--space-8\);/);
     expect(stylesheet).toMatch(/\.reader-page \{[\s\S]*border-left: 1px solid var\(--color-reader-divider\);/);
