@@ -30,7 +30,7 @@ interface ThemeContextValue {
 
 interface AppSettingsContextValue {
   settings: AppSettings;
-  updateSettings: (settings: AppSettings) => void;
+  updateSettings: (settings: AppSettings) => boolean;
 }
 
 interface AppProvidersProps {
@@ -89,9 +89,10 @@ export function AppProviders({ children, client = documentClient, initialPath }:
   }, []);
 
   const updateSettings = useCallback((nextSettings: AppSettings) => {
-    saveAppSettings(nextSettings);
+    const wasSaved = saveAppSettings(nextSettings);
     setSettings(nextSettings);
     setThemeState(nextSettings.theme);
+    return wasSaved;
   }, []);
 
   const navigate = useCallback((path: string, state?: unknown) => {

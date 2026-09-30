@@ -62,10 +62,12 @@ export function loadAppSettings(): AppSettings {
   }
 }
 
-export function saveAppSettings(settings: AppSettings): void {
+export function saveAppSettings(settings: AppSettings): boolean {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: STORAGE_VERSION, ...settings }));
+    return true;
   } catch {
     // The selected settings remain active for the current visit when storage is unavailable.
+    return false;
   }
 }

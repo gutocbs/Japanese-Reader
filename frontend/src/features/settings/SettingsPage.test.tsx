@@ -18,23 +18,45 @@ beforeEach(() => {
   window.history.replaceState(null, '', '/');
 });
 
-it('offers persisted settings controls from the application navigation', () => {
+it('groups accessible controls and persists their active changes from the application navigation', () => {
   render(<App client={client()} initialPath="/" />);
 
   fireEvent.click(screen.getByRole('link', { name: 'Configurações' }));
 
   expect(screen.getByRole('heading', { name: 'Configurações', level: 1 })).toBeInTheDocument();
-  fireEvent.click(screen.getByRole('radio', { name: 'Tema escuro' }));
-  fireEvent.change(screen.getByLabelText('Tamanho padrão da fonte japonesa'), {
-    target: { value: '28' },
-  });
+  expect(screen.getByRole('group', { name: 'Aparência' })).toBeInTheDocument();
+  expect(screen.getByRole('group', { name: 'Leitura' })).toBeInTheDocument();
+  expect(screen.getByRole('group', { name: 'Experimentos' })).toBeInTheDocument();
+
+  const darkTheme = screen.getByRole('radio', { name: 'Tema escuro' });
+  fireEvent.click(darkTheme);
+  fireEvent.click(screen.getByRole('button', { name: 'Aumentar tamanho padrão da fonte japonesa' }));
   fireEvent.click(screen.getByRole('checkbox', { name: 'Disponibilizar ação para unir quebras de linha' }));
 
+  expect(darkTheme).toBeChecked();
   expect(window.document.documentElement).toHaveAttribute('data-theme', 'dark');
+  expect(screen.getByText('Configurações salvas neste navegador.')).toHaveAttribute('role', 'status');
   expect(localStorage.getItem('japanese-reader:app-settings')).toBe(JSON.stringify({
     version: 1,
     theme: 'dark',
-    defaultReaderFontSizePx: 28,
+    defaultReaderFontSizePx: 25,
     lineBreakNormalizationEnabled: false,
   }));
+});
+
+it('keeps changes active and announces a storage error when local persistence is unavailable', () => {
+  const setItem = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+    throw new Error('storage disabled');
+  });
+  render(<App client={client()} initialPath="/settings" />);
+
+  fireEvent.click(screen.getByRole('radio', { name: 'Tema escuro' }));
+
+  expect(screen.getByRole('radio', { name: 'Tema escuro' })).toBeChecked();
+  expect(window.document.documentElement).toHaveAttribute('data-theme', 'dark');
+  expect(screen.getByRole('alert')).toHaveTextContent(
+    'Não foi possível salvar as configurações neste navegador.',
+  );
+
+  setItem.mockRestore();
 });
