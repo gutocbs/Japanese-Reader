@@ -10,3 +10,4 @@ frontend/dist/
 .dev/
 data/
 
+/.pytest-tmp
