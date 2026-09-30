@@ -71,6 +71,33 @@ describe('tag management route', () => {
     expect(remove).toHaveAttribute('title', 'Remover etiqueta Clássico');
   });
 
+  it('announces successful catalogue changes and explains document impact before deletion', async () => {
+    localStorage.clear();
+    const createTag = vi.fn().mockResolvedValue({ name: 'Leitura', color: '#1D4ED8' });
+    render(<App client={client({ createTag })} initialPath="/tags" />);
+
+    await screen.findByRole('heading', { name: 'Etiquetas' });
+    fireEvent.change(screen.getByLabelText('Nova etiqueta'), { target: { value: 'Leitura' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Criar etiqueta' }));
+
+    expect(await screen.findByRole('status')).toHaveTextContent('Etiqueta criada.');
+    fireEvent.click(screen.getByRole('button', { name: 'Remover etiqueta Clássico' }));
+    expect(screen.getByRole('dialog', { name: 'Remover etiqueta' })).toHaveTextContent('será removida dos documentos associados');
+  });
+
+  it('uses a custom picker color when creating a catalogue tag', async () => {
+    localStorage.clear();
+    const createTag = vi.fn().mockResolvedValue({ name: 'Anotações', color: '#123456' });
+    render(<App client={client({ createTag })} initialPath="/tags" />);
+
+    await screen.findByRole('heading', { name: 'Etiquetas' });
+    fireEvent.change(screen.getByLabelText('Cor personalizada'), { target: { value: '#123456' } });
+    fireEvent.change(screen.getByLabelText('Nova etiqueta'), { target: { value: 'Anotações' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Criar etiqueta' }));
+
+    await waitFor(() => expect(createTag).toHaveBeenCalledWith({ name: 'Anotações', color: '#123456' }));
+  });
+
   it('announces an empty catalogue with a direct creation action', async () => {
     localStorage.clear();
     render(<App client={client({ listTags: vi.fn().mockResolvedValue([]) })} initialPath="/tags" />);
