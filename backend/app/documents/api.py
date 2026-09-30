@@ -23,20 +23,13 @@ class CreateDocumentRequest(HttpModel):
 
 class DocumentTagModel(HttpModel):
     name: str
-    color: str
+    color: str = Field(pattern=r"^#[0-9A-Fa-f]{6}$")
 
     @field_validator("name", "color")
     @classmethod
     def validate_not_blank(cls, value: str) -> str:
         if not value.strip():
             raise ValueError("Document tag fields cannot be empty")
-        return value
-
-    @field_validator("color")
-    @classmethod
-    def validate_palette(cls, value: str) -> str:
-        if value not in {"#0F766E", "#1D4ED8", "#7C3AED", "#B45309", "#BE123C"}:
-            raise ValueError("Document tag color must use the controlled palette")
         return value
 
     @classmethod

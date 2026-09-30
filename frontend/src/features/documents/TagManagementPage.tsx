@@ -1,7 +1,7 @@
 import { type CSSProperties, useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useDocumentClient, useRouter } from '../../app/providers';
-import type { DocumentTag } from '../../shared/api/client';
+import { ApiError, type DocumentTag } from '../../shared/api/client';
 import { documentKeys } from './queries';
 import { TAG_COLOR_OPTIONS, tagColorForName } from './tags';
 
@@ -43,7 +43,9 @@ export function TagManagementPage() {
       await refresh();
     } catch (caught) {
       setNotice('');
-      setError(caught instanceof Error ? 'Essa etiqueta já existe.' : 'Não foi possível criar a etiqueta.');
+      setError(caught instanceof ApiError && caught.status === 409
+        ? 'Essa etiqueta já existe.'
+        : 'Não foi possível criar a etiqueta.');
     } finally {
       setIsSaving(false);
     }
