@@ -163,8 +163,13 @@ function LocalizedDateField({
   onValueChange: (value: string) => void;
 }) {
   const [displayValue, setDisplayValue] = useState(() => formatLocalizedDate(value));
+  const localChangePendingRef = useRef(false);
 
   useEffect(() => {
+    if (localChangePendingRef.current) {
+      localChangePendingRef.current = false;
+      return;
+    }
     setDisplayValue(formatLocalizedDate(value));
   }, [value]);
 
@@ -181,13 +186,14 @@ function LocalizedDateField({
       onChange={(event) => {
         const nextDisplayValue = maskLocalizedDate(event.target.value);
         setDisplayValue(nextDisplayValue);
+        localChangePendingRef.current = true;
         if (nextDisplayValue.length === 0) {
           onValueChange('');
           return;
         }
 
         const isoDate = parseLocalizedDate(nextDisplayValue);
-        if (isoDate !== null) onValueChange(isoDate);
+        onValueChange(isoDate ?? '');
       }}
     />
   );

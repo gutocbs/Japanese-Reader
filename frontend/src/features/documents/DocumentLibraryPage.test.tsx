@@ -362,6 +362,21 @@ describe('document library flows', () => {
     expect(libraryTitles()).toEqual(['Beta', 'Alfa', 'Gama']);
   });
 
+  it('clears a previously applied creation date when the input becomes incomplete', async () => {
+    render(<App client={client({ list: vi.fn().mockResolvedValue(orderingDocuments) })} initialPath="/" />);
+
+    await screen.findByRole('list', { name: 'Documentos' });
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir filtros' }));
+    const createdAfter = screen.getByRole('textbox', { name: 'Data de criação a partir de' });
+
+    fireEvent.change(createdAfter, { target: { value: '26/09/2026' } });
+    expect(libraryTitles()).toEqual(['Beta']);
+
+    fireEvent.change(createdAfter, { target: { value: '25/09' } });
+    expect(createdAfter).toHaveValue('25/09');
+    expect(libraryTitles()).toEqual(['Beta', 'Alfa', 'Gama']);
+  });
+
   it('composes title, favorite, and creation-date filters while preserving the selected ordering', async () => {
     const documents = [
       { ...firstDocument, title: 'Diário antigo', createdAt: '2026-09-24T12:00:00Z' },
