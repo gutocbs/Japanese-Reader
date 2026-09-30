@@ -50,6 +50,10 @@ function status(document) {
   return document.querySelector('[data-japanese-reader-note-import] [role="status"]');
 }
 
+function control(document) {
+  return document.querySelector('[data-japanese-reader-note-import]');
+}
+
 async function flushNavigation() {
   await Promise.resolve();
   await Promise.resolve();
@@ -65,6 +69,27 @@ describe('initializeNoteImport', () => {
     expect(document.querySelectorAll('[data-japanese-reader-note-import]')).toHaveLength(1);
     expect(button(document)).toMatchObject({ textContent: 'Import to Japanese Reader', disabled: false });
     expect(status(document).textContent).toBe('Ready to import this article.');
+  });
+
+  it('places the editorial utility after the article with stable namespaced style and state hooks', () => {
+    const document = createDocument();
+    const articleElement = document.querySelector('article.p-article__body');
+
+    initializeNoteImport({ document, url: article.url, extractArticle: supportedExtractor, client: {} });
+
+    expect(articleElement.nextElementSibling).toBe(control(document));
+    expect(control(document)).toMatchObject({
+      className: 'japanese-reader-note-import__control',
+      dataset: expect.objectContaining({ japaneseReaderNoteImport: '', state: 'available' }),
+    });
+    expect(button(document)).toMatchObject({
+      className: 'japanese-reader-note-import__button',
+      type: 'button',
+      disabled: false,
+    });
+    expect(status(document)).toMatchObject({ className: 'japanese-reader-note-import__status' });
+    expect(button(document).getAttribute('aria-describedby')).toBe(status(document).id);
+    expect(document.getElementById('japanese-reader-note-import-styles')).not.toBeNull();
   });
 
   it('does not add a duplicate button or listener when initialized repeatedly for the same article', async () => {
@@ -113,6 +138,7 @@ describe('initializeNoteImport', () => {
 
     expect(button(document)).toMatchObject({ textContent: 'Importing…', disabled: true });
     expect(status(document).textContent).toBe('Importing article…');
+    expect(control(document).dataset.state).toBe('importing');
   });
 
   it('shows success feedback after the local API accepts the import', async () => {
@@ -130,6 +156,7 @@ describe('initializeNoteImport', () => {
 
     expect(button(document)).toMatchObject({ textContent: 'Imported', disabled: true });
     expect(status(document).textContent).toBe('Imported to Japanese Reader.');
+    expect(control(document).dataset.state).toBe('success');
   });
 
   it('shows a concise error and restores the button for retry after a failed import', async () => {
@@ -150,12 +177,14 @@ describe('initializeNoteImport', () => {
 
     expect(button(document)).toMatchObject({ textContent: 'Retry import', disabled: false });
     expect(status(document).textContent).toBe('Import failed: The local API is not running.');
+    expect(control(document).dataset.state).toBe('error');
 
     button(document).click();
     await Promise.resolve();
 
     expect(attempts).toBe(2);
     expect(status(document).textContent).toBe('Imported to Japanese Reader.');
+    expect(control(document).dataset.state).toBe('success');
   });
 
   it('starts only one import when the button is clicked repeatedly while a request is pending', () => {

@@ -291,8 +291,84 @@
 
     const ROOT_ATTRIBUTE = 'data-japanese-reader-note-import';
     const ROOT_ID = 'japanese-reader-note-import-control';
+    const STYLE_ID = 'japanese-reader-note-import-styles';
     const ARTICLE_SELECTOR = 'article.p-article__body';
     const NAVIGATION_MARKER = '__japaneseReaderNoteImportNavigation';
+    const CONTROL_CLASS = 'japanese-reader-note-import__control';
+    const BUTTON_CLASS = 'japanese-reader-note-import__button';
+    const STATUS_CLASS = 'japanese-reader-note-import__status';
+    const STATUS_ID = 'japanese-reader-note-import-status';
+
+    const CONTROL_STYLES = `
+    #${ROOT_ID} {
+      --japanese-reader-note-import-ink: #2C2A27;
+      --japanese-reader-note-import-muted: #6B675F;
+      --japanese-reader-note-import-paper: #FBFAF7;
+      --japanese-reader-note-import-rule: #D7D2C8;
+      --japanese-reader-note-import-accent: #5C4B8A;
+      --japanese-reader-note-import-accent-strong: #43345F;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px 12px;
+      margin: clamp(18px, 3vw, 32px) 0 0;
+      padding: 16px 0 0;
+      border-top: 1px solid var(--japanese-reader-note-import-rule);
+      color: var(--japanese-reader-note-import-ink);
+      font: 500 14px/1.45 system-ui, sans-serif;
+    }
+
+    #${ROOT_ID} .${BUTTON_CLASS} {
+      min-height: 36px;
+      padding: 7px 11px;
+      border: 1px solid var(--japanese-reader-note-import-accent);
+      border-radius: 3px;
+      background: var(--japanese-reader-note-import-paper);
+      color: var(--japanese-reader-note-import-accent-strong);
+      font: inherit;
+      font-weight: 650;
+      cursor: pointer;
+    }
+
+    #${ROOT_ID} .${BUTTON_CLASS}:hover:not(:disabled) {
+      background: #F2F0EA;
+    }
+
+    #${ROOT_ID} .${BUTTON_CLASS}:focus-visible {
+      outline: 2px solid var(--japanese-reader-note-import-accent);
+      outline-offset: 3px;
+    }
+
+    #${ROOT_ID} .${BUTTON_CLASS}:disabled {
+      opacity: 0.58;
+      cursor: default;
+    }
+
+    #${ROOT_ID}[data-state="importing"] .${BUTTON_CLASS} {
+      cursor: progress;
+    }
+
+    #${ROOT_ID} .${STATUS_CLASS} {
+      color: var(--japanese-reader-note-import-muted);
+    }
+
+    @media (max-width: 480px) {
+      #${ROOT_ID} {
+        align-items: stretch;
+      }
+
+      #${ROOT_ID} .${BUTTON_CLASS} {
+        width: 100%;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      #${ROOT_ID} * {
+        scroll-behavior: auto;
+        transition-duration: 0.01ms;
+      }
+    }
+    `;
 
     function installNoteImportNavigation({
       window = globalThis.window,
@@ -380,7 +456,7 @@
 
       async function importArticle() {
         importing = true;
-        renderState(importButton, feedback, 'importing');
+        renderState(root, importButton, feedback, 'importing');
 
         let result;
         try {
@@ -392,69 +468,79 @@
         importing = false;
         if (result?.ok) {
           imported = true;
-          renderState(importButton, feedback, 'success');
+          renderState(root, importButton, feedback, 'success');
           return;
         }
 
-        renderState(importButton, feedback, 'error', conciseErrorMessage(result?.error));
+        renderState(root, importButton, feedback, 'error', conciseErrorMessage(result?.error));
       }
 
-      article.insertBefore(root, article.firstChild);
+      article.insertAdjacentElement('afterend', root);
       return { injected: true, root };
     }
 
     function createControl(document, url) {
+      ensureControlStyles(document);
+
       const root = document.createElement('section');
       root.id = ROOT_ID;
+      root.className = CONTROL_CLASS;
       root.dataset.japaneseReaderNoteImport = '';
       root.dataset.noteImportUrl = url;
       root.setAttribute('aria-label', 'Japanese Reader import');
-      root.style.cssText = 'display:flex;align-items:center;gap:8px;margin:0 0 16px;font:14px/1.4 sans-serif;';
 
       const button = document.createElement('button');
       button.type = 'button';
+      button.className = BUTTON_CLASS;
       button.textContent = 'Import to Japanese Reader';
-      button.style.cssText = 'padding:8px 12px;border:1px solid #7C3AED;border-radius:4px;background:#fff;color:#5B21B6;font:inherit;cursor:pointer;';
 
       const feedback = document.createElement('span');
+      feedback.id = STATUS_ID;
+      feedback.className = STATUS_CLASS;
       feedback.setAttribute('role', 'status');
       feedback.setAttribute('aria-live', 'polite');
+      button.setAttribute('aria-describedby', STATUS_ID);
 
       root.append(button, feedback);
-      renderState(button, feedback, 'available');
+      renderState(root, button, feedback, 'available');
       return root;
     }
 
-    function renderState(button, feedback, state, detail = '') {
+    function renderState(root, button, feedback, state, detail = '') {
+      root.dataset.state = state;
+
       switch (state) {
         case 'importing':
           button.disabled = true;
           button.textContent = 'Importing…';
-          button.style.opacity = '0.5';
-          button.style.cursor = 'progress';
           feedback.textContent = 'Importing article…';
           break;
         case 'success':
           button.disabled = true;
           button.textContent = 'Imported';
-          button.style.opacity = '0.5';
-          button.style.cursor = 'default';
           feedback.textContent = 'Imported to Japanese Reader.';
           break;
         case 'error':
           button.disabled = false;
           button.textContent = 'Retry import';
-          button.style.opacity = '1';
-          button.style.cursor = 'pointer';
           feedback.textContent = `Import failed: ${detail}`;
           break;
         default:
           button.disabled = false;
           button.textContent = 'Import to Japanese Reader';
-          button.style.opacity = '1';
-          button.style.cursor = 'pointer';
           feedback.textContent = 'Ready to import this article.';
       }
+    }
+
+    function ensureControlStyles(document) {
+      if (document.getElementById(STYLE_ID)) {
+        return;
+      }
+
+      const styles = document.createElement('style');
+      styles.id = STYLE_ID;
+      styles.textContent = CONTROL_STYLES;
+      (document.head ?? document.documentElement).append(styles);
     }
 
     function conciseErrorMessage(error) {
