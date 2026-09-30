@@ -1,0 +1,84 @@
+[CmdletBinding()]
+param(
+    [int]$StartupTimeoutSeconds = 120,
+    [int]$HealthCheckIntervalSeconds = 2
+)
+
+$ErrorActionPreference = 'Stop'
+$projectRoot = $PSScriptRoot
+$url = 'http://localhost:8000/'
+$healthUrl = 'http://localhost:8000/api/health'
+$composeFile = Join-Path $projectRoot 'docker-compose.yml'
+$composeStartedByScript = $false
+
+function Log {
+    param([string]$Message)
+
+    $timestamp = Get-Date -Format 'dd/MM/yyyy HH:mm:ss'
+    Write-Host "[$timestamp] $Message"
+}
+
+function Test-ApplicationHealth {
+    try {
+        $response = Invoke-WebRequest -Uri $healthUrl -UseBasicParsing -TimeoutSec 5
+        return $response.StatusCode -eq 200
+    }
+    catch {
+        return $false
+    }
+}
+
+if (-not (Test-Path -LiteralPath $composeFile -PathType Leaf)) {
+    throw "docker-compose.yml não foi encontrado em '$projectRoot'."
+}
+
+try {
+    Push-Location $projectRoot
+
+    Log 'Iniciando a aplicação com Docker Compose...'
+    docker compose up -d --build
+    if ($LASTEXITCODE -ne 0) {
+        throw 'O Docker Compose não conseguiu iniciar a aplicação.'
+    }
+    $composeStartedByScript = $true
+
+    Log "Aguardando a aplicação responder em $healthUrl..."
+    $deadline = (Get-Date).AddSeconds($StartupTimeoutSeconds)
+    while ((Get-Date) -lt $deadline) {
+        if (Test-ApplicationHealth) {
+            break
+        }
+
+        Start-Sleep -Seconds $HealthCheckIntervalSeconds
+    }
+
+    if (-not (Test-ApplicationHealth)) {
+        throw "A aplicação não ficou saudável dentro de $StartupTimeoutSeconds segundos. Consulte 'docker compose logs'."
+    }
+
+    Log "Aplicação pronta. Abrindo $url"
+    Start-Process $url | Out-Null
+    Log 'A aplicação continuará executando em Docker. Pressione Ctrl+C para encerrá-la.'
+
+    while ($true) {
+        Start-Sleep -Seconds 60
+    }
+}
+catch {
+    Log "Erro: $($_.Exception.Message)"
+    throw
+}
+finally {
+    Pop-Location -ErrorAction SilentlyContinue
+
+    if ($composeStartedByScript) {
+        Log 'Encerrando a aplicação Docker...'
+        docker compose -f $composeFile down
+        if ($LASTEXITCODE -ne 0) {
+            Log 'Não foi possível encerrar a aplicação automaticamente.'
+        }
+        else {
+            Log 'Aplicação encerrada.'
+        }
+    }
+}
