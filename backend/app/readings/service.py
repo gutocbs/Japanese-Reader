@@ -9,6 +9,8 @@ from backend.app.documents.service import DocumentNotFoundError
 from backend.app.readings.models import (
     ReadingOverride,
     ReadingOverrideKey,
+    ReadingOverrideOperation,
+    ReadingOverrideScope,
     ResolvedReading,
 )
 from backend.app.readings.repository import ReadingOverrideRepository
@@ -34,6 +36,14 @@ class StaleReadingOverrideRevisionError(ValueError):
         self.document_revision = revision
         super().__init__(
             f"Document {document_id} is no longer at revision {revision}"
+        )
+
+
+class InvalidReadingOverrideVocabularyKeyError(ValueError):
+    def __init__(self, vocabulary_key: str) -> None:
+        self.vocabulary_key = vocabulary_key
+        super().__init__(
+            "Vocabulary key must identify the selected analyzed token"
         )
 
 
@@ -92,24 +102,43 @@ class ReadingOverrideService:
         self._analyses = analyses
         self._analysis_repository = analysis_repository
 
-    def set_override(self, key: ReadingOverrideKey, reading: str) -> ReadingOverride:
+    def set_override(
+        self,
+        key: ReadingOverrideKey,
+        reading: str,
+        *,
+        scope: ReadingOverrideScope = ReadingOverrideScope.LOCAL,
+        vocabulary_key: str | None = None,
+    ) -> ReadingOverrideOperation:
         with self._documents.revision_guard(key.document_id):
-            self._validate_target(key)
+            targets = self._resolve_targets(key, scope, vocabulary_key)
             normalized = normalize_kana_reading(reading)
-            override = ReadingOverride(key, normalized)
-            self._overrides.upsert(override)
+            overrides = tuple(ReadingOverride(target, normalized) for target in targets)
+            for override in overrides:
+                self._overrides.upsert(override)
             self._analysis_repository.invalidate_document(key.document_id)
-            return override
+            return ReadingOverrideOperation(len(overrides), overrides)
 
-    def delete_override(self, key: ReadingOverrideKey) -> bool:
+    def delete_override(
+        self,
+        key: ReadingOverrideKey,
+        *,
+        scope: ReadingOverrideScope = ReadingOverrideScope.LOCAL,
+        vocabulary_key: str | None = None,
+    ) -> ReadingOverrideOperation:
         with self._documents.revision_guard(key.document_id):
-            self._validate_target(key)
-            deleted = self._overrides.delete(key)
-            if deleted:
+            targets = self._resolve_targets(key, scope, vocabulary_key)
+            deleted_count = sum(self._overrides.delete(target) for target in targets)
+            if deleted_count:
                 self._analysis_repository.invalidate_document(key.document_id)
-            return deleted
+            return ReadingOverrideOperation(deleted_count, ())
 
-    def _validate_target(self, key: ReadingOverrideKey) -> None:
+    def _resolve_targets(
+        self,
+        key: ReadingOverrideKey,
+        scope: ReadingOverrideScope,
+        vocabulary_key: str | None,
+    ) -> tuple[ReadingOverrideKey, ...]:
         document = self._documents.get(key.document_id)
         if document is None:
             raise DocumentNotFoundError(key.document_id)
@@ -118,16 +147,36 @@ class ReadingOverrideService:
                 key.document_id, key.document_revision
             )
         analysis = self._analyses.analyze(key.document_id)
-        matching = any(
-            token.start_offset == key.start_offset
-            and token.end_offset == key.end_offset
+        selected = next((
+            token
             for block in analysis.blocks
             for token in block.tokens
-        )
-        if not matching:
+            if token.start_offset == key.start_offset
+            and token.end_offset == key.end_offset
+        ), None)
+        if selected is None:
             raise InvalidReadingOverrideTargetError(key)
         current = self._documents.get(key.document_id)
         if current is None or current.revision != key.document_revision:
             raise StaleReadingOverrideRevisionError(
                 key.document_id, key.document_revision
             )
+        if scope == ReadingOverrideScope.LOCAL:
+            return (key,)
+        if (
+            scope != ReadingOverrideScope.VOCABULARY
+            or vocabulary_key is None
+            or selected.vocabulary_key != vocabulary_key
+        ):
+            raise InvalidReadingOverrideVocabularyKeyError(vocabulary_key or "")
+        return tuple(
+            ReadingOverrideKey(
+                key.document_id,
+                key.document_revision,
+                token.start_offset,
+                token.end_offset,
+            )
+            for block in analysis.blocks
+            for token in block.tokens
+            if token.vocabulary_key == vocabulary_key
+        )

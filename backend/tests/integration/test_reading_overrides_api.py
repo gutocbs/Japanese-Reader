@@ -42,9 +42,12 @@ def test_put_updates_only_one_occurrence_and_delete_restores_analyzer(client):
 
     assert saved.status_code == 200
     assert saved.json() == {
-        "documentId": document["id"],
-        **key,
-        "reading": "さくじつ",
+        "affectedOccurrenceCount": 1,
+        "overrides": [{
+            "documentId": document["id"],
+            **key,
+            "reading": "さくじつ",
+        }],
     }
     changed = [
         token for token in tokens(client, document["id"]) if token["surface"] == "昨日"
@@ -56,7 +59,8 @@ def test_put_updates_only_one_occurrence_and_delete_restores_analyzer(client):
 
     removed = client.request("DELETE", path, json=key)
 
-    assert removed.status_code == 204
+    assert removed.status_code == 200
+    assert removed.json() == {"affectedOccurrenceCount": 1, "overrides": []}
     restored = [
         token for token in tokens(client, document["id"]) if token["surface"] == "昨日"
     ]
@@ -64,6 +68,63 @@ def test_put_updates_only_one_occurrence_and_delete_restores_analyzer(client):
         ("きのう", False),
         ("きのう", False),
     ]
+
+
+def test_vocabulary_scope_updates_and_removes_only_tokens_with_the_selected_key(client):
+    document = create_document(client, "昨日、昨日、今日")
+    path = f"/api/documents/{document['id']}/reading-overrides"
+    analyzed_tokens = tokens(client, document["id"])
+    yesterday = [token for token in analyzed_tokens if token["surface"] == "昨日"]
+    today = next(token for token in analyzed_tokens if token["surface"] == "今日")
+    assert len(yesterday) == 2
+    target = yesterday[0]
+    request = {
+        "documentRevision": document["revision"],
+        "startOffset": target["startOffset"],
+        "endOffset": target["endOffset"],
+        "scope": "vocabulary",
+        "vocabularyKey": target["vocabularyKey"],
+    }
+
+    saved = client.put(path, json={**request, "reading": "さくじつ"})
+
+    assert saved.status_code == 200
+    assert saved.json()["affectedOccurrenceCount"] == 2
+    assert [override["startOffset"] for override in saved.json()["overrides"]] == [
+        yesterday[0]["startOffset"], yesterday[1]["startOffset"],
+    ]
+    changed = tokens(client, document["id"])
+    assert [
+        (token["surface"], token["reading"], token["hasReadingOverride"])
+        for token in changed if token["surface"] in {"昨日", "今日"}
+    ] == [
+        ("昨日", "さくじつ", True),
+        ("昨日", "さくじつ", True),
+        ("今日", today["reading"], False),
+    ]
+
+    removed = client.request("DELETE", path, json=request)
+
+    assert removed.status_code == 200
+    assert removed.json() == {"affectedOccurrenceCount": 2, "overrides": []}
+
+
+def test_vocabulary_scope_rejects_a_key_that_is_not_the_selected_token_key(client):
+    document = create_document(client, "昨日")
+    token = tokens(client, document["id"])[0]
+    path = f"/api/documents/{document['id']}/reading-overrides"
+
+    response = client.put(path, json={
+        "documentRevision": document["revision"],
+        "startOffset": token["startOffset"],
+        "endOffset": token["endOffset"],
+        "scope": "vocabulary",
+        "vocabularyKey": '["今日","きょう"]',
+        "reading": "さくじつ",
+    })
+
+    assert response.status_code == 422
+    assert response.headers["content-type"] == "application/problem+json"
 
 
 def test_stale_revision_and_invalid_target_return_problem_details(client):
@@ -161,6 +222,8 @@ def test_reading_override_openapi_documents_success_conflict_and_validation():
     ]
     assert operations["put"]["operationId"] == "setReadingOverride"
     assert operations["delete"]["operationId"] == "deleteReadingOverride"
+    assert operations["put"]["responses"]["200"]["content"]["application/json"]["schema"]["$ref"].endswith("ReadingOverrideOperationResponse")
+    assert operations["delete"]["responses"]["200"]["content"]["application/json"]["schema"]["$ref"].endswith("ReadingOverrideOperationResponse")
     assert set(operations["put"]["responses"]["409"]["content"]) == {
         "application/problem+json"
     }

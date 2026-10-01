@@ -1,12 +1,17 @@
-from typing import Annotated, Self
+from typing import Annotated, Literal, Self
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Request, Response
-from pydantic import BaseModel, ConfigDict
+from fastapi import APIRouter, Depends, Request
+from pydantic import BaseModel, ConfigDict, model_validator
 from pydantic.alias_generators import to_camel
 
 from backend.app.api.errors import PROBLEM_RESPONSES, ProblemDetails
-from backend.app.readings.models import ReadingOverride, ReadingOverrideKey
+from backend.app.readings.models import (
+    ReadingOverride,
+    ReadingOverrideKey,
+    ReadingOverrideOperation,
+    ReadingOverrideScope,
+)
 from backend.app.readings.service import ReadingOverrideService
 
 
@@ -26,6 +31,16 @@ class ReadingOverrideKeyRequest(ReadingOverrideRequestModel):
     documentRevision: int
     startOffset: int
     endOffset: int
+    scope: Literal["local", "vocabulary"] = "local"
+    vocabularyKey: str | None = None
+
+    @model_validator(mode="after")
+    def validate_scope(self) -> Self:
+        if self.scope == "vocabulary" and self.vocabularyKey is None:
+            raise ValueError("Vocabulary scope requires vocabularyKey")
+        if self.scope == "local" and self.vocabularyKey is not None:
+            raise ValueError("Local scope does not accept vocabularyKey")
+        return self
 
     def to_key(self, document_id: UUID) -> ReadingOverrideKey:
         return ReadingOverrideKey(
@@ -55,6 +70,21 @@ class ReadingOverrideResponse(ReadingOverrideHttpModel):
         )
 
 
+class ReadingOverrideOperationResponse(ReadingOverrideHttpModel):
+    affected_occurrence_count: int
+    overrides: list[ReadingOverrideResponse]
+
+    @classmethod
+    def from_operation(cls, operation: ReadingOverrideOperation) -> Self:
+        return cls(
+            affected_occurrence_count=operation.affected_occurrence_count,
+            overrides=[
+                ReadingOverrideResponse.from_override(override)
+                for override in operation.overrides
+            ],
+        )
+
+
 def get_reading_override_service(request: Request) -> ReadingOverrideService:
     return request.app.state.reading_override_service
 
@@ -81,28 +111,38 @@ router = APIRouter(
 
 @router.put(
     "/{document_id}/reading-overrides",
-    response_model=ReadingOverrideResponse,
+    response_model=ReadingOverrideOperationResponse,
     operation_id="setReadingOverride",
 )
 def set_reading_override(
     document_id: UUID,
     data: SetReadingOverrideRequest,
     service: ReadingOverrideServiceDependency,
-) -> ReadingOverrideResponse:
-    return ReadingOverrideResponse.from_override(
-        service.set_override(data.to_key(document_id), data.reading)
+) -> ReadingOverrideOperationResponse:
+    return ReadingOverrideOperationResponse.from_operation(
+        service.set_override(
+            data.to_key(document_id),
+            data.reading,
+            scope=ReadingOverrideScope(data.scope),
+            vocabulary_key=data.vocabularyKey,
+        )
     )
 
 
 @router.delete(
     "/{document_id}/reading-overrides",
-    status_code=204,
+    response_model=ReadingOverrideOperationResponse,
     operation_id="deleteReadingOverride",
 )
 def delete_reading_override(
     document_id: UUID,
     data: ReadingOverrideKeyRequest,
     service: ReadingOverrideServiceDependency,
-) -> Response:
-    service.delete_override(data.to_key(document_id))
-    return Response(status_code=204)
+) -> ReadingOverrideOperationResponse:
+    return ReadingOverrideOperationResponse.from_operation(
+        service.delete_override(
+            data.to_key(document_id),
+            scope=ReadingOverrideScope(data.scope),
+            vocabulary_key=data.vocabularyKey,
+        )
+    )

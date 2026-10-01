@@ -10,7 +10,10 @@ from backend.app.documents.service import DocumentService
 from backend.app.persistence.memory.analyses import InMemoryAnalysisRepository
 from backend.app.persistence.memory.documents import InMemoryDocumentRepository
 from backend.app.persistence.memory.readings import InMemoryReadingOverrideRepository
-from backend.app.readings.models import ReadingOverride, ReadingOverrideKey
+from backend.app.readings.models import (
+    ReadingOverride,
+    ReadingOverrideKey,
+)
 from backend.app.readings.service import (
     InvalidReadingError,
     InvalidReadingOverrideTargetError,
@@ -18,6 +21,7 @@ from backend.app.readings.service import (
     ReadingOverrideService,
     StaleReadingOverrideRevisionError,
 )
+from backend.app.vocabulary.models import VocabularyKey
 
 
 class RepeatedTokenAnalyzer:
@@ -35,6 +39,19 @@ class RepeatedTokenAnalyzer:
                 "食べた", base_offset + 3, base_offset + 6, "食べる", "たべた",
                 "たべる", part_of_speech, False,
             ),
+        )
+
+
+class VocabularyScopedAnalyzer:
+    metadata = AnalyzerMetadata("test", "1", "dictionary", "1", "B")
+
+    def analyze(self, text: str, base_offset: int = 0):
+        assert text == "私私流私"
+        part_of_speech = ("名詞", "普通名詞", "一般", "*", "*", "*")
+        return (
+            RawToken("私", base_offset, base_offset + 1, "私", "わたし", "わたし", part_of_speech, False),
+            RawToken("私流", base_offset + 1, base_offset + 3, "私流", "しりゅう", "しりゅう", part_of_speech, False),
+            RawToken("私", base_offset + 3, base_offset + 4, "私", "わたし", "わたし", part_of_speech, False),
         )
 
 
@@ -64,6 +81,20 @@ def services():
     return document, analysis, readings, overrides
 
 
+@pytest.fixture
+def vocabulary_services():
+    documents = InMemoryDocumentRepository()
+    analyses = InMemoryAnalysisRepository()
+    overrides = InMemoryReadingOverrideRepository()
+    analysis = AnalysisService(
+        documents, analyses, VocabularyScopedAnalyzer(), FuriganaAligner(),
+        ReadingOverrideResolver(overrides),
+    )
+    readings = ReadingOverrideService(documents, overrides, analysis, analyses)
+    document = documents.create(CreateDocument("title", "私私流私"))
+    return document, analysis, readings, overrides
+
+
 def flattened_tokens(analysis):
     return [token for block in analysis.blocks for token in block.tokens]
 
@@ -75,7 +106,7 @@ def test_override_is_normalized_and_changes_only_the_target_occurrence(services)
     saved = readings.set_override(key, " クッタ ")
     tokens = flattened_tokens(analysis.analyze(document.id))
 
-    assert saved.reading == "くった"
+    assert saved.overrides == (ReadingOverride(key, "くった"),)
     assert [(token.reading, token.has_reading_override) for token in tokens] == [
         ("くった", True),
         ("たべた", False),
@@ -182,3 +213,79 @@ def test_content_edit_cannot_interleave_between_override_validation_and_storage(
     assert not edited_before_override_finished
     assert document_service.get(document.id).revision == 2
     assert overrides.get(key) is None
+
+
+def test_vocabulary_override_replaces_each_matching_vocabulary_key_only(vocabulary_services):
+    document, _, readings, overrides = vocabulary_services
+    first = ReadingOverrideKey(document.id, document.revision, 0, 1)
+    last = ReadingOverrideKey(document.id, document.revision, 3, 4)
+    unrelated = ReadingOverrideKey(document.id, document.revision, 1, 3)
+    vocabulary_key = VocabularyKey("私", "わたし").encode()
+    readings.set_override(last, "わたくし")
+
+    result = readings.set_override(
+        first,
+        "ぼく",
+        scope="vocabulary",
+        vocabulary_key=vocabulary_key,
+    )
+
+    assert result.affected_occurrence_count == 2
+    assert result.overrides == (
+        ReadingOverride(first, "ぼく"),
+        ReadingOverride(last, "ぼく"),
+    )
+    assert overrides.get(unrelated) is None
+
+
+def test_vocabulary_override_requires_the_selected_tokens_exact_vocabulary_key(vocabulary_services):
+    document, _, readings, overrides = vocabulary_services
+    key = ReadingOverrideKey(document.id, document.revision, 0, 1)
+
+    with pytest.raises(ValueError):
+        readings.set_override(
+            key,
+            "ぼく",
+            scope="vocabulary",
+            vocabulary_key=VocabularyKey("私流", "しりゅう").encode(),
+        )
+
+    assert overrides.get(key) is None
+
+
+def test_vocabulary_delete_removes_only_matching_vocabulary_overrides(vocabulary_services):
+    document, _, readings, overrides = vocabulary_services
+    first = ReadingOverrideKey(document.id, document.revision, 0, 1)
+    unrelated = ReadingOverrideKey(document.id, document.revision, 1, 3)
+    last = ReadingOverrideKey(document.id, document.revision, 3, 4)
+    vocabulary_key = VocabularyKey("私", "わたし").encode()
+    readings.set_override(first, "ぼく")
+    readings.set_override(unrelated, "しりゅう")
+    readings.set_override(last, "ぼく")
+
+    result = readings.delete_override(
+        first,
+        scope="vocabulary",
+        vocabulary_key=vocabulary_key,
+    )
+
+    assert result.affected_occurrence_count == 2
+    assert result.overrides == ()
+    assert overrides.get(first) is None
+    assert overrides.get(last) is None
+    assert overrides.get(unrelated) == ReadingOverride(unrelated, "しりゅう")
+
+
+def test_stale_vocabulary_override_cannot_write_a_partial_expansion(vocabulary_services):
+    document, _, readings, overrides = vocabulary_services
+    stale = ReadingOverrideKey(document.id, document.revision + 1, 0, 1)
+
+    with pytest.raises(StaleReadingOverrideRevisionError):
+        readings.set_override(
+            stale,
+            "ぼく",
+            scope="vocabulary",
+            vocabulary_key=VocabularyKey("私", "わたし").encode(),
+        )
+
+    assert not overrides.has_document(document.id)

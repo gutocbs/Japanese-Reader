@@ -15,6 +15,7 @@ from backend.app.documents.service import (
 from backend.app.readings.service import (
     InvalidReadingError,
     InvalidReadingOverrideTargetError,
+    InvalidReadingOverrideVocabularyKeyError,
     StaleReadingOverrideRevisionError,
 )
 
@@ -77,6 +78,7 @@ def install_error_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(InvalidReadingError)
     @app.exception_handler(InvalidReadingOverrideTargetError)
+    @app.exception_handler(InvalidReadingOverrideVocabularyKeyError)
     async def invalid_reading_override(request: Request, error: ValueError):
         return problem_response(422, str(error))
 
