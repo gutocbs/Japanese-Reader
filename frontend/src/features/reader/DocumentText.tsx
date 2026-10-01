@@ -2,6 +2,7 @@ import { Fragment, type ReactNode } from 'react';
 import type {
   Analysis,
   ReadingOverrideKey,
+  ReadingOverrideOperation,
   SetReadingOverride,
 } from '../../shared/api/client';
 import { Token } from './Token';
@@ -16,8 +17,8 @@ interface DocumentTextProps {
   fontSizePx?: number;
   furiganaVisibilityByKey?: ReadonlyMap<string, FuriganaVisibility>;
   onSetFuriganaVisibility?: (key: string, visibility: FuriganaVisibility) => void;
-  onSaveReadingOverride?: (override: SetReadingOverride) => Promise<void>;
-  onRemoveReadingOverride?: (key: ReadingOverrideKey) => Promise<void>;
+  onSaveReadingOverride?: (override: SetReadingOverride) => Promise<ReadingOverrideOperation>;
+  onRemoveReadingOverride?: (key: ReadingOverrideKey) => Promise<ReadingOverrideOperation>;
 }
 
 export function DocumentText({
@@ -66,6 +67,9 @@ export function DocumentText({
           furiganaVisibility={furiganaVisibility}
           onSetFuriganaVisibility={onSetFuriganaVisibility}
           documentRevision={analysis.documentRevision}
+          matchingOccurrenceCount={token.vocabularyKey === null ? 1 : analysis.blocks
+            .flatMap((candidateBlock) => candidateBlock.tokens)
+            .filter((candidate) => candidate.vocabularyKey === token.vocabularyKey).length}
           onSaveReadingOverride={onSaveReadingOverride}
           onRemoveReadingOverride={onRemoveReadingOverride}
         />,

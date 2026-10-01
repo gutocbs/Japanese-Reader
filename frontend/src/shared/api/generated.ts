@@ -360,6 +360,21 @@ export interface components {
             startOffset: number;
             /** Endoffset */
             endOffset: number;
+            /**
+             * Scope
+             * @default local
+             * @enum {string}
+             */
+            scope: "local" | "vocabulary";
+            /** Vocabularykey */
+            vocabularyKey?: string | null;
+        };
+        /** ReadingOverrideOperationResponse */
+        ReadingOverrideOperationResponse: {
+            /** Affectedoccurrencecount */
+            affectedOccurrenceCount: number;
+            /** Overrides */
+            overrides: components["schemas"]["ReadingOverrideResponse"][];
         };
         /** ReadingOverrideResponse */
         ReadingOverrideResponse: {
@@ -390,6 +405,14 @@ export interface components {
             startOffset: number;
             /** Endoffset */
             endOffset: number;
+            /**
+             * Scope
+             * @default local
+             * @enum {string}
+             */
+            scope: "local" | "vocabulary";
+            /** Vocabularykey */
+            vocabularyKey?: string | null;
             /** Reading */
             reading: string;
         };
@@ -1347,7 +1370,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ReadingOverrideResponse"];
+                    "application/json": components["schemas"]["ReadingOverrideOperationResponse"];
                 };
             };
             /** @description Not Found */
@@ -1440,11 +1463,13 @@ export interface operations {
         };
         responses: {
             /** @description Successful Response */
-            204: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ReadingOverrideOperationResponse"];
+                };
             };
             /** @description Not Found */
             404: {

@@ -5,6 +5,7 @@ import type {
   Analysis,
   Document,
   ReadingOverrideKey,
+  ReadingOverrideOperation,
   SetReadingOverride,
 } from '../../shared/api/client';
 import {
@@ -211,14 +212,15 @@ export function ReaderPage({ documentId }: ReaderPageProps) {
 
   const refreshReadingOccurrence = useCallback(async (
     key: ReadingOverrideKey,
-    mutation: () => Promise<unknown>,
+    mutation: () => Promise<ReadingOverrideOperation>,
+    operationLabel: 'aplicada' | 'removida',
   ) => {
     setPersistenceError('');
     try {
       if (snapshot === null || snapshot.analysis.documentRevision !== key.documentRevision) {
         throw new Error('Reading override is no longer on the displayed revision');
       }
-      await mutation();
+      const operation = await mutation();
       const refreshed = await client.analyze(documentId);
       setSnapshot((current) => {
         if (current === null || current.analysis.documentRevision !== key.documentRevision) {
@@ -226,9 +228,15 @@ export function ReaderPage({ documentId }: ReaderPageProps) {
         }
         return {
           ...current,
-          analysis: replaceAnalysisOccurrence(current.analysis, refreshed, key),
+          analysis: operation.affectedOccurrenceCount > 1
+            ? refreshed
+            : replaceAnalysisOccurrence(current.analysis, refreshed, key),
         };
       });
+      if (key.scope === 'vocabulary' && operation.affectedOccurrenceCount > 1) {
+        setPersistenceError(`Correção ${operationLabel} em ${operation.affectedOccurrenceCount} ocorrências.`);
+      }
+      return operation;
     } catch (error) {
       setPersistenceError('Não foi possível salvar a correção de leitura.');
       throw error;
@@ -240,17 +248,21 @@ export function ReaderPage({ documentId }: ReaderPageProps) {
       documentRevision: override.documentRevision,
       startOffset: override.startOffset,
       endOffset: override.endOffset,
+      scope: override.scope,
+      vocabularyKey: override.vocabularyKey,
     };
-    await refreshReadingOccurrence(
+    return refreshReadingOccurrence(
       key,
       () => client.setReadingOverride(documentId, override),
+      'aplicada',
     );
   }, [client, documentId, refreshReadingOccurrence]);
 
   const removeReadingOverride = useCallback(async (key: ReadingOverrideKey) => {
-    await refreshReadingOccurrence(
+    return refreshReadingOccurrence(
       key,
       () => client.deleteReadingOverride(documentId, key),
+      'removida',
     );
   }, [client, documentId, refreshReadingOccurrence]);
 

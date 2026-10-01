@@ -15,9 +15,15 @@ export type AnalyzedToken = components['schemas']['AnalyzedTokenResponse'];
 export type VocabularySelection = components['schemas']['VocabularyKeyModel'];
 export type FuriganaVisibility = components['schemas']['FuriganaVisibility'];
 export type VocabularyDisplayPreference = components['schemas']['VocabularyDisplayPreferenceModel'];
-export type ReadingOverrideKey = components['schemas']['ReadingOverrideKeyRequest'];
-export type SetReadingOverride = components['schemas']['SetReadingOverrideRequest'];
+type ReadingOverrideScope = 'local' | 'vocabulary';
+export type ReadingOverrideKey = Omit<components['schemas']['ReadingOverrideKeyRequest'], 'scope'> & {
+  scope?: ReadingOverrideScope;
+};
+export type SetReadingOverride = Omit<components['schemas']['SetReadingOverrideRequest'], 'scope'> & {
+  scope?: ReadingOverrideScope;
+};
 export type ReadingOverride = components['schemas']['ReadingOverrideResponse'];
+export type ReadingOverrideOperation = components['schemas']['ReadingOverrideOperationResponse'];
 export type ProblemDetails = operations['getDocument']['responses'][404]['content']['application/problem+json'];
 
 function isProblemDetails(body: unknown): body is ProblemDetails {
@@ -94,10 +100,10 @@ export function createDocumentClient(fetcher: typeof fetch = globalThis.fetch) {
       request<void>(displayPreferencesPath(id), 'PUT', preference)
     ),
     setReadingOverride: (id: string, override: SetReadingOverride) => (
-      request<ReadingOverride>(readingOverridesPath(id), 'PUT', override)
+      request<ReadingOverrideOperation>(readingOverridesPath(id), 'PUT', override)
     ),
     deleteReadingOverride: (id: string, key: ReadingOverrideKey) => (
-      request<void>(readingOverridesPath(id), 'DELETE', key)
+      request<ReadingOverrideOperation>(readingOverridesPath(id), 'DELETE', key)
     ),
   };
 }

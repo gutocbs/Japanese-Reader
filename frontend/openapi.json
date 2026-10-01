@@ -1615,7 +1615,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ReadingOverrideResponse"
+                  "$ref": "#/components/schemas/ReadingOverrideOperationResponse"
                 }
               }
             }
@@ -1791,8 +1791,15 @@
           }
         },
         "responses": {
-          "204": {
-            "description": "Successful Response"
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadingOverrideOperationResponse"
+                }
+              }
+            }
           },
           "404": {
             "description": "Not Found",
@@ -2569,6 +2576,26 @@
           "endOffset": {
             "type": "integer",
             "title": "Endoffset"
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "local",
+              "vocabulary"
+            ],
+            "title": "Scope",
+            "default": "local"
+          },
+          "vocabularyKey": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vocabularykey"
           }
         },
         "additionalProperties": false,
@@ -2579,6 +2606,28 @@
           "endOffset"
         ],
         "title": "ReadingOverrideKeyRequest"
+      },
+      "ReadingOverrideOperationResponse": {
+        "properties": {
+          "affectedOccurrenceCount": {
+            "type": "integer",
+            "title": "Affectedoccurrencecount"
+          },
+          "overrides": {
+            "items": {
+              "$ref": "#/components/schemas/ReadingOverrideResponse"
+            },
+            "type": "array",
+            "title": "Overrides"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "affectedOccurrenceCount",
+          "overrides"
+        ],
+        "title": "ReadingOverrideOperationResponse"
       },
       "ReadingOverrideResponse": {
         "properties": {
@@ -2641,6 +2690,26 @@
           "endOffset": {
             "type": "integer",
             "title": "Endoffset"
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "local",
+              "vocabulary"
+            ],
+            "title": "Scope",
+            "default": "local"
+          },
+          "vocabularyKey": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vocabularykey"
           },
           "reading": {
             "type": "string",

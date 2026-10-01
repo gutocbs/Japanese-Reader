@@ -2,6 +2,7 @@ import { Fragment, useEffect, useRef, useState } from 'react';
 import type {
   AnalyzedToken,
   ReadingOverrideKey,
+  ReadingOverrideOperation,
   SetReadingOverride,
 } from '../../shared/api/client';
 import type { FuriganaVisibility } from './preferences';
@@ -16,8 +17,9 @@ interface TokenProps {
   furiganaVisibility?: FuriganaVisibility;
   onSetFuriganaVisibility?: (key: string, visibility: FuriganaVisibility) => void;
   documentRevision?: number;
-  onSaveReadingOverride?: (override: SetReadingOverride) => Promise<void>;
-  onRemoveReadingOverride?: (key: ReadingOverrideKey) => Promise<void>;
+  matchingOccurrenceCount?: number;
+  onSaveReadingOverride?: (override: SetReadingOverride) => Promise<ReadingOverrideOperation>;
+  onRemoveReadingOverride?: (key: ReadingOverrideKey) => Promise<ReadingOverrideOperation>;
 }
 
 export function Token({
@@ -28,6 +30,7 @@ export function Token({
   furiganaVisibility = 'inherit',
   onSetFuriganaVisibility,
   documentRevision,
+  matchingOccurrenceCount,
   onSaveReadingOverride,
   onRemoveReadingOverride,
 }: TokenProps) {
@@ -154,6 +157,7 @@ export function Token({
         <ReadingOverrideDialog
           token={token}
           documentRevision={documentRevision}
+          matchingOccurrenceCount={matchingOccurrenceCount}
           returnFocusRef={triggerRef}
           onClose={() => setIsReadingDialogOpen(false)}
           onSave={onSaveReadingOverride}

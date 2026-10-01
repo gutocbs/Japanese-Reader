@@ -51,6 +51,8 @@ describe('ReadingOverrideDialog', () => {
 
     expect(screen.getByRole('dialog', { name: 'Corrigir leitura de 昨日' }))
       .toHaveTextContent('Leitura atual: きのう');
+    expect(screen.getByRole('checkbox', { name: 'Aplicar a todas as ocorrências desta palavra' }))
+      .not.toBeChecked();
     fireEvent.change(screen.getByLabelText('Nova leitura em kana'), {
       target: { value: 'さくじつ' },
     });
@@ -60,9 +62,34 @@ describe('ReadingOverrideDialog', () => {
       documentRevision: 1,
       startOffset: 3,
       endOffset: 5,
+      scope: 'local',
       reading: 'さくじつ',
     }));
     expect(onSave).toHaveBeenCalledTimes(1);
+  });
+
+  it('confirms before saving a vocabulary-scoped correction with the token vocabulary key', async () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    renderDialog({ onSave, matchingOccurrenceCount: 2 });
+
+    fireEvent.click(screen.getByRole('checkbox', {
+      name: 'Aplicar a todas as ocorrências desta palavra',
+    }));
+    fireEvent.change(screen.getByLabelText('Nova leitura em kana'), {
+      target: { value: 'さくじつ' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar correção' }));
+
+    expect(confirm).toHaveBeenCalledOnce();
+    await waitFor(() => expect(onSave).toHaveBeenCalledWith({
+      documentRevision: 1,
+      startOffset: 3,
+      endOffset: 5,
+      scope: 'vocabulary',
+      vocabularyKey: '["昨日","きのう"]',
+      reading: 'さくじつ',
+    }));
   });
 
   it('keeps a save failure next to the reading field', async () => {
@@ -96,6 +123,31 @@ describe('ReadingOverrideDialog', () => {
       documentRevision: 1,
       startOffset: 3,
       endOffset: 5,
+      scope: 'local',
+    }));
+  });
+
+  it('confirms and removes all matching vocabulary overrides when global scope is selected', async () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const onRemove = vi.fn().mockResolvedValue(undefined);
+    renderDialog({
+      token: { ...token, hasReadingOverride: true },
+      onRemove,
+      matchingOccurrenceCount: 2,
+    });
+
+    fireEvent.click(screen.getByRole('checkbox', {
+      name: 'Aplicar a todas as ocorrências desta palavra',
+    }));
+    fireEvent.click(screen.getByRole('button', { name: 'Remover correção' }));
+
+    expect(confirm).toHaveBeenCalledOnce();
+    await waitFor(() => expect(onRemove).toHaveBeenCalledWith({
+      documentRevision: 1,
+      startOffset: 3,
+      endOffset: 5,
+      scope: 'vocabulary',
+      vocabularyKey: '["昨日","きのう"]',
     }));
   });
 

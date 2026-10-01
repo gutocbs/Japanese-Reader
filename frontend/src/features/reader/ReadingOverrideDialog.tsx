@@ -10,6 +10,7 @@ import { createPortal } from 'react-dom';
 import type {
   AnalyzedToken,
   ReadingOverrideKey,
+  ReadingOverrideOperation,
   SetReadingOverride,
 } from '../../shared/api/client';
 
@@ -17,16 +18,18 @@ import type {
 interface ReadingOverrideDialogProps {
   token: AnalyzedToken;
   documentRevision: number;
+  matchingOccurrenceCount?: number;
   returnFocusRef: RefObject<HTMLElement | null>;
   onClose: () => void;
-  onSave: (override: SetReadingOverride) => Promise<void>;
-  onRemove: (key: ReadingOverrideKey) => Promise<void>;
+  onSave: (override: SetReadingOverride) => Promise<ReadingOverrideOperation>;
+  onRemove: (key: ReadingOverrideKey) => Promise<ReadingOverrideOperation>;
 }
 
 
 export function ReadingOverrideDialog({
   token,
   documentRevision,
+  matchingOccurrenceCount = 1,
   returnFocusRef,
   onClose,
   onSave,
@@ -38,6 +41,7 @@ export function ReadingOverrideDialog({
   const [reading, setReading] = useState(token.reading ?? '');
   const [error, setError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [isVocabularyScope, setIsVocabularyScope] = useState(false);
   const key: ReadingOverrideKey = {
     documentRevision,
     startOffset: token.startOffset,
@@ -55,7 +59,19 @@ export function ReadingOverrideDialog({
     onClose();
   };
 
-  const run = async (operation: () => Promise<void>) => {
+  const operationKey = (): ReadingOverrideKey => (
+    isVocabularyScope
+      ? { ...key, scope: 'vocabulary', vocabularyKey: token.vocabularyKey! }
+      : { ...key, scope: 'local' }
+  );
+
+  const confirmVocabularyOperation = () => (
+    !isVocabularyScope
+    || matchingOccurrenceCount <= 1
+    || window.confirm(`Aplicar a correção a ${matchingOccurrenceCount} ocorrências?`)
+  );
+
+  const run = async (operation: () => Promise<ReadingOverrideOperation>) => {
     setError('');
     setIsSaving(true);
     try {
@@ -75,7 +91,8 @@ export function ReadingOverrideDialog({
       setError('Informe uma leitura em kana.');
       return;
     }
-    void run(() => onSave({ ...key, reading: normalizedInput }));
+    if (!confirmVocabularyOperation()) return;
+    void run(() => onSave({ ...operationKey(), reading: normalizedInput }));
   };
 
   return createPortal(
@@ -107,6 +124,14 @@ export function ReadingOverrideDialog({
             onChange={(event) => setReading(event.target.value)}
           />
         </label>
+        <label>
+          <input
+            type="checkbox"
+            checked={isVocabularyScope}
+            onChange={(event) => setIsVocabularyScope(event.target.checked)}
+          />
+          Aplicar a todas as ocorrências desta palavra
+        </label>
         {error && <p id={errorId} className="field-error" role="alert">{error}</p>}
         <div className="reading-override-dialog__actions">
           {token.hasReadingOverride && (
@@ -114,7 +139,10 @@ export function ReadingOverrideDialog({
               className="button button--secondary"
               type="button"
               disabled={isSaving}
-              onClick={() => void run(() => onRemove(key))}
+              onClick={() => {
+                if (!confirmVocabularyOperation()) return;
+                void run(() => onRemove(operationKey()));
+              }}
             >
               Remover correção
             </button>

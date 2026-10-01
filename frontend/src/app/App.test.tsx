@@ -690,12 +690,78 @@ describe('reader routes', () => {
       documentRevision: 1,
       startOffset: 3,
       endOffset: 5,
+      scope: 'local',
       reading: 'さくじつ',
     }));
     await waitFor(() => {
       expect(screen.getAllByText('きのう')).toHaveLength(1);
       expect(screen.getByText('さくじつ')).toBeInTheDocument();
     });
+  });
+
+  it('refreshes all matching tokens and reports the affected count after a global correction', async () => {
+    const repeatedAnalysis: Analysis = {
+      ...analysis,
+      blocks: [{
+        startOffset: 0,
+        endOffset: 5,
+        tokens: [
+          {
+            ...analysis.blocks[0].tokens[0], startOffset: 0, endOffset: 2,
+            surface: '昨日', lemma: '昨日', reading: 'きのう',
+            dictionaryReading: 'きのう', vocabularyKey: '["昨日","きのう"]',
+            furiganaSegments: [{ text: '昨日', reading: 'きのう' }],
+          },
+          {
+            ...analysis.blocks[0].tokens[0], startOffset: 3, endOffset: 5,
+            surface: '昨日', lemma: '昨日', reading: 'きのう',
+            dictionaryReading: 'きのう', vocabularyKey: '["昨日","きのう"]',
+            furiganaSegments: [{ text: '昨日', reading: 'きのう' }],
+          },
+        ],
+      }],
+    };
+    const overriddenAnalysis: Analysis = {
+      ...repeatedAnalysis,
+      blocks: [{
+        ...repeatedAnalysis.blocks[0],
+        tokens: repeatedAnalysis.blocks[0].tokens.map((token) => ({
+          ...token, reading: 'さくじつ', hasReadingOverride: true,
+          furiganaSegments: [{ text: '昨日', reading: 'さくじつ' }],
+        })),
+      }],
+    };
+    const setReadingOverride = vi.fn().mockResolvedValue({
+      affectedOccurrenceCount: 2,
+      overrides: [],
+    });
+    const api = client({
+      get: vi.fn().mockResolvedValue({ ...document, content: '昨日、昨日' }),
+      analyze: vi.fn()
+        .mockResolvedValueOnce(repeatedAnalysis)
+        .mockResolvedValueOnce(overriddenAnalysis),
+      setReadingOverride,
+    });
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    render(<App client={api} initialPath={`/documents/${document.id}/read`} />);
+
+    const occurrences = await screen.findAllByRole('button', { name: '昨日（きのう）' });
+    fireEvent.contextMenu(occurrences[1]);
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Corrigir leitura' }));
+    fireEvent.click(screen.getByRole('checkbox', {
+      name: 'Aplicar a todas as ocorrências desta palavra',
+    }));
+    fireEvent.change(screen.getByLabelText('Nova leitura em kana'), {
+      target: { value: 'さくじつ' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar correção' }));
+
+    await waitFor(() => expect(setReadingOverride).toHaveBeenCalledWith(document.id, {
+      documentRevision: 1, startOffset: 3, endOffset: 5, scope: 'vocabulary',
+      vocabularyKey: '["昨日","きのう"]', reading: 'さくじつ',
+    }));
+    expect(await screen.findByText('Correção aplicada em 2 ocorrências.')).toBeInTheDocument();
+    expect(screen.getAllByText('さくじつ')).toHaveLength(2);
   });
 
   it('keeps both occurrences when two reading corrections finish concurrently', async () => {
@@ -798,22 +864,28 @@ describe('reader routes', () => {
 
     expect(setReadingOverride).toHaveBeenCalledTimes(2);
     await act(async () => firstWrite.resolve({
-      documentId: document.id,
-      documentRevision: 1,
-      startOffset: 0,
-      endOffset: 2,
-      reading: 'さくじつ',
+      affectedOccurrenceCount: 1,
+      overrides: [{
+        documentId: document.id,
+        documentRevision: 1,
+        startOffset: 0,
+        endOffset: 2,
+        reading: 'さくじつ',
+      }],
     }));
     await waitFor(() => expect(analyze).toHaveBeenCalledTimes(2));
     await act(async () => firstRefresh.resolve(firstOverride));
     expect(await screen.findByText('さくじつ')).toBeInTheDocument();
 
     await act(async () => secondWrite.resolve({
-      documentId: document.id,
-      documentRevision: 1,
-      startOffset: 2,
-      endOffset: 4,
-      reading: 'こんにち',
+      affectedOccurrenceCount: 1,
+      overrides: [{
+        documentId: document.id,
+        documentRevision: 1,
+        startOffset: 2,
+        endOffset: 4,
+        reading: 'こんにち',
+      }],
     }));
     await waitFor(() => expect(analyze).toHaveBeenCalledTimes(3));
     await act(async () => secondRefresh.resolve(bothOverrides));

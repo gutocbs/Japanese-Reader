@@ -146,23 +146,34 @@ describe('document client', () => {
     ]);
   });
 
-  it('upserts and deletes one reading override by revision and code-point offsets', async () => {
+  it('transports local and vocabulary-scoped reading override operations with their counts', async () => {
     const override = {
-      documentRevision: 2, startOffset: 4, endOffset: 6, reading: 'さくじつ',
+      documentRevision: 2, startOffset: 4, endOffset: 6, scope: 'vocabulary' as const,
+      vocabularyKey: '["昨日","きのう"]', reading: 'さくじつ',
     };
-    const saved = { documentId: document.id, ...override };
+    const saved = {
+      affectedOccurrenceCount: 2,
+      overrides: [{ documentId: document.id, ...override }],
+    };
     const key = {
       documentRevision: override.documentRevision,
       startOffset: override.startOffset,
       endOffset: override.endOffset,
+      scope: 'local' as const,
     };
     const fetcher = vi.fn<typeof fetch>()
       .mockResolvedValueOnce(new Response(JSON.stringify(saved)))
-      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        affectedOccurrenceCount: 1,
+        overrides: [],
+      })));
     const client = createDocumentClient(fetcher);
 
     expect(await client.setReadingOverride('doc/one', override)).toEqual(saved);
-    expect(await client.deleteReadingOverride('doc/one', key)).toBeUndefined();
+    expect(await client.deleteReadingOverride('doc/one', key)).toEqual({
+      affectedOccurrenceCount: 1,
+      overrides: [],
+    });
     expect(fetcher.mock.calls).toEqual([
       ['/api/documents/doc%2Fone/reading-overrides', {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
