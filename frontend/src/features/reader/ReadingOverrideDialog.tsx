@@ -7,18 +7,18 @@ import {
   useState,
 } from 'react';
 import { createPortal } from 'react-dom';
-import type {
-  AnalyzedToken,
-  ReadingOverrideKey,
-  ReadingOverrideOperation,
-  SetReadingOverride,
+import {
+  ApiError,
+  type AnalyzedToken,
+  type ReadingOverrideKey,
+  type ReadingOverrideOperation,
+  type SetReadingOverride,
 } from '../../shared/api/client';
 
 
 interface ReadingOverrideDialogProps {
   token: AnalyzedToken;
   documentRevision: number;
-  matchingOccurrenceCount?: number;
   returnFocusRef: RefObject<HTMLElement | null>;
   onClose: () => void;
   onSave: (override: SetReadingOverride) => Promise<ReadingOverrideOperation>;
@@ -29,7 +29,6 @@ interface ReadingOverrideDialogProps {
 export function ReadingOverrideDialog({
   token,
   documentRevision,
-  matchingOccurrenceCount = 1,
   returnFocusRef,
   onClose,
   onSave,
@@ -65,20 +64,27 @@ export function ReadingOverrideDialog({
       : { ...key, scope: 'local' }
   );
 
-  const confirmVocabularyOperation = () => (
-    !isVocabularyScope
-    || matchingOccurrenceCount <= 1
-    || window.confirm(`Aplicar a correção a ${matchingOccurrenceCount} ocorrências?`)
-  );
-
-  const run = async (operation: () => Promise<ReadingOverrideOperation>) => {
+  const run = async (
+    operation: () => Promise<ReadingOverrideOperation>,
+    failureMessage: string,
+  ) => {
     setError('');
     setIsSaving(true);
     try {
       await operation();
       close();
-    } catch {
-      setError('Não foi possível salvar. Use apenas kana.');
+    } catch (operationError) {
+      if (
+        operationError instanceof ApiError
+        && operationError.status === 422
+        && operationError.problem?.detail === 'Reading must contain kana only'
+      ) {
+        setError('Não foi possível salvar. Use apenas kana.');
+      } else if (operationError instanceof ApiError && operationError.problem !== undefined) {
+        setError(operationError.problem.detail);
+      } else {
+        setError(failureMessage);
+      }
     } finally {
       setIsSaving(false);
     }
@@ -91,8 +97,10 @@ export function ReadingOverrideDialog({
       setError('Informe uma leitura em kana.');
       return;
     }
-    if (!confirmVocabularyOperation()) return;
-    void run(() => onSave({ ...operationKey(), reading: normalizedInput }));
+    void run(
+      () => onSave({ ...operationKey(), reading: normalizedInput }),
+      'Não foi possível salvar a correção de leitura.',
+    );
   };
 
   return createPortal(
@@ -140,8 +148,10 @@ export function ReadingOverrideDialog({
               type="button"
               disabled={isSaving}
               onClick={() => {
-                if (!confirmVocabularyOperation()) return;
-                void run(() => onRemove(operationKey()));
+                void run(
+                  () => onRemove(operationKey()),
+                  'Não foi possível remover a correção de leitura.',
+                );
               }}
             >
               Remover correção

@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { createRef } from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import type { AnalyzedToken } from '../../shared/api/client';
+import { ApiError, type AnalyzedToken } from '../../shared/api/client';
 import { ReadingOverrideDialog } from './ReadingOverrideDialog';
 
 
@@ -68,10 +68,10 @@ describe('ReadingOverrideDialog', () => {
     expect(onSave).toHaveBeenCalledTimes(1);
   });
 
-  it('confirms before saving a vocabulary-scoped correction with the token vocabulary key', async () => {
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
+  it('saves a valid vocabulary-scoped correction immediately with the token vocabulary key', async () => {
+    const confirm = vi.spyOn(window, 'confirm');
     const onSave = vi.fn().mockResolvedValue(undefined);
-    renderDialog({ onSave, matchingOccurrenceCount: 2 });
+    renderDialog({ onSave });
 
     fireEvent.click(screen.getByRole('checkbox', {
       name: 'Aplicar a todas as ocorrências desta palavra',
@@ -81,7 +81,7 @@ describe('ReadingOverrideDialog', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'Salvar correção' }));
 
-    expect(confirm).toHaveBeenCalledOnce();
+    expect(confirm).not.toHaveBeenCalled();
     await waitFor(() => expect(onSave).toHaveBeenCalledWith({
       documentRevision: 1,
       startOffset: 3,
@@ -92,9 +92,12 @@ describe('ReadingOverrideDialog', () => {
     }));
   });
 
-  it('keeps a save failure next to the reading field', async () => {
+  it('keeps the kana validation message next to the reading field for the known API error', async () => {
     renderDialog({
-      onSave: vi.fn().mockRejectedValue(new Error('invalid reading')),
+      onSave: vi.fn().mockRejectedValue(new ApiError(422, {
+        type: 'about:blank', title: 'Validation error', status: 422,
+        detail: 'Reading must contain kana only',
+      })),
     });
 
     fireEvent.change(screen.getByLabelText('Nova leitura em kana'), {
@@ -127,13 +130,34 @@ describe('ReadingOverrideDialog', () => {
     }));
   });
 
-  it('confirms and removes all matching vocabulary overrides when global scope is selected', async () => {
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
+  it('shows the API error detail instead of attributing a global failure to kana validation', async () => {
+    renderDialog({
+      onSave: vi.fn().mockRejectedValue(new ApiError(409, {
+        type: 'urn:japanese-reader:stale-reading-override-revision',
+        title: 'Conflict', status: 409,
+        detail: 'Reading override revision is stale',
+      })),
+    });
+
+    fireEvent.click(screen.getByRole('checkbox', {
+      name: 'Aplicar a todas as ocorrências desta palavra',
+    }));
+    fireEvent.change(screen.getByLabelText('Nova leitura em kana'), {
+      target: { value: 'さくじつ' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar correção' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Reading override revision is stale',
+    );
+  });
+
+  it('removes all matching vocabulary overrides immediately when global scope is selected', async () => {
+    const confirm = vi.spyOn(window, 'confirm');
     const onRemove = vi.fn().mockResolvedValue(undefined);
     renderDialog({
       token: { ...token, hasReadingOverride: true },
       onRemove,
-      matchingOccurrenceCount: 2,
     });
 
     fireEvent.click(screen.getByRole('checkbox', {
@@ -141,7 +165,7 @@ describe('ReadingOverrideDialog', () => {
     }));
     fireEvent.click(screen.getByRole('button', { name: 'Remover correção' }));
 
-    expect(confirm).toHaveBeenCalledOnce();
+    expect(confirm).not.toHaveBeenCalled();
     await waitFor(() => expect(onRemove).toHaveBeenCalledWith({
       documentRevision: 1,
       startOffset: 3,

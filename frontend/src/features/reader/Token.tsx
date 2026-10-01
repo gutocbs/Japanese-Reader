@@ -17,7 +17,6 @@ interface TokenProps {
   furiganaVisibility?: FuriganaVisibility;
   onSetFuriganaVisibility?: (key: string, visibility: FuriganaVisibility) => void;
   documentRevision?: number;
-  matchingOccurrenceCount?: number;
   onSaveReadingOverride?: (override: SetReadingOverride) => Promise<ReadingOverrideOperation>;
   onRemoveReadingOverride?: (key: ReadingOverrideKey) => Promise<ReadingOverrideOperation>;
 }
@@ -30,7 +29,6 @@ export function Token({
   furiganaVisibility = 'inherit',
   onSetFuriganaVisibility,
   documentRevision,
-  matchingOccurrenceCount,
   onSaveReadingOverride,
   onRemoveReadingOverride,
 }: TokenProps) {
@@ -157,7 +155,6 @@ export function Token({
         <ReadingOverrideDialog
           token={token}
           documentRevision={documentRevision}
-          matchingOccurrenceCount={matchingOccurrenceCount}
           returnFocusRef={triggerRef}
           onClose={() => setIsReadingDialogOpen(false)}
           onSave={onSaveReadingOverride}

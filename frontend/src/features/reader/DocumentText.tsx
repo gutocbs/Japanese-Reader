@@ -67,9 +67,6 @@ export function DocumentText({
           furiganaVisibility={furiganaVisibility}
           onSetFuriganaVisibility={onSetFuriganaVisibility}
           documentRevision={analysis.documentRevision}
-          matchingOccurrenceCount={token.vocabularyKey === null ? 1 : analysis.blocks
-            .flatMap((candidateBlock) => candidateBlock.tokens)
-            .filter((candidate) => candidate.vocabularyKey === token.vocabularyKey).length}
           onSaveReadingOverride={onSaveReadingOverride}
           onRemoveReadingOverride={onRemoveReadingOverride}
         />,
