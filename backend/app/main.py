@@ -99,6 +99,13 @@ def create_app(
                 "/assets", StaticFiles(directory=assets_directory), name="assets"
             )
 
+        for root_file in frontend_directory.iterdir():
+            if root_file.is_file() and root_file.name != "index.html":
+
+                @application.get(f"/{root_file.name}", include_in_schema=False)
+                def frontend_root_file(path: Path = root_file) -> FileResponse:
+                    return FileResponse(path)
+
         if index_file.is_file():
 
             @application.get("/{frontend_path:path}", include_in_schema=False)

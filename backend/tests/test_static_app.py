@@ -30,6 +30,20 @@ def test_compiled_asset_is_served_from_static_directory(tmp_path):
     assert response.text == "console.log('reader');"
 
 
+def test_root_static_file_is_served_from_static_directory(tmp_path):
+    static_directory = tmp_path / "frontend"
+    static_directory.mkdir()
+    (static_directory / "icon128.png").write_bytes(b"png-content")
+    application = create_app(
+        database_path=tmp_path / "reader.db", static_directory=static_directory
+    )
+
+    response = request(application, "/icon128.png")
+
+    assert response.status_code == 200
+    assert response.content == b"png-content"
+
+
 def test_non_api_deep_link_serves_compiled_index(tmp_path):
     static_directory = tmp_path / "frontend"
     static_directory.mkdir()
