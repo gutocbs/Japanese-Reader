@@ -36,8 +36,17 @@ if (-not (Test-Path -LiteralPath $composeFile -PathType Leaf)) {
 try {
     Push-Location $projectRoot
 
-    Log "Construindo a imagem '$imageName' e iniciando a aplicação com Docker Compose..."
-    docker compose up -d --build
+    docker image inspect $imageName *> $null
+    $imageExists = $LASTEXITCODE -eq 0
+
+    if ($imageExists) {
+        Log "A imagem '$imageName' já existe. Iniciando a aplicação com Docker Compose..."
+        docker compose up -d
+    }
+    else {
+        Log "A imagem '$imageName' não existe. Construindo e iniciando a aplicação com Docker Compose..."
+        docker compose up -d --build
+    }
     if ($LASTEXITCODE -ne 0) {
         throw 'O Docker Compose não conseguiu iniciar a aplicação.'
     }
