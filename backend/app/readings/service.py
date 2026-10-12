@@ -1,5 +1,4 @@
 from typing import Protocol
-from unicodedata import normalize
 from uuid import UUID
 
 from backend.app.analysis.models import DocumentAnalysis
@@ -14,11 +13,7 @@ from backend.app.readings.models import (
     ResolvedReading,
 )
 from backend.app.readings.repository import ReadingOverrideRepository
-
-
-class InvalidReadingError(ValueError):
-    def __init__(self) -> None:
-        super().__init__("Reading must contain kana only")
+from backend.app.readings.normalization import InvalidReadingError, normalize_kana_reading
 
 
 class InvalidReadingOverrideTargetError(ValueError):
@@ -49,28 +44,6 @@ class InvalidReadingOverrideVocabularyKeyError(ValueError):
 
 class AnalysisProvider(Protocol):
     def analyze(self, document_id: UUID) -> DocumentAnalysis: ...
-
-
-def normalize_kana_reading(reading: str) -> str:
-    stripped = normalize("NFKC", reading.strip())
-    hiragana = normalize(
-        "NFC",
-        "".join(
-            chr(ord(character) - 0x60)
-            if "ァ" <= character <= "ヶ" or character in "ヽヾ"
-            else character
-            for character in normalize("NFD", stripped)
-        ),
-    )
-    if not any("ぁ" <= character <= "ゖ" for character in hiragana) or any(
-        not (
-            "ぁ" <= character <= "ゖ"
-            or character in "ゝゞー\u3099\u309a"
-        )
-        for character in hiragana
-    ):
-        raise InvalidReadingError()
-    return hiragana
 
 
 class ReadingOverrideResolver:
