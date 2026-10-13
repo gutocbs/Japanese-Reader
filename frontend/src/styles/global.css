@@ -1001,6 +1001,128 @@ a {
   margin-top: var(--space-6);
 }
 
+.reading-exceptions-page {
+  max-width: 62rem;
+}
+
+.reading-exceptions-page__heading p {
+  max-width: 42rem;
+}
+
+.reading-exceptions-page__add-form,
+.reading-exceptions-page__editor {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  align-items: end;
+  gap: var(--space-3);
+  max-width: 52rem;
+  margin: var(--space-5) 0;
+}
+
+.reading-exceptions-page__add-form label,
+.reading-exceptions-page__editor label {
+  display: grid;
+  gap: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+  font-weight: 650;
+}
+
+.reading-exceptions-page__add-form input,
+.reading-exceptions-page__editor input {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 2.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-small);
+  background: var(--color-surface);
+  color: var(--color-text);
+  padding: 0 var(--space-3);
+}
+
+.reading-exceptions-page__notice,
+.reading-exceptions-page__empty,
+.reading-exceptions-page__state {
+  max-width: var(--reading-width);
+  margin: 0 0 var(--space-4);
+  border-left: 0.25rem solid var(--color-primary);
+  background: var(--color-surface-muted);
+  padding: var(--space-3) var(--space-4);
+}
+
+.reading-exceptions-page__list {
+  display: grid;
+  gap: 0;
+  max-width: 62rem;
+  margin: var(--space-5) 0;
+  border-top: 1px solid var(--color-border);
+  padding: 0;
+  list-style: none;
+}
+
+.reading-exceptions-page__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 4rem;
+  border-bottom: 1px solid var(--color-border);
+  padding: var(--space-3) var(--space-2);
+}
+
+.reading-exceptions-page__values {
+  display: grid;
+  min-width: 0;
+  gap: 0.125rem;
+}
+
+.reading-exceptions-page__values strong,
+.reading-exceptions-page__values span {
+  overflow-wrap: anywhere;
+}
+
+.reading-exceptions-page__values strong {
+  font-family: var(--font-reader);
+  font-size: 1.05rem;
+}
+
+.reading-exceptions-page__values span {
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+}
+
+.reading-exceptions-page__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.reading-exceptions-page__editor {
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(12rem, 20rem) auto auto;
+  width: 100%;
+  margin: 0;
+}
+
+.reading-exceptions-page__row--editing {
+  align-items: start;
+}
+
+@media (max-width: 42rem) {
+  .reading-exceptions-page__add-form,
+  .reading-exceptions-page__editor {
+    grid-template-columns: 1fr;
+  }
+
+  .reading-exceptions-page__row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .reading-exceptions-page__actions {
+    justify-content: flex-start;
+  }
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
