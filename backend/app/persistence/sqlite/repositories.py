@@ -635,17 +635,77 @@ class SqliteReadingOverrideRepository:
 
 
 class SqliteReadingExceptionRepository:
-    def __init__(self, database: SqliteDatabase) -> None:
+    def __init__(
+        self,
+        database: SqliteDatabase,
+        *,
+        clock: Callable[[], datetime] = utc_now,
+    ) -> None:
         self._database = database
+        self._clock = clock
 
-    def list_active(self) -> tuple[ReadingException, ...]:
+    def list(self, *, include_deleted: bool = False) -> tuple[ReadingException, ...]:
+        where_clause = "" if include_deleted else "WHERE deleted_at IS NULL"
         with self._database.unit_of_work() as connection:
             rows = connection.execute(
-                """
-                SELECT lemma, reading
+                f"""
+                SELECT lemma, reading, deleted_at
                 FROM reading_exceptions
-                WHERE deleted_at IS NULL
+                {where_clause}
                 ORDER BY lemma
                 """
             ).fetchall()
-        return tuple(ReadingException(row["lemma"], row["reading"]) for row in rows)
+        return tuple(
+            ReadingException(
+                row["lemma"], row["reading"], _parse_datetime(row["deleted_at"])
+            )
+            for row in rows
+        )
+
+    def list_active(self) -> tuple[ReadingException, ...]:
+        return self.list()
+
+    def put(self, lemma: str, reading: str) -> tuple[ReadingException, bool]:
+        with self._database.unit_of_work(write=True) as connection:
+            existing = connection.execute(
+                "SELECT 1 FROM reading_exceptions WHERE lemma = ?", (lemma,)
+            ).fetchone()
+            if existing is None:
+                connection.execute(
+                    "INSERT INTO reading_exceptions(lemma, reading, deleted_at) VALUES (?, ?, NULL)",
+                    (lemma, reading),
+                )
+                return ReadingException(lemma, reading), True
+            connection.execute(
+                "UPDATE reading_exceptions SET reading = ?, deleted_at = NULL WHERE lemma = ?",
+                (reading, lemma),
+            )
+        return ReadingException(lemma, reading), False
+
+    def soft_delete(self, lemma: str) -> ReadingException | None:
+        timestamp = _utc(self._clock())
+        with self._database.unit_of_work(write=True) as connection:
+            row = connection.execute(
+                "SELECT reading FROM reading_exceptions WHERE lemma = ? AND deleted_at IS NULL",
+                (lemma,),
+            ).fetchone()
+            if row is None:
+                return None
+            connection.execute(
+                "UPDATE reading_exceptions SET deleted_at = ? WHERE lemma = ?",
+                (timestamp.isoformat(), lemma),
+            )
+        return ReadingException(lemma, row["reading"], timestamp)
+
+    def restore(self, lemma: str) -> ReadingException | None:
+        with self._database.unit_of_work(write=True) as connection:
+            row = connection.execute(
+                "SELECT reading, deleted_at FROM reading_exceptions WHERE lemma = ?", (lemma,)
+            ).fetchone()
+            if row is None:
+                return None
+            if row["deleted_at"] is not None:
+                connection.execute(
+                    "UPDATE reading_exceptions SET deleted_at = NULL WHERE lemma = ?", (lemma,)
+                )
+        return ReadingException(lemma, row["reading"])

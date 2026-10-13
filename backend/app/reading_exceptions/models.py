@@ -1,3 +1,4 @@
+from datetime import datetime
 from dataclasses import dataclass
 
 
@@ -5,3 +6,4 @@ from dataclasses import dataclass
 class ReadingException:
     lemma: str
     reading: str
+    deleted_at: datetime | None = None

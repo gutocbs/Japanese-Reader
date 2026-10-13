@@ -5,6 +5,7 @@ from backend.app.persistence.memory.reading_exceptions import (
 )
 from backend.app.reading_exceptions.models import ReadingException
 from backend.tests.contracts.reading_exception_repository import (
+    DELETED_AT,
     ReadingExceptionRepositoryContract,
 )
 
@@ -13,7 +14,8 @@ class TestInMemoryReadingExceptionRepository(ReadingExceptionRepositoryContract)
     @pytest.fixture
     def repository(self):
         return InMemoryReadingExceptionRepository(
-            (ReadingException("私", "わたし"), ReadingException("猫", "ねこ"))
+            (ReadingException("私", "わたし"), ReadingException("猫", "ねこ")),
+            clock=lambda: DELETED_AT,
         )
 
     def test_replaced_snapshot_is_reflected(self, repository):

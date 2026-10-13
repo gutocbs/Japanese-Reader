@@ -6,6 +6,7 @@ from backend.app.persistence.sqlite.connection import SqliteDatabase
 from backend.app.persistence.sqlite.repositories import SqliteReadingExceptionRepository
 from backend.app.reading_exceptions.models import ReadingException
 from backend.tests.contracts.reading_exception_repository import (
+    DELETED_AT,
     ReadingExceptionRepositoryContract,
 )
 
@@ -18,7 +19,7 @@ def repository(tmp_path):
             "INSERT INTO reading_exceptions(lemma, reading, deleted_at) VALUES (?, ?, ?)",
             (("猫", "ねこ", None),),
         )
-    return SqliteReadingExceptionRepository(database)
+    return SqliteReadingExceptionRepository(database, clock=lambda: DELETED_AT)
 
 
 class TestSqliteReadingExceptionRepository(ReadingExceptionRepositoryContract):
