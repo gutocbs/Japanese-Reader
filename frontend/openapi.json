@@ -1944,6 +1944,577 @@
         }
       }
     },
+    "/api/reading-exceptions": {
+      "get": {
+        "tags": [
+          "reading-exceptions"
+        ],
+        "summary": "List Reading Exceptions",
+        "operationId": "listReadingExceptions",
+        "parameters": [
+          {
+            "name": "includeDeleted",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Includedeleted"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ReadingExceptionResponse"
+                  },
+                  "title": "Response Listreadingexceptions"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "properties": {
+                    "type": {
+                      "title": "Type",
+                      "type": "string"
+                    },
+                    "title": {
+                      "title": "Title",
+                      "type": "string"
+                    },
+                    "status": {
+                      "title": "Status",
+                      "type": "integer"
+                    },
+                    "detail": {
+                      "title": "Detail",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail"
+                  ],
+                  "title": "ProblemDetails",
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "properties": {
+                    "type": {
+                      "title": "Type",
+                      "type": "string"
+                    },
+                    "title": {
+                      "title": "Title",
+                      "type": "string"
+                    },
+                    "status": {
+                      "title": "Status",
+                      "type": "integer"
+                    },
+                    "detail": {
+                      "title": "Detail",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail"
+                  ],
+                  "title": "ProblemDetails",
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "properties": {
+                    "type": {
+                      "title": "Type",
+                      "type": "string"
+                    },
+                    "title": {
+                      "title": "Title",
+                      "type": "string"
+                    },
+                    "status": {
+                      "title": "Status",
+                      "type": "integer"
+                    },
+                    "detail": {
+                      "title": "Detail",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail"
+                  ],
+                  "title": "ProblemDetails",
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reading-exceptions/{lemma}": {
+      "put": {
+        "tags": [
+          "reading-exceptions"
+        ],
+        "summary": "Set Reading Exception",
+        "operationId": "setReadingException",
+        "parameters": [
+          {
+            "name": "lemma",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Lemma"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetReadingExceptionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadingExceptionResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "properties": {
+                    "type": {
+                      "title": "Type",
+                      "type": "string"
+                    },
+                    "title": {
+                      "title": "Title",
+                      "type": "string"
+                    },
+                    "status": {
+                      "title": "Status",
+                      "type": "integer"
+                    },
+                    "detail": {
+                      "title": "Detail",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail"
+                  ],
+                  "title": "ProblemDetails",
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "properties": {
+                    "type": {
+                      "title": "Type",
+                      "type": "string"
+                    },
+                    "title": {
+                      "title": "Title",
+                      "type": "string"
+                    },
+                    "status": {
+                      "title": "Status",
+                      "type": "integer"
+                    },
+                    "detail": {
+                      "title": "Detail",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail"
+                  ],
+                  "title": "ProblemDetails",
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "properties": {
+                    "type": {
+                      "title": "Type",
+                      "type": "string"
+                    },
+                    "title": {
+                      "title": "Title",
+                      "type": "string"
+                    },
+                    "status": {
+                      "title": "Status",
+                      "type": "integer"
+                    },
+                    "detail": {
+                      "title": "Detail",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail"
+                  ],
+                  "title": "ProblemDetails",
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadingExceptionResponse"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "reading-exceptions"
+        ],
+        "summary": "Delete Reading Exception",
+        "operationId": "deleteReadingException",
+        "parameters": [
+          {
+            "name": "lemma",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Lemma"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadingExceptionResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "properties": {
+                    "type": {
+                      "title": "Type",
+                      "type": "string"
+                    },
+                    "title": {
+                      "title": "Title",
+                      "type": "string"
+                    },
+                    "status": {
+                      "title": "Status",
+                      "type": "integer"
+                    },
+                    "detail": {
+                      "title": "Detail",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail"
+                  ],
+                  "title": "ProblemDetails",
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "properties": {
+                    "type": {
+                      "title": "Type",
+                      "type": "string"
+                    },
+                    "title": {
+                      "title": "Title",
+                      "type": "string"
+                    },
+                    "status": {
+                      "title": "Status",
+                      "type": "integer"
+                    },
+                    "detail": {
+                      "title": "Detail",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail"
+                  ],
+                  "title": "ProblemDetails",
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "properties": {
+                    "type": {
+                      "title": "Type",
+                      "type": "string"
+                    },
+                    "title": {
+                      "title": "Title",
+                      "type": "string"
+                    },
+                    "status": {
+                      "title": "Status",
+                      "type": "integer"
+                    },
+                    "detail": {
+                      "title": "Detail",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail"
+                  ],
+                  "title": "ProblemDetails",
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reading-exceptions/{lemma}/restore": {
+      "put": {
+        "tags": [
+          "reading-exceptions"
+        ],
+        "summary": "Restore Reading Exception",
+        "operationId": "restoreReadingException",
+        "parameters": [
+          {
+            "name": "lemma",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Lemma"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadingExceptionResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "properties": {
+                    "type": {
+                      "title": "Type",
+                      "type": "string"
+                    },
+                    "title": {
+                      "title": "Title",
+                      "type": "string"
+                    },
+                    "status": {
+                      "title": "Status",
+                      "type": "integer"
+                    },
+                    "detail": {
+                      "title": "Detail",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail"
+                  ],
+                  "title": "ProblemDetails",
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "properties": {
+                    "type": {
+                      "title": "Type",
+                      "type": "string"
+                    },
+                    "title": {
+                      "title": "Title",
+                      "type": "string"
+                    },
+                    "status": {
+                      "title": "Status",
+                      "type": "integer"
+                    },
+                    "detail": {
+                      "title": "Detail",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail"
+                  ],
+                  "title": "ProblemDetails",
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "properties": {
+                    "type": {
+                      "title": "Type",
+                      "type": "string"
+                    },
+                    "title": {
+                      "title": "Title",
+                      "type": "string"
+                    },
+                    "status": {
+                      "title": "Status",
+                      "type": "integer"
+                    },
+                    "detail": {
+                      "title": "Detail",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail"
+                  ],
+                  "title": "ProblemDetails",
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/tags": {
       "get": {
         "tags": [
@@ -2563,6 +3134,38 @@
         ],
         "title": "ImportDocumentRequest"
       },
+      "ReadingExceptionResponse": {
+        "properties": {
+          "lemma": {
+            "type": "string",
+            "title": "Lemma"
+          },
+          "reading": {
+            "type": "string",
+            "title": "Reading"
+          },
+          "deletedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deletedat"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "lemma",
+          "reading",
+          "deletedAt"
+        ],
+        "title": "ReadingExceptionResponse"
+      },
       "ReadingOverrideKeyRequest": {
         "properties": {
           "documentRevision": {
@@ -2676,6 +3279,20 @@
           "name"
         ],
         "title": "RenameTagRequest"
+      },
+      "SetReadingExceptionRequest": {
+        "properties": {
+          "reading": {
+            "type": "string",
+            "title": "Reading"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "reading"
+        ],
+        "title": "SetReadingExceptionRequest"
       },
       "SetReadingOverrideRequest": {
         "properties": {

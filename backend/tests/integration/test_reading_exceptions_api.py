@@ -70,6 +70,55 @@ def test_delete_returns_utc_timestamp_and_restore_is_explicit_and_idempotent(cli
     assert restored_again.json() == restored.json()
 
 
+def test_analysis_observes_exception_update_delete_and_restore_without_manual_cache_invalidation(client):
+    document = client.post(
+        "/api/documents", json={"title": "例外", "content": "私"}
+    )
+    assert document.status_code == 201
+    analysis_path = f"/api/documents/{document.json()['id']}/analysis"
+
+    original = client.post(analysis_path)
+    updated = client.put("/api/reading-exceptions/私", json={"reading": "あたし"})
+    changed = client.post(analysis_path)
+    deleted = client.delete("/api/reading-exceptions/私")
+    without_exception = client.post(analysis_path)
+    restored = client.put("/api/reading-exceptions/私/restore")
+    restored_analysis = client.post(analysis_path)
+
+    assert original.status_code == 200
+    assert updated.status_code == 200
+    assert deleted.status_code == 200
+    assert restored.status_code == 200
+
+    original_token = original.json()["blocks"][0]["tokens"][0]
+    changed_token = changed.json()["blocks"][0]["tokens"][0]
+    deleted_token = without_exception.json()["blocks"][0]["tokens"][0]
+    restored_token = restored_analysis.json()["blocks"][0]["tokens"][0]
+
+    assert original_token["reading"] == "わたし"
+    assert (
+        changed_token["reading"],
+        changed_token["dictionaryReading"],
+        changed_token["vocabularyKey"],
+        changed_token["furiganaSegments"],
+        changed_token["hasReadingOverride"],
+    ) == (
+        "あたし",
+        "あたし",
+        '["私","あたし"]',
+        [{"text": "私", "reading": "あたし"}],
+        False,
+    )
+    assert deleted_token["reading"] == "わたくし"
+    assert deleted_token["dictionaryReading"] is None
+    assert deleted_token["vocabularyKey"] == '["私","わたくし"]'
+    assert deleted_token["furiganaSegments"] == [{"text": "私", "reading": "わたくし"}]
+    assert restored_token["reading"] == "あたし"
+    assert restored_token["dictionaryReading"] == "あたし"
+    assert restored_token["vocabularyKey"] == '["私","あたし"]'
+    assert restored_token["furiganaSegments"] == [{"text": "私", "reading": "あたし"}]
+
+
 def test_missing_and_inactive_lifecycle_targets_return_problem_details(client):
     missing = "/api/reading-exceptions/不存在"
 
