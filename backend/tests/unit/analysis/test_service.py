@@ -77,6 +77,7 @@ def test_global_exception_changes_reading_dictionary_identity_and_furigana():
     assert (token.reading, token.dictionary_reading, token.vocabulary_key) == (
         "わたし", "わたし", '["私","わたし"]'
     )
+    assert token.has_reading_override is False
     assert [(segment.text, segment.reading) for segment in token.furigana_segments] == [("私", "わたし")]
 
     isolated, _, isolated_document, _, _ = exception_service(
