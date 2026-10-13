@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { ApiError, createDocumentClient } from './client';
-import type { Document, DocumentTag, ReadingException } from './client';
+import type { Document, DocumentTag, ReadingException, SetReadingException } from './client';
 
 const document = {
   id: '00000000-0000-0000-0000-000000000001', title: '原文', content: '𠮷野家\n日本語  text',
@@ -215,6 +215,18 @@ describe('document client', () => {
         method: 'DELETE', headers: undefined, body: undefined,
       }],
     ]);
+  });
+
+  it('serializes only reading when a widened reading-exception payload has extra fields', async () => {
+    const payload: SetReadingException & { unexpected: string } = {
+      reading: 'とりあつかい', unexpected: 'must-not-reach-api',
+    };
+    const saved = { lemma: '取り扱い', reading: payload.reading, deletedAt: null };
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify(saved)));
+
+    await expect(createDocumentClient(fetcher).setReadingException(saved.lemma, payload)).resolves.toEqual(saved);
+
+    expect(JSON.parse(fetcher.mock.calls[0][1]!.body as string)).toEqual({ reading: payload.reading });
   });
 
   it('preserves Problem Details and HTTP status for callers', async () => {

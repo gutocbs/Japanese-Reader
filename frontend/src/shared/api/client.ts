@@ -110,7 +110,7 @@ export function createDocumentClient(fetcher: typeof fetch = globalThis.fetch) {
     ),
     listReadingExceptions: () => request<ReadingException[]>('/api/reading-exceptions', 'GET'),
     setReadingException: (lemma: string, payload: SetReadingException) => (
-      request<ReadingException>(readingExceptionPath(lemma), 'PUT', payload)
+      request<ReadingException>(readingExceptionPath(lemma), 'PUT', { reading: payload.reading })
     ),
     deleteReadingException: (lemma: string) => (
       request<ReadingException>(readingExceptionPath(lemma), 'DELETE')
