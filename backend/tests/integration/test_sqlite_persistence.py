@@ -17,8 +17,10 @@ from backend.app.persistence.sqlite.repositories import (
     SqliteAnalysisRepository,
     SqliteDocumentRepository,
     SqliteReadingOverrideRepository,
+    SqliteReadingExceptionRepository,
     SqliteVocabularyRepository,
 )
+from backend.app.reading_exceptions.models import ReadingException
 from backend.app.readings.models import ReadingOverride, ReadingOverrideKey
 from backend.app.vocabulary.models import FuriganaVisibility, VocabularyKey
 from backend.tests.contracts.analysis_repository import analysis_for
@@ -33,6 +35,20 @@ def repositories(path: Path):
         SqliteVocabularyRepository(database),
         SqliteReadingOverrideRepository(database),
     )
+
+
+def test_reading_exception_migration_seeds_one_active_row_and_is_idempotent(tmp_path):
+    path = tmp_path / "reading-exceptions.db"
+    first = SqliteDatabase(path)
+    assert SqliteReadingExceptionRepository(first).list_active() == (
+        ReadingException("私", "わたし"),
+    )
+
+    second = SqliteDatabase(path)
+    with second.unit_of_work() as connection:
+        assert connection.execute(
+            "SELECT COUNT(*) FROM reading_exceptions WHERE lemma = '私'"
+        ).fetchone()[0] == 1
 
 
 def test_reopening_the_same_file_preserves_canonical_and_study_data(tmp_path):
@@ -284,7 +300,7 @@ def test_database_configuration_uses_environment_and_versioned_migrations(tmp_pa
             for row in connection.execute(
                 "SELECT version FROM schema_migrations ORDER BY version"
             )
-        ] == [1, 2, 3]
+        ] == [1, 2, 3, 4]
         tables = {
             row[0]
             for row in connection.execute(
@@ -297,6 +313,7 @@ def test_database_configuration_uses_environment_and_versioned_migrations(tmp_pa
         "vocabulary_selections",
         "vocabulary_display_preferences",
         "reading_overrides",
+        "reading_exceptions",
         "schema_migrations",
     } <= tables
 
@@ -336,4 +353,4 @@ def test_concurrent_database_initialization_applies_each_migration_once(
     with ThreadPoolExecutor(max_workers=workers) as executor:
         versions = list(executor.map(lambda _: initialize(), range(workers)))
 
-    assert versions == [[1, 2, 3]] * workers
+    assert versions == [[1, 2, 3, 4]] * workers

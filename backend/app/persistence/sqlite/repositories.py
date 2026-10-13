@@ -17,6 +17,7 @@ from backend.app.analysis.models import (
 )
 from backend.app.documents.models import UNSET, CreateDocument, Document, DocumentTag, UpdateDocument
 from backend.app.persistence.sqlite.connection import SqliteDatabase
+from backend.app.reading_exceptions.models import ReadingException
 from backend.app.readings.models import ReadingOverride, ReadingOverrideKey
 from backend.app.vocabulary.models import (
     FuriganaVisibility,
@@ -628,3 +629,20 @@ class SqliteReadingOverrideRepository:
                 "DELETE FROM reading_overrides WHERE document_id = ?",
                 (str(document_id),),
             )
+
+
+class SqliteReadingExceptionRepository:
+    def __init__(self, database: SqliteDatabase) -> None:
+        self._database = database
+
+    def list_active(self) -> tuple[ReadingException, ...]:
+        with self._database.unit_of_work() as connection:
+            rows = connection.execute(
+                """
+                SELECT lemma, reading
+                FROM reading_exceptions
+                WHERE deleted_at IS NULL
+                ORDER BY lemma
+                """
+            ).fetchall()
+        return tuple(ReadingException(row["lemma"], row["reading"]) for row in rows)
