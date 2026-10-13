@@ -147,6 +147,7 @@ def test_lifespan_shares_analyzer_and_releases_it(monkeypatch):
     async def exercise():
         async with app.router.lifespan_context(app):
             shared = app.state.morphological_analyzer
+            assert app.state.reading_exception_repository is not None
             assert shared.analyze("食べた")[0].dictionary_reading == "たべる"
             assert shared.analyze("猫")[0].reading == "ねこ"
             assert created == [shared]

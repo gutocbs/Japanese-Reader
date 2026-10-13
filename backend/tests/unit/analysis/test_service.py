@@ -18,6 +18,10 @@ from backend.app.documents.service import DocumentNotFoundError
 from backend.app.persistence.memory.analyses import InMemoryAnalysisRepository
 from backend.app.persistence.memory.documents import InMemoryDocumentRepository
 from backend.app.persistence.memory.readings import InMemoryReadingOverrideRepository
+from backend.app.persistence.memory.reading_exceptions import InMemoryReadingExceptionRepository
+from backend.app.reading_exceptions.models import ReadingException
+from backend.app.reading_exceptions.service import ReadingExceptionResolver
+from backend.app.readings.models import ReadingOverride, ReadingOverrideKey
 from backend.app.readings.service import ReadingOverrideResolver
 
 
@@ -30,6 +34,89 @@ def analyzer():
 
 def service_for(documents, analyzer, cache=None):
     return AnalysisService(documents, cache or InMemoryAnalysisRepository(), analyzer, FuriganaAligner())
+
+
+class ExceptionTestAnalyzer:
+    metadata = AnalyzerMetadata("test", "1", "dictionary", "1", "B")
+
+    def __init__(self):
+        self.calls = 0
+
+    def analyze(self, text, base_offset=0):
+        self.calls += 1
+        tokens = {
+            "私": RawToken("私", 0, 1, "私", "わたくし", "わたくし", ("名詞", "普通名詞", "一般", "*", "*", "*"), False),
+            "私流": RawToken("私流", 0, 2, "私流", "しりゅう", "しりゅう", ("名詞", "普通名詞", "一般", "*", "*", "*"), False),
+            "猫": RawToken("猫", 0, 1, "猫", "ねこ", "ねこ", ("名詞", "普通名詞", "一般", "*", "*", "*"), False),
+        }
+        token = tokens[text]
+        return (replace(token, start_offset=base_offset, end_offset=base_offset + len(text)),)
+
+
+def exception_service(content, exceptions, *, cache=None, overrides=None, analyzer=None):
+    documents = InMemoryDocumentRepository()
+    document = documents.create(CreateDocument("title", content))
+    analyzer = analyzer or ExceptionTestAnalyzer()
+    exception_repository = InMemoryReadingExceptionRepository(exceptions)
+    service = AnalysisService(
+        documents,
+        cache or InMemoryAnalysisRepository(),
+        analyzer,
+        FuriganaAligner(),
+        ReadingOverrideResolver(overrides) if overrides else None,
+        ReadingExceptionResolver(exception_repository),
+    )
+    return service, documents, document, exception_repository, analyzer
+
+
+def test_global_exception_changes_reading_dictionary_identity_and_furigana():
+    service, _, document, _, _ = exception_service(
+        "私", [ReadingException("私", "わたし")]
+    )
+    token = service.analyze(document.id).blocks[0].tokens[0]
+    assert (token.reading, token.dictionary_reading, token.vocabulary_key) == (
+        "わたし", "わたし", '["私","わたし"]'
+    )
+    assert [(segment.text, segment.reading) for segment in token.furigana_segments] == [("私", "わたし")]
+
+    isolated, _, isolated_document, _, _ = exception_service(
+        "私流", [ReadingException("私", "わたし")]
+    )
+    isolated_token = isolated.analyze(isolated_document.id).blocks[0].tokens[0]
+    assert isolated_token.lemma == "私流"
+    assert isolated_token.reading == "しりゅう"
+
+
+def test_global_exception_does_not_mark_or_widen_a_local_override():
+    overrides = InMemoryReadingOverrideRepository()
+    service, _, document, _, _ = exception_service(
+        "私", [ReadingException("私", "わたし")], overrides=overrides
+    )
+    overrides.upsert(ReadingOverride(ReadingOverrideKey(document.id, 1, 0, 1), "あたし"))
+    token = service.analyze(document.id).blocks[0].tokens[0]
+    assert token.reading == "あたし"
+    assert token.dictionary_reading == "わたし"
+    assert token.vocabulary_key == '["私","わたし"]'
+    assert token.has_reading_override is True
+
+
+def test_changed_deleted_and_restored_snapshots_select_compatible_cache():
+    analyzer = ExceptionTestAnalyzer()
+    cache = InMemoryAnalysisRepository()
+    service, _, document, exceptions, _ = exception_service(
+        "私", [ReadingException("私", "わたし")], cache=cache, analyzer=analyzer
+    )
+    first = service.analyze(document.id)
+    exceptions.replace([ReadingException("私", "あたし")])
+    changed = service.analyze(document.id)
+    exceptions.replace([])
+    deleted = service.analyze(document.id)
+    exceptions.replace([ReadingException("私", "わたし")])
+    restored = service.analyze(document.id)
+    assert analyzer.calls == 3
+    assert changed != first
+    assert deleted != first
+    assert restored == first
 
 
 def test_analysis_preserves_absolute_code_point_offsets_and_original_gaps(analyzer):
