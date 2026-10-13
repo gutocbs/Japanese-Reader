@@ -283,6 +283,7 @@ def _analysis_options_json(options: AnalysisOptions) -> str:
     return json.dumps(
         {
             "furiganaAlgorithmVersion": options.furigana_algorithm_version,
+            "readingExceptionsVersion": options.reading_exceptions_version,
             "splitMode": options.split_mode,
         },
         ensure_ascii=False, separators=(",", ":"),
@@ -304,6 +305,7 @@ def _analysis_payload(analysis: DocumentAnalysis) -> str:
         },
         "analysisOptions": {
             "furiganaAlgorithmVersion": analysis.analysis_options.furigana_algorithm_version,
+            "readingExceptionsVersion": analysis.analysis_options.reading_exceptions_version,
             "splitMode": analysis.analysis_options.split_mode,
         },
         "blocks": [
@@ -363,6 +365,7 @@ def _decode_analysis(payload: str) -> DocumentAnalysis:
         analysis_options=AnalysisOptions(
             split_mode=options["splitMode"],
             furigana_algorithm_version=options.get("furiganaAlgorithmVersion", 1),
+            reading_exceptions_version=options.get("readingExceptionsVersion", ""),
         ),
         blocks=tuple(
             AnalysisBlock(

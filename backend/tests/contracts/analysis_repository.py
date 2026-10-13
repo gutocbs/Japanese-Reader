@@ -80,6 +80,14 @@ class AnalysisRepositoryContract:
                 analysis_options=AnalysisOptions(split_mode="A"),
             )
         ) is None
+        assert analysis_repository.find_compatible(
+            replace(
+                stored.cache_key,
+                analysis_options=AnalysisOptions(
+                    split_mode="B", reading_exceptions_version="v2"
+                ),
+            )
+        ) is None
 
     def test_invalidation_removes_only_the_target_document(
         self, analysis_repository: AnalysisRepository

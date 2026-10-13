@@ -1,5 +1,6 @@
 from itertools import count
 import json
+from dataclasses import replace
 from uuid import UUID
 
 import pytest
@@ -30,6 +31,48 @@ def analysis_repository(tmp_path):
 
 class TestSqliteAnalysisRepository(AnalysisRepositoryContract):
     pass
+
+
+def test_round_trips_reading_exceptions_version(tmp_path):
+    database = SqliteDatabase(tmp_path / "versioned-analysis.db")
+    documents = SqliteDocumentRepository(database, uuid_factory=lambda: UUID(int=1))
+    document = documents.create(CreateDocument("versioned", "𠮷野"))
+    repository = SqliteAnalysisRepository(database)
+    stored_options = replace(
+        analysis_for(document.id).analysis_options,
+        reading_exceptions_version="catalog-v3",
+    )
+    stored = replace(
+        analysis_for(document.id),
+        analysis_options=stored_options,
+    )
+
+    repository.save(stored)
+
+    assert repository.find_compatible(stored.cache_key) == stored
+
+
+def test_legacy_payload_without_reading_exceptions_version_decodes_as_empty(tmp_path):
+    database = SqliteDatabase(tmp_path / "legacy-reading-exceptions-analysis.db")
+    documents = SqliteDocumentRepository(database, uuid_factory=lambda: UUID(int=1))
+    document = documents.create(CreateDocument("legacy", "𠮷野"))
+    repository = SqliteAnalysisRepository(database)
+    stored = analysis_for(document.id)
+    repository.save(stored)
+
+    with database.unit_of_work(write=True) as connection:
+        row = connection.execute(
+            "SELECT analysis_json FROM document_analyses WHERE document_id = ?",
+            (str(document.id),),
+        ).fetchone()
+        payload = json.loads(row["analysis_json"])
+        payload["analysisOptions"].pop("readingExceptionsVersion", None)
+        connection.execute(
+            "UPDATE document_analyses SET analysis_json = ? WHERE document_id = ?",
+            (json.dumps(payload, ensure_ascii=False), str(document.id)),
+        )
+
+    assert repository.find_compatible(stored.cache_key) == stored
 
 
 def test_payload_identity_mismatch_is_a_cache_miss(tmp_path):

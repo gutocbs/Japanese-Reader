@@ -35,6 +35,7 @@ class AnalyzerMetadata:
 class AnalysisOptions:
     split_mode: str
     furigana_algorithm_version: int = FURIGANA_ALGORITHM_VERSION
+    reading_exceptions_version: str = ""
 
 
 @dataclass(frozen=True)
