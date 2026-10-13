@@ -21,7 +21,10 @@ from backend.app.persistence.sqlite.repositories import (
     SqliteVocabularyRepository,
 )
 from backend.app.readings.service import ReadingOverrideResolver, ReadingOverrideService
-from backend.app.reading_exceptions.service import ReadingExceptionResolver
+from backend.app.reading_exceptions.service import (
+    ReadingExceptionResolver,
+    ReadingExceptionService,
+)
 from backend.app.vocabulary.service import VocabularySelectionService
 
 
@@ -56,6 +59,7 @@ async def lifespan(application: FastAPI):
         del application.state.morphological_analyzer
         del application.state.analysis_service
         del application.state.reading_override_service
+        del application.state.reading_exception_service
         del application.state.vocabulary_service
         application.state.database.close()
 
@@ -80,6 +84,7 @@ def create_app(
     application.state.analysis_repository = analyses
     application.state.reading_override_repository = reading_overrides
     application.state.reading_exception_repository = reading_exceptions
+    application.state.reading_exception_service = ReadingExceptionService(reading_exceptions)
     application.state.vocabulary_repository = vocabulary
     application.state.document_service = DocumentService(
         documents, analyses, reading_overrides

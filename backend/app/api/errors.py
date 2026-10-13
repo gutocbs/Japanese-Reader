@@ -18,6 +18,10 @@ from backend.app.readings.service import (
     InvalidReadingOverrideVocabularyKeyError,
     StaleReadingOverrideRevisionError,
 )
+from backend.app.reading_exceptions.service import (
+    InvalidReadingExceptionError,
+    ReadingExceptionNotFoundError,
+)
 
 
 class ProblemDetails(BaseModel):
@@ -77,12 +81,14 @@ def install_error_handlers(app: FastAPI) -> None:
         return problem_response(409, str(error))
 
     @app.exception_handler(InvalidReadingError)
+    @app.exception_handler(InvalidReadingExceptionError)
     @app.exception_handler(InvalidReadingOverrideTargetError)
     @app.exception_handler(InvalidReadingOverrideVocabularyKeyError)
     async def invalid_reading_override(request: Request, error: ValueError):
         return problem_response(422, str(error))
 
     @app.exception_handler(DocumentNotFoundError)
+    @app.exception_handler(ReadingExceptionNotFoundError)
     async def document_not_found(request: Request, error: DocumentNotFoundError):
         return problem_response(404, str(error))
 
