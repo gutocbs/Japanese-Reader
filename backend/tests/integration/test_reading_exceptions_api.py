@@ -129,3 +129,26 @@ def test_sqlite_errors_from_the_reading_exception_service_map_to_503(client):
         "status": 503,
         "detail": "The local database operation failed; changes were not saved",
     }
+
+
+def test_set_reading_exception_openapi_documents_update_create_and_problem_responses():
+    operation = create_app(":memory:").openapi()["paths"][
+        "/api/reading-exceptions/{lemma}"
+    ]["put"]
+
+    assert operation["operationId"] == "setReadingException"
+    assert operation["responses"]["200"]["content"]["application/json"]["schema"][
+        "$ref"
+    ].endswith("ReadingExceptionResponse")
+    assert operation["responses"]["201"]["content"]["application/json"]["schema"][
+        "$ref"
+    ].endswith("ReadingExceptionResponse")
+    assert set(operation["responses"]["404"]["content"]) == {
+        "application/problem+json"
+    }
+    assert set(operation["responses"]["422"]["content"]) == {
+        "application/problem+json"
+    }
+    assert set(operation["responses"]["503"]["content"]) == {
+        "application/problem+json"
+    }

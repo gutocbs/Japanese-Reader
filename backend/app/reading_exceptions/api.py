@@ -70,6 +70,7 @@ def list_reading_exceptions(
 @router.put(
     "/{lemma}",
     response_model=ReadingExceptionResponse,
+    responses={201: {"model": ReadingExceptionResponse}},
     operation_id="setReadingException",
 )
 def set_reading_exception(
