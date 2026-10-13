@@ -2,6 +2,7 @@ import { DocumentEditorPage } from '../features/documents/DocumentEditorPage';
 import { DocumentLibraryPage } from '../features/documents/DocumentLibraryPage';
 import { DocumentMetadataPage } from '../features/documents/DocumentMetadataPage';
 import { TagManagementPage } from '../features/documents/TagManagementPage';
+import { ReadingExceptionsPage } from '../features/reading-exceptions/ReadingExceptionsPage';
 import { ReaderPage } from '../features/reader/ReaderPage';
 import { SettingsPage } from '../features/settings/SettingsPage';
 import { useRouter } from './providers';
@@ -23,6 +24,10 @@ export function AppRouter() {
 
   if (location.path === '/tags') {
     return <TagManagementPage />;
+  }
+
+  if (location.path === '/reading-exceptions') {
+    return <ReadingExceptionsPage />;
   }
 
   const match = /^\/documents\/([^/]+)\/(edit|metadata|read)$/.exec(location.path);

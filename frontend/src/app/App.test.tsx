@@ -1,7 +1,13 @@
 import { StrictMode } from 'react';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ApiError, type Analysis, type Document, type DocumentClient } from '../shared/api/client';
+import {
+  ApiError,
+  type Analysis,
+  type Document,
+  type DocumentClient,
+  type ReadingException,
+} from '../shared/api/client';
 import { App } from './App';
 
 const document: Document = {
@@ -64,6 +70,12 @@ const revisedAnalysis: Analysis = {
   }],
 };
 
+const readingException: ReadingException = {
+  lemma: '今日',
+  reading: 'キョウ',
+  deletedAt: null,
+};
+
 function deferred<T>() {
   let resolve!: (value: T) => void;
   let reject!: (reason: unknown) => void;
@@ -94,6 +106,7 @@ function client(overrides: Partial<DocumentClient> = {}): DocumentClient {
       reading: 'こっきょう',
     }),
     deleteReadingOverride: vi.fn().mockResolvedValue(undefined),
+    listReadingExceptions: vi.fn().mockResolvedValue([]),
     ...overrides,
   };
 }
@@ -103,6 +116,19 @@ beforeEach(() => {
   window.history.replaceState(null, '', '/');
   localStorage.clear();
   window.matchMedia = vi.fn().mockReturnValue({ matches: false });
+});
+
+it('renders the reading exceptions route with its active primary navigation link', async () => {
+  render(<App client={client({
+    listReadingExceptions: vi.fn().mockResolvedValue([readingException]),
+  })} initialPath="/reading-exceptions" />);
+
+  expect(await screen.findByRole('heading', { name: 'Exceções de leitura', level: 1 }))
+    .toBeInTheDocument();
+  expect(screen.getByRole('link', { name: 'Exceções de leitura' }))
+    .toHaveAttribute('href', '/reading-exceptions');
+  expect(screen.getByRole('link', { name: 'Exceções de leitura' }))
+    .toHaveAttribute('aria-current', 'page');
 });
 
 it('migrates a saved legacy theme until settings are changed', () => {
