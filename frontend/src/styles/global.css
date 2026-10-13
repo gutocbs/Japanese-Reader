@@ -1015,8 +1015,8 @@ a {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
   align-items: end;
   gap: var(--space-3);
-  max-width: 52rem;
-  margin: var(--space-5) 0;
+  max-width: 62rem;
+  margin: var(--space-5) 0 var(--space-6);
 }
 
 .reading-exceptions-page__add-form label,
@@ -1054,7 +1054,7 @@ a {
   display: grid;
   gap: 0;
   max-width: 62rem;
-  margin: var(--space-5) 0;
+  margin: 0 0 var(--space-5);
   border-top: 1px solid var(--color-border);
   padding: 0;
   list-style: none;
