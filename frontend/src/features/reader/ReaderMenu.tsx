@@ -24,12 +24,12 @@ export function ReaderMenu({ preferences, onPreferencesChange }: ReaderMenuProps
       <button
         className="reader-rail__button"
         type="button"
-        aria-label="Diminuir tamanho da fonte japonesa"
-        title="Diminuir tamanho da fonte japonesa"
-        disabled={preferences.fontSizePx <= READER_FONT_SIZE_RANGE.min}
-        onClick={decreaseFontSize}
+        aria-label="Aumentar tamanho da fonte japonesa"
+        title="Aumentar tamanho da fonte japonesa"
+        disabled={preferences.fontSizePx >= READER_FONT_SIZE_RANGE.max}
+        onClick={increaseFontSize}
       >
-        <span aria-hidden="true">−</span>
+        <span aria-hidden="true">＋</span>
       </button>
       <output className="reader-rail__font-size" aria-live="polite">
         {preferences.fontSizePx} px
@@ -37,12 +37,12 @@ export function ReaderMenu({ preferences, onPreferencesChange }: ReaderMenuProps
       <button
         className="reader-rail__button"
         type="button"
-        aria-label="Aumentar tamanho da fonte japonesa"
-        title="Aumentar tamanho da fonte japonesa"
-        disabled={preferences.fontSizePx >= READER_FONT_SIZE_RANGE.max}
-        onClick={increaseFontSize}
+        aria-label="Diminuir tamanho da fonte japonesa"
+        title="Diminuir tamanho da fonte japonesa"
+        disabled={preferences.fontSizePx <= READER_FONT_SIZE_RANGE.min}
+        onClick={decreaseFontSize}
       >
-        <span aria-hidden="true">＋</span>
+        <span aria-hidden="true">−</span>
       </button>
       <span className="reader-rail__divider" aria-hidden="true" />
       <button
