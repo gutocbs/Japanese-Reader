@@ -1,6 +1,6 @@
 import hashlib
 import json
-from dataclasses import replace
+from dataclasses import dataclass, replace
 
 from backend.app.analysis.models import RawToken
 from backend.app.reading_exceptions.models import ReadingException
@@ -17,13 +17,16 @@ class InvalidReadingExceptionError(ValueError):
         super().__init__(f"Invalid reading exception for lemma {lemma}")
 
 
+@dataclass(frozen=True)
 class ReadingExceptionSnapshot:
-    def __init__(self, pairs: tuple[tuple[str, str], ...], version: str) -> None:
-        self._pairs = dict(pairs)
-        self.version = version
+    _pairs: tuple[tuple[str, str], ...]
+    version: str
 
     def resolve(self, token: RawToken) -> RawToken:
-        reading = self._pairs.get(token.lemma)
+        reading = next(
+            (reading for lemma, reading in self._pairs if lemma == token.lemma),
+            None,
+        )
         if reading is None:
             return token
         return replace(token, reading=reading, dictionary_reading=reading)

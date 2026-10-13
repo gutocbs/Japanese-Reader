@@ -1,4 +1,5 @@
 from dataclasses import replace
+from dataclasses import FrozenInstanceError
 
 import pytest
 
@@ -65,3 +66,16 @@ def test_resolver_matches_the_complete_lemma_only():
     ).snapshot()
 
     assert snapshot.resolve(token("私流")) == token("私流")
+
+
+def test_snapshot_state_cannot_be_reassigned_or_mutated():
+    snapshot = ReadingExceptionResolver(
+        Repository([ReadingException("私", "わたし")])
+    ).snapshot()
+
+    with pytest.raises(FrozenInstanceError):
+        snapshot.version = "changed"
+
+    assert isinstance(snapshot._pairs, tuple)
+    with pytest.raises(AttributeError):
+        snapshot._pairs.append(("猫", "ねこ"))
