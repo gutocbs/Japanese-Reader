@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { ApiError, createDocumentClient } from './client';
-import type { Document, DocumentTag } from './client';
+import type { Document, DocumentTag, ReadingException } from './client';
 
 const document = {
   id: '00000000-0000-0000-0000-000000000001', title: '原文', content: '𠮷野家\n日本語  text',
@@ -182,6 +182,37 @@ describe('document client', () => {
       ['/api/documents/doc%2Fone/reading-overrides', {
         method: 'DELETE', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(key),
+      }],
+    ]);
+  });
+
+  it('transports global reading exceptions through their encoded resource', async () => {
+    const lemma = '取り/扱い';
+    const exception = { lemma, reading: 'とりあつかい', deletedAt: null } satisfies ReadingException;
+    const updated = { ...exception, reading: 'とりあつかう' };
+    const fetcher = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(new Response(JSON.stringify([exception])))
+      .mockResolvedValueOnce(new Response(JSON.stringify(exception), { status: 201 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify(updated)))
+      .mockResolvedValueOnce(new Response(JSON.stringify(updated)));
+    const client = createDocumentClient(fetcher);
+
+    expect(await client.listReadingExceptions()).toEqual([exception]);
+    expect(await client.setReadingException(lemma, { reading: exception.reading })).toEqual(exception);
+    expect(await client.setReadingException(lemma, { reading: updated.reading })).toEqual(updated);
+    expect(await client.deleteReadingException(lemma)).toEqual(updated);
+    expect(fetcher.mock.calls).toEqual([
+      ['/api/reading-exceptions', { method: 'GET', headers: undefined, body: undefined }],
+      ['/api/reading-exceptions/%E5%8F%96%E3%82%8A%2F%E6%89%B1%E3%81%84', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reading: exception.reading }),
+      }],
+      ['/api/reading-exceptions/%E5%8F%96%E3%82%8A%2F%E6%89%B1%E3%81%84', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reading: updated.reading }),
+      }],
+      ['/api/reading-exceptions/%E5%8F%96%E3%82%8A%2F%E6%89%B1%E3%81%84', {
+        method: 'DELETE', headers: undefined, body: undefined,
       }],
     ]);
   });

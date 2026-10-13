@@ -24,6 +24,8 @@ export type SetReadingOverride = Omit<components['schemas']['SetReadingOverrideR
 };
 export type ReadingOverride = components['schemas']['ReadingOverrideResponse'];
 export type ReadingOverrideOperation = components['schemas']['ReadingOverrideOperationResponse'];
+export type ReadingException = components['schemas']['ReadingExceptionResponse'];
+export type SetReadingException = components['schemas']['SetReadingExceptionRequest'];
 export type ProblemDetails = operations['getDocument']['responses'][404]['content']['application/problem+json'];
 
 function isProblemDetails(body: unknown): body is ProblemDetails {
@@ -74,6 +76,7 @@ export function createDocumentClient(fetcher: typeof fetch = globalThis.fetch) {
   const vocabularyPath = (id: string) => `${documentPath(id)}/vocabulary-selections`;
   const displayPreferencesPath = (id: string) => `${documentPath(id)}/vocabulary-display-preferences`;
   const readingOverridesPath = (id: string) => `${documentPath(id)}/reading-overrides`;
+  const readingExceptionPath = (lemma: string) => `/api/reading-exceptions/${encodeURIComponent(lemma)}`;
   const tagPath = (name: string) => `/api/tags/${encodeURIComponent(name)}`;
   return {
     list: () => request<Document[]>('/api/documents', 'GET'),
@@ -105,6 +108,13 @@ export function createDocumentClient(fetcher: typeof fetch = globalThis.fetch) {
     deleteReadingOverride: (id: string, key: ReadingOverrideKey) => (
       request<ReadingOverrideOperation>(readingOverridesPath(id), 'DELETE', key)
     ),
+    listReadingExceptions: () => request<ReadingException[]>('/api/reading-exceptions', 'GET'),
+    setReadingException: (lemma: string, payload: SetReadingException) => (
+      request<ReadingException>(readingExceptionPath(lemma), 'PUT', payload)
+    ),
+    deleteReadingException: (lemma: string) => (
+      request<ReadingException>(readingExceptionPath(lemma), 'DELETE')
+    ),
   };
 }
 
@@ -113,7 +123,10 @@ type OptionalClientMethods =
   | 'listTags'
   | 'createTag'
   | 'renameTag'
-  | 'deleteTag';
+  | 'deleteTag'
+  | 'listReadingExceptions'
+  | 'setReadingException'
+  | 'deleteReadingException';
 export type DocumentClient = Omit<ReturnType<typeof createDocumentClient>, OptionalClientMethods>
   & Partial<Pick<ReturnType<typeof createDocumentClient>, OptionalClientMethods>>;
 export const documentClient = createDocumentClient();
