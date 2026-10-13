@@ -59,6 +59,26 @@ def test_analysis_endpoint_returns_camel_case_tokens_segments_and_metadata(clien
     assert client.post(f"/api/documents/{document_id}/analysis").json() == body
 
 
+def test_seeded_global_exception_is_returned_by_existing_analysis_endpoint():
+    with TestClient(create_app(":memory:")) as client:
+        database = client.app.state.database
+        with database.unit_of_work(write=True) as connection:
+            connection.execute(
+                "UPDATE reading_exceptions SET reading = ?, deleted_at = NULL WHERE lemma = ?",
+                ("わたし", "私"),
+            )
+        document_id = create_document(client, "私")
+        response = client.post(f"/api/documents/{document_id}/analysis")
+        assert response.status_code == 200
+        token = response.json()["blocks"][0]["tokens"][0]
+        assert token["lemma"] == "私"
+        assert token["reading"] == "わたし"
+        assert token["dictionaryReading"] == "わたし"
+        assert token["vocabularyKey"] == '["私","わたし"]'
+        assert token["hasReadingOverride"] is False
+        assert token["furiganaSegments"] == [{"text": "私", "reading": "わたし"}]
+
+
 def test_missing_document_analysis_returns_404_problem(client):
     response = client.post("/api/documents/00000000-0000-0000-0000-000000000001/analysis")
     assert response.status_code == 404

@@ -17,9 +17,11 @@ from backend.app.persistence.sqlite.repositories import (
     SqliteAnalysisRepository,
     SqliteDocumentRepository,
     SqliteReadingOverrideRepository,
+    SqliteReadingExceptionRepository,
     SqliteVocabularyRepository,
 )
 from backend.app.readings.service import ReadingOverrideResolver, ReadingOverrideService
+from backend.app.reading_exceptions.service import ReadingExceptionResolver
 from backend.app.vocabulary.service import VocabularySelectionService
 
 
@@ -34,6 +36,7 @@ async def lifespan(application: FastAPI):
             analyzer,
             FuriganaAligner(),
             ReadingOverrideResolver(application.state.reading_override_repository),
+            ReadingExceptionResolver(application.state.reading_exception_repository),
         )
         application.state.reading_override_service = ReadingOverrideService(
             application.state.document_repository,
@@ -68,6 +71,7 @@ def create_app(
     documents = SqliteDocumentRepository(database)
     analyses = SqliteAnalysisRepository(database)
     reading_overrides = SqliteReadingOverrideRepository(database)
+    reading_exceptions = SqliteReadingExceptionRepository(database)
     vocabulary = SqliteVocabularyRepository(database)
 
     application = FastAPI(title="Japanese Reader", lifespan=lifespan)
@@ -75,6 +79,7 @@ def create_app(
     application.state.document_repository = documents
     application.state.analysis_repository = analyses
     application.state.reading_override_repository = reading_overrides
+    application.state.reading_exception_repository = reading_exceptions
     application.state.vocabulary_repository = vocabulary
     application.state.document_service = DocumentService(
         documents, analyses, reading_overrides

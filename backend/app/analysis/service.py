@@ -14,6 +14,7 @@ from backend.app.documents.service import DocumentNotFoundError
 from backend.app.vocabulary.models import VocabularyKey
 from backend.app.readings.models import ReadingOverrideKey, ResolvedReading
 from backend.app.readings.service import ReadingOverrideResolver
+from backend.app.reading_exceptions.service import ReadingExceptionResolver, ReadingExceptionSnapshot
 
 
 class EmptyDocumentError(ValueError):
@@ -33,12 +34,14 @@ class AnalysisService:
         self, documents: DocumentRepository, analyses: AnalysisRepository,
         analyzer: MorphologicalAnalyzer, aligner: FuriganaAligner,
         reading_overrides: ReadingOverrideResolver | None = None,
+        reading_exceptions: ReadingExceptionResolver | None = None,
     ) -> None:
         self._documents = documents
         self._analyses = analyses
         self._analyzer = analyzer
         self._aligner = aligner
         self._reading_overrides = reading_overrides
+        self._reading_exceptions = reading_exceptions
 
     def analyze(self, document_id: UUID) -> DocumentAnalysis:
         document = self._documents.get(document_id)
@@ -48,7 +51,15 @@ class AnalysisService:
             raise EmptyDocumentError()
 
         metadata = self._analyzer.metadata
-        options = AnalysisOptions(split_mode=metadata.split_mode)
+        exception_snapshot = (
+            self._reading_exceptions.snapshot()
+            if self._reading_exceptions
+            else ReadingExceptionSnapshot((), "")
+        )
+        options = AnalysisOptions(
+            split_mode=metadata.split_mode,
+            reading_exceptions_version=exception_snapshot.version,
+        )
         content_hash = self._content_hash(document.content)
         key = AnalysisCacheKey(document.id, document.revision, content_hash, metadata, options)
         cached = self._analyses.find_compatible(key)
@@ -66,7 +77,8 @@ class AnalysisService:
         for line in document.content.splitlines(keepends=True):
             tokens: list[AnalyzedToken] = []
             for raw in self._analyzer.analyze(line, base_offset=offset):
-                vocabulary_key = VocabularyKey.from_token(raw)
+                resolved_raw = exception_snapshot.resolve(raw)
+                vocabulary_key = VocabularyKey.from_token(resolved_raw)
                 resolved = (
                     self._reading_overrides.resolve(
                         ReadingOverrideKey(
@@ -75,28 +87,28 @@ class AnalysisService:
                             raw.start_offset,
                             raw.end_offset,
                         ),
-                        raw.reading,
+                        resolved_raw.reading,
                     )
                     if has_reading_overrides
-                    else ResolvedReading(raw.reading, False)
+                    else ResolvedReading(resolved_raw.reading, False)
                 )
                 alignment = self._aligner.align_with_diagnostics(
-                    raw.raw_surface, resolved.reading
+                    resolved_raw.raw_surface, resolved.reading
                 )
                 tokens.append(AnalyzedToken(
-                    start_offset=raw.start_offset, end_offset=raw.end_offset,
-                    surface=raw.raw_surface, lemma=raw.lemma, reading=resolved.reading,
-                    dictionary_reading=raw.dictionary_reading, part_of_speech=raw.part_of_speech,
-                    is_out_of_vocabulary=raw.is_out_of_vocabulary,
+                    start_offset=resolved_raw.start_offset, end_offset=resolved_raw.end_offset,
+                    surface=resolved_raw.raw_surface, lemma=resolved_raw.lemma, reading=resolved.reading,
+                    dictionary_reading=resolved_raw.dictionary_reading, part_of_speech=resolved_raw.part_of_speech,
+                    is_out_of_vocabulary=resolved_raw.is_out_of_vocabulary,
                     is_lexical=vocabulary_key is not None,
                     vocabulary_key=vocabulary_key.encode() if vocabulary_key is not None else None,
                     furigana_segments=alignment.segments,
                     has_reading_override=resolved.has_override,
                 ))
-                if not raw.reading:
-                    diagnostics.append(AnalysisDiagnostic("missing_reading", raw.start_offset, raw.end_offset))
+                if not resolved_raw.reading:
+                    diagnostics.append(AnalysisDiagnostic("missing_reading", resolved_raw.start_offset, resolved_raw.end_offset))
                 if alignment.used_fallback:
-                    diagnostics.append(AnalysisDiagnostic("furigana_fallback", raw.start_offset, raw.end_offset))
+                    diagnostics.append(AnalysisDiagnostic("furigana_fallback", resolved_raw.start_offset, resolved_raw.end_offset))
             blocks.append(AnalysisBlock(offset, offset + len(line), tuple(tokens)))
             offset += len(line)
 
